@@ -14,15 +14,14 @@ describe("ControlRoom", () => {
       const region = screen.getByRole("region", { name: worker.name });
       const heading = within(region).getByRole("heading", { name: worker.name });
       expect(region).toHaveAttribute("aria-labelledby", heading.id);
-      expect(heading.closest(".kb-facet-header")).not.toBeNull();
+      expect(heading.closest(".kb-panel-header")).not.toBeNull();
     }
   });
 
-  test("draws every worker as a visible plane with no cut corners", () => {
+  test("draws every worker as a visible plane", () => {
     render(<ControlRoom task={task} workers={idle} onStop={noop} />);
     for (const worker of idle) {
       const region = screen.getByRole("region", { name: worker.name });
-      expect([null, "none"]).toContain(region.getAttribute("data-cut"));
       expect(region).not.toHaveAttribute("data-tone", "quiet");
     }
   });
@@ -45,7 +44,7 @@ describe("ControlRoom", () => {
     expect(within(hero).queryByText("Step 3 of 5: cargo check.")).not.toBeInTheDocument();
   });
 
-  test("leaves light to kbui's facet glow instead of drawing its own pools", () => {
+  test("leaves light to kbui's panel glow instead of drawing its own pools", () => {
     const { container } = render(<ControlRoom task={task} workers={blocked} onStop={noop} />);
     expect(container.querySelector(".cr-light")).toBeNull();
   });
@@ -69,14 +68,14 @@ describe("ControlRoom", () => {
     expect(live).toHaveLength(1);
     expect(live[0]).toHaveTextContent("Running");
     for (const region of screen.getAllByRole("region", { name: /^Worker [A-C]$/ })) {
-      expect(region.querySelector(".kb-facet-header .kb-status")).toHaveAttribute(
+      expect(region.querySelector(".kb-panel-header .kb-status")).toHaveAttribute(
         "data-appearance",
         "chip",
       );
     }
   });
 
-  test("maps worker state to facet tone and status tone", () => {
+  test("maps worker state to panel tone and status tone", () => {
     render(<ControlRoom task={task} workers={blocked} onStop={noop} />);
     const blockedRegion = screen.getByRole("region", { name: "Worker B" });
     expect(blockedRegion).toHaveAttribute("data-tone", "critical");
@@ -101,7 +100,7 @@ describe("ControlRoom", () => {
 
   test("summarises worker states in the banner", () => {
     render(<ControlRoom task={task} workers={blocked} onStop={noop} />);
-    // jsdom also maps each Facet.Header to banner, so find the page bar by its h1.
+    // jsdom also maps each Panel.Header to banner, so find the page bar by its h1.
     const title = screen.getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Control Room");
     const banner = title.closest("header") as HTMLElement;
@@ -115,7 +114,7 @@ describe("ControlRoom", () => {
   test("puts output in a labelled, keyboard-scrollable well", () => {
     render(<ControlRoom task={task} workers={longContent} onStop={noop} />);
     const well = screen.getByRole("region", { name: "Worker B output" });
-    expect(well).toHaveClass("kb-facet-well");
+    expect(well).toHaveClass("kb-panel-well");
     const scroller = well.querySelector("pre");
     expect(scroller).toHaveAttribute("tabindex", "0");
     expect(scroller?.textContent?.length ?? 0).toBeGreaterThan(400);
@@ -124,7 +123,7 @@ describe("ControlRoom", () => {
   test("shows branch and elapsed time in a non-hero footer", () => {
     render(<ControlRoom task={task} workers={running} onStop={noop} />);
     const region = screen.getByRole("region", { name: "Worker C" });
-    const footer = region.querySelector(".kb-facet-footer");
+    const footer = region.querySelector(".kb-panel-footer");
     expect(footer).toHaveTextContent("feat/policy-engine");
     expect(footer).toHaveTextContent("00:42");
   });

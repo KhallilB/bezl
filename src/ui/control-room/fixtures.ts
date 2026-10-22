@@ -9,8 +9,8 @@ const transcript = Array.from(
   { length: 8 },
   (_, i) =>
     `[${String(i + 1).padStart(2, "0")}] cargo test -p bezl-domain ... Compiling bezl-domain v0.1.0; ` +
-    "warning: unused variable `ctx` in src/policy.rs:41; the well scrolls inside its plane, so a " +
-    "long transcript never spills past the seam or hides behind the cut.",
+    "warning: unused variable `ctx` in src/policy.rs:41; the well scrolls inside its panel, so a " +
+    "long transcript never spills past the panel's edge.",
 ).join("\n");
 
 const a: WorkerView = {

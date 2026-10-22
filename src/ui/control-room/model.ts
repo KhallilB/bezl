@@ -1,4 +1,4 @@
-import type { FacetRail, FacetTone, StatusTone } from "@kbui/react";
+import type { PanelRail, PanelTone, StatusTone } from "@kbui/react";
 
 /** UI projection of a worker; the Rust domain owns the real state machine. */
 export type WorkerState = "idle" | "running" | "blocked" | "finished";
@@ -31,8 +31,8 @@ export type WorkerView = {
 };
 
 export type WorkerPresentation = {
-  tone: FacetTone;
-  rail: FacetRail;
+  tone: PanelTone;
+  rail: PanelRail;
   status: { tone: StatusTone; label: string; live: boolean };
   stoppable: boolean;
 };

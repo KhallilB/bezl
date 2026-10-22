@@ -1,4 +1,4 @@
-import { Button, Dialog, Facet, Status } from "@kbui/react";
+import { Button, Dialog, Panel, Status } from "@kbui/react";
 import type { CSSProperties } from "react";
 import { usePortalRoot } from "../skin/FacetedOperationsSkin";
 import { ActivityTrace } from "./ActivityTrace";
@@ -48,12 +48,12 @@ function StopWorker({ worker, onStop }: WorkerProps) {
 function Output({ worker }: { worker: WorkerView }) {
   if (!worker.transcript) return null;
   return (
-    <Facet.Well role="region" aria-label={`${worker.name} output`}>
+    <Panel.Well role="region" aria-label={`${worker.name} output`}>
       {/* biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable output must take keyboard focus to scroll. */}
       <pre className="cr-transcript" tabIndex={0}>
         {worker.transcript}
       </pre>
-    </Facet.Well>
+    </Panel.Well>
   );
 }
 
@@ -96,8 +96,8 @@ function WorkerPanel({ worker, onStop, hero }: WorkerProps & { hero: boolean }) 
   const meta = [worker.branch, hero ? undefined : worker.elapsed].filter(Boolean).join(" · ");
   return (
     <div className="cr-cell" data-state={worker.state} {...(hero ? { "data-hero": "" } : {})}>
-      <Facet tone={view.tone} rail={view.rail} aria-labelledby={headingId}>
-        <Facet.Header>
+      <Panel tone={view.tone} rail={view.rail} aria-labelledby={headingId}>
+        <Panel.Header>
           <div className="cr-heading">
             <p className="cr-eyebrow">
               {`${roleLabel[worker.role]} · ${worker.provider} · ${accessLabel[worker.role]}`}
@@ -112,8 +112,8 @@ function WorkerPanel({ worker, onStop, hero }: WorkerProps & { hero: boolean }) 
           >
             {view.status.label}
           </Status>
-        </Facet.Header>
-        <Facet.Body className="cr-body">
+        </Panel.Header>
+        <Panel.Body className="cr-body">
           {hero ? <Readout worker={worker} /> : null}
           {hero && worker.activity ? <ActivityTrace samples={worker.activity} /> : null}
           {hero && worker.step ? null : (
@@ -122,14 +122,14 @@ function WorkerPanel({ worker, onStop, hero }: WorkerProps & { hero: boolean }) 
             </p>
           )}
           <Output worker={worker} />
-        </Facet.Body>
+        </Panel.Body>
         {meta || view.stoppable ? (
-          <Facet.Footer>
+          <Panel.Footer>
             {meta ? <span className="cr-meta">{meta}</span> : null}
             {view.stoppable ? <StopWorker worker={worker} onStop={onStop} /> : null}
-          </Facet.Footer>
+          </Panel.Footer>
         ) : null}
-      </Facet>
+      </Panel>
     </div>
   );
 }

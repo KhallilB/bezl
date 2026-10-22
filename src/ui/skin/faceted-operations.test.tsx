@@ -6,7 +6,7 @@ import { FacetedOperationsSkin, usePortalRoot } from "./FacetedOperationsSkin";
 import { facetedOperations } from "./faceted-operations";
 
 const documented = new Set<string>(
-  [tokens.facet, tokens.status, tokens.button, tokens.dialog].flatMap((g) => Object.values(g)),
+  [tokens.panel, tokens.status, tokens.button, tokens.dialog].flatMap((g) => Object.values(g)),
 );
 const semantic = new Set<string>(
   [tokens.color, tokens.space, tokens.radius].flatMap((g) => Object.values(g)),
@@ -14,7 +14,7 @@ const semantic = new Set<string>(
 const skin: Record<string, string> = facetedOperations;
 
 describe("faceted operations skin", () => {
-  test("sets documented facet, status, button and dialog properties only", () => {
+  test("sets documented panel, status, button and dialog properties only", () => {
     const keys = Object.keys(skin);
     expect(keys.length).toBeGreaterThan(0);
     for (const key of keys) expect(documented.has(key), key).toBe(true);
@@ -25,7 +25,7 @@ describe("faceted operations skin", () => {
     const mix = /^color-mix\(in oklab, var\((--kb-color-[a-z0-9-]+)\) \d{1,2}%, transparent\)$/;
     const filter = /^(?:(?:blur\(\d+px\)|saturate\(\d+%\)) ?)+$/;
     for (const [key, value] of Object.entries(skin)) {
-      if (key === tokens.facet.backdrop) {
+      if (key === tokens.panel.backdrop) {
         expect(value, key).toMatch(filter);
         continue;
       }
@@ -35,25 +35,21 @@ describe("faceted operations skin", () => {
   });
 
   test("lets the room's light through a translucent, blurred plane", () => {
-    expect(skin[tokens.facet.background]).toMatch(
+    expect(skin[tokens.panel.background]).toMatch(
       /^color-mix\(in oklab, var\(--kb-color-surface\)/,
     );
-    expect(skin[tokens.facet.backdrop]).toMatch(/blur\(\d+px\)/);
+    expect(skin[tokens.panel.backdrop]).toMatch(/blur\(\d+px\)/);
   });
 
   test("casts info light from running planes and danger light from blocked ones", () => {
-    expect(skin[tokens.facet["glow-active"]]).toContain(`var(${tokens.color.info})`);
-    expect(skin[tokens.facet["glow-critical"]]).toContain(`var(${tokens.color.danger})`);
+    expect(skin[tokens.panel["glow-active"]]).toContain(`var(${tokens.color.info})`);
+    expect(skin[tokens.panel["glow-critical"]]).toContain(`var(${tokens.color.danger})`);
   });
 
   test("rounds planes and turns status chips into glowing pills", () => {
-    expect(skin).toHaveProperty(tokens.facet.radius);
+    expect(skin).toHaveProperty(tokens.panel.radius);
     expect(skin[tokens.status.radius]).toBe(`var(${tokens.radius.full})`);
     expect(skin).toHaveProperty(tokens.status.glow);
-  });
-
-  test("sets no cut-corner geometry: the owner dropped cuts for rounded planes", () => {
-    for (const key of Object.keys(skin)) expect(key, key).not.toMatch(/^--kb-facet-cut/);
   });
 
   test("rounds controls into pills and dialogs into soft slabs", () => {

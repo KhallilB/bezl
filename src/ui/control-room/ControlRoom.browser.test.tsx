@@ -117,15 +117,15 @@ test("orbit labels stay inside the drawing", async () => {
   }
 });
 
-test("skinned facet planes clip only the decorative pseudo-element, never the root", async () => {
+test("skinned panel planes clip only the decorative pseudo-element, never the root", async () => {
   const el = await mount(
     <FacetedOperationsSkin>
       <ControlRoom task={task} workers={running} onStop={() => {}} />
     </FacetedOperationsSkin>,
     "dark",
   );
-  for (const facet of el.querySelectorAll<HTMLElement>(".kb-facet")) {
-    expect(getComputedStyle(facet).clipPath).toBe("none");
-    expect(getComputedStyle(facet).overflow).toBe("visible");
+  for (const panel of el.querySelectorAll<HTMLElement>(".kb-panel")) {
+    expect(getComputedStyle(panel).clipPath).toBe("none");
+    expect(getComputedStyle(panel).overflow).toBe("visible");
   }
 });
