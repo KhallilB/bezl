@@ -6,6 +6,11 @@ export type WorkerState = "idle" | "running" | "blocked" | "finished";
 /** One primary holds write authority per task worktree; reviewers are read-only. */
 export type WorkerRole = "primary" | "reviewer";
 
+/** The task worktree a room supervises; one primary writes to it, reviewers read. */
+export type TaskView = { branch: string };
+
+export type WorkerStep = { index: number; total: number; label: string };
+
 export type WorkerView = {
   id: string;
   name: string;
@@ -20,6 +25,9 @@ export type WorkerView = {
   branch?: string;
   /** Preformatted by the domain projection, e.g. "04:12". */
   elapsed?: string;
+  step?: WorkerStep;
+  /** Output volume per sample window, oldest first; drawn as a trace, never read as data. */
+  activity?: number[];
 };
 
 export type WorkerPresentation = {
@@ -32,6 +40,16 @@ export type WorkerPresentation = {
 export const states: WorkerState[] = ["running", "blocked", "idle", "finished"];
 
 export const roleLabel: Record<WorkerRole, string> = { primary: "Primary", reviewer: "Reviewer" };
+
+export const accessLabel: Record<WorkerRole, "writes" | "reads"> = {
+  primary: "writes",
+  reviewer: "reads",
+};
+
+/** The worker the room centres on: first running, else first blocked, else none. */
+export function heroOf(workers: WorkerView[]): WorkerView | undefined {
+  return workers.find((w) => w.state === "running") ?? workers.find((w) => w.state === "blocked");
+}
 
 /** Every worker is a visible plane; running lifts and announces, blocked warns. */
 export const presentation: Record<WorkerState, WorkerPresentation> = {

@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { FacetedOperationsSkin } from "../skin/FacetedOperationsSkin";
 import { ControlRoom } from "./ControlRoom";
-import { blocked, idle, longContent, running } from "./fixtures";
+import { blocked, idle, longContent, running, task } from "./fixtures";
 
 const noop = () => {};
 
 describe("ControlRoom", () => {
   test("renders one named region per worker, labelled by its header heading", () => {
-    render(<ControlRoom workers={idle} onStop={noop} />);
+    render(<ControlRoom task={task} workers={idle} onStop={noop} />);
     for (const worker of idle) {
       const region = screen.getByRole("region", { name: worker.name });
       const heading = within(region).getByRole("heading", { name: worker.name });
@@ -18,23 +18,48 @@ describe("ControlRoom", () => {
     }
   });
 
-  test("draws every worker as a visible plane cut on both corners", () => {
-    render(<ControlRoom workers={idle} onStop={noop} />);
+  test("draws every worker as a visible plane with no cut corners", () => {
+    render(<ControlRoom task={task} workers={idle} onStop={noop} />);
     for (const worker of idle) {
       const region = screen.getByRole("region", { name: worker.name });
-      expect(region).toHaveAttribute("data-cut", "both");
+      expect([null, "none"]).toContain(region.getAttribute("data-cut"));
       expect(region).not.toHaveAttribute("data-tone", "quiet");
     }
   });
 
+  test("makes the running worker the hero with elapsed time, step progress and an activity trace", () => {
+    render(<ControlRoom task={task} workers={running} onStop={noop} />);
+    const hero = screen.getByRole("region", { name: "Worker B" });
+    expect(hero.closest("[data-hero]")).not.toBeNull();
+    expect(screen.getByRole("region", { name: "Worker A" }).closest("[data-hero]")).toBeNull();
+    expect(within(hero).getByText("04:12")).toBeVisible();
+    const progress = within(hero).getByRole("progressbar", { name: "Step 3 of 5: cargo check" });
+    expect(progress).toHaveAttribute("aria-valuenow", "3");
+    expect(progress).toHaveAttribute("aria-valuemax", "5");
+    expect(hero.querySelector('svg[data-part="trace"]')).toHaveAttribute("aria-hidden", "true");
+  });
+
+  test("does not repeat the hero's step as a summary line", () => {
+    render(<ControlRoom task={task} workers={running} onStop={noop} />);
+    const hero = screen.getByRole("region", { name: "Worker B" });
+    expect(within(hero).queryByText("Step 3 of 5: cargo check.")).not.toBeInTheDocument();
+  });
+
+  test("has no hero when nothing is running or blocked", () => {
+    const { container } = render(<ControlRoom task={task} workers={idle} onStop={noop} />);
+    expect(container.querySelector("[data-hero]")).toBeNull();
+  });
+
   test("names each worker's role and provider above its title", () => {
-    render(<ControlRoom workers={running} onStop={noop} />);
+    render(<ControlRoom task={task} workers={running} onStop={noop} />);
     const region = screen.getByRole("region", { name: "Worker B" });
-    expect(within(region).getByText("Primary · Codex")).toBeVisible();
+    expect(within(region).getByText("Primary · Codex · writes")).toBeVisible();
+    const reviewer = screen.getByRole("region", { name: "Worker A" });
+    expect(within(reviewer).getByText("Reviewer · Claude Code · reads")).toBeVisible();
   });
 
   test("shows status chips for every worker and announces only the running one", () => {
-    render(<ControlRoom workers={running} onStop={noop} />);
+    render(<ControlRoom task={task} workers={running} onStop={noop} />);
     const live = screen.getAllByRole("status");
     expect(live).toHaveLength(1);
     expect(live[0]).toHaveTextContent("Running");
@@ -47,7 +72,7 @@ describe("ControlRoom", () => {
   });
 
   test("maps worker state to facet tone and status tone", () => {
-    render(<ControlRoom workers={blocked} onStop={noop} />);
+    render(<ControlRoom task={task} workers={blocked} onStop={noop} />);
     const blockedRegion = screen.getByRole("region", { name: "Worker B" });
     expect(blockedRegion).toHaveAttribute("data-tone", "critical");
     expect(within(blockedRegion).getByText("Blocked").closest(".kb-status")).toHaveAttribute(
@@ -60,8 +85,17 @@ describe("ControlRoom", () => {
     );
   });
 
+  test("maps the task worktree and its workers in the banner orbit", () => {
+    render(<ControlRoom task={task} workers={blocked} onStop={noop} />);
+    expect(
+      screen.getByRole("img", {
+        name: "feat/policy-engine: Worker A reads, idle; Worker B writes, blocked; Worker C reads, finished",
+      }),
+    ).toBeVisible();
+  });
+
   test("summarises worker states in the banner", () => {
-    render(<ControlRoom workers={blocked} onStop={noop} />);
+    render(<ControlRoom task={task} workers={blocked} onStop={noop} />);
     // jsdom also maps each Facet.Header to banner, so find the page bar by its h1.
     const title = screen.getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Control Room");
@@ -73,26 +107,25 @@ describe("ControlRoom", () => {
     expect(within(banner).queryByText(/running/)).not.toBeInTheDocument();
   });
 
-  test("puts output in a sunken, keyboard-scrollable well", () => {
-    render(<ControlRoom workers={longContent} onStop={noop} />);
+  test("puts output in a labelled, keyboard-scrollable well", () => {
+    render(<ControlRoom task={task} workers={longContent} onStop={noop} />);
     const well = screen.getByRole("region", { name: "Worker B output" });
-    expect(well).toHaveAttribute("data-tone", "sunken");
     const scroller = well.querySelector("pre");
     expect(scroller).toHaveAttribute("tabindex", "0");
     expect(scroller?.textContent?.length ?? 0).toBeGreaterThan(400);
   });
 
-  test("shows branch and elapsed time in the footer", () => {
-    render(<ControlRoom workers={running} onStop={noop} />);
-    const region = screen.getByRole("region", { name: "Worker B" });
+  test("shows branch and elapsed time in a non-hero footer", () => {
+    render(<ControlRoom task={task} workers={running} onStop={noop} />);
+    const region = screen.getByRole("region", { name: "Worker C" });
     const footer = region.querySelector(".kb-facet-footer");
     expect(footer).toHaveTextContent("feat/policy-engine");
-    expect(footer).toHaveTextContent("04:12");
+    expect(footer).toHaveTextContent("00:42");
   });
 
   test("stop asks for confirmation and fires onStop only when confirmed", async () => {
     const onStop = vi.fn();
-    render(<ControlRoom workers={running} onStop={onStop} />);
+    render(<ControlRoom task={task} workers={running} onStop={onStop} />);
     const region = screen.getByRole("region", { name: "Worker B" });
     await userEvent.click(within(region).getByRole("button", { name: "Stop" }));
     const dialog = await screen.findByRole("dialog", { name: "Stop Worker B?" });
@@ -112,7 +145,7 @@ describe("ControlRoom", () => {
     async (enabled) => {
       const { container } = render(
         <FacetedOperationsSkin enabled={enabled}>
-          <ControlRoom workers={running} onStop={noop} />
+          <ControlRoom task={task} workers={running} onStop={noop} />
         </FacetedOperationsSkin>,
       );
       await userEvent.click(screen.getByRole("button", { name: "Stop" }));
@@ -122,7 +155,7 @@ describe("ControlRoom", () => {
   );
 
   test("idle and finished workers offer no stop control", () => {
-    render(<ControlRoom workers={idle} onStop={noop} />);
+    render(<ControlRoom task={task} workers={idle} onStop={noop} />);
     expect(screen.queryByRole("button", { name: "Stop" })).not.toBeInTheDocument();
   });
 });

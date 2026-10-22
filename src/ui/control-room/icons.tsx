@@ -41,13 +41,3 @@ export function StateIcon({ state }: { state: WorkerState }) {
       );
   }
 }
-
-/** Bezl mark: a plane cut on both corners, the shape every facet repeats. */
-export function Mark() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="cr-mark">
-      <path d="M6 1h13v13l-5 5H1V6z" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M6 1v5H1M14 19v-5h5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}

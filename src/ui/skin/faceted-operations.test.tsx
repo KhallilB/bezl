@@ -40,9 +40,9 @@ describe("faceted operations skin", () => {
     }
   });
 
-  test("gives buttons and dialogs the facets' tight radius", () => {
-    expect(skin[tokens.button.radius]).toBe(`var(${tokens.radius.sm})`);
-    expect(skin[tokens.dialog.radius]).toBe(`var(${tokens.radius.sm})`);
+  test("rounds controls into pills and dialogs into soft slabs", () => {
+    expect(skin[tokens.button.radius]).toBe(`var(${tokens.radius.full})`);
+    expect(skin[tokens.dialog.radius]).toBe(`var(${tokens.radius.lg})`);
   });
 
   test("uses no .kb-* selectors and no !important", async () => {

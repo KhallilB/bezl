@@ -1,3 +1,5 @@
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "@kbui/css/styles.css";
 import { useState } from "react";
 import { PtySpike, useSpikeConfig } from "./spike/PtySpike";
@@ -9,7 +11,13 @@ import { FacetedOperationsSkin } from "./ui/skin/FacetedOperationsSkin";
 // Sample workers until the Rust domain projects real ones over IPC; ?sample= picks a state.
 function initialWorkers(): WorkerView[] {
   const name = new URLSearchParams(window.location.search).get("sample");
-  return name && name in samples ? samples[name as keyof typeof samples] : samples.running;
+  const pick = {
+    idle: samples.idle,
+    running: samples.running,
+    blocked: samples.blocked,
+    longContent: samples.longContent,
+  };
+  return name && name in pick ? pick[name as keyof typeof pick] : samples.running;
 }
 
 export function App() {
@@ -19,6 +27,7 @@ export function App() {
   return (
     <FacetedOperationsSkin>
       <ControlRoom
+        task={samples.task}
         workers={workers}
         onStop={(id) =>
           setWorkers((all) =>

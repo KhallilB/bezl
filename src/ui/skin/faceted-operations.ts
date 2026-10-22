@@ -22,6 +22,6 @@ export const facetedOperations = {
   "--kb-facet-rail": "var(--kb-color-border)",
   "--kb-facet-rail-active": "var(--kb-color-info)",
   "--kb-status-running": "var(--kb-color-info)",
-  "--kb-button-radius": "var(--kb-radius-sm)",
-  "--kb-dialog-radius": "var(--kb-radius-sm)",
+  "--kb-button-radius": "var(--kb-radius-full)",
+  "--kb-dialog-radius": "var(--kb-radius-lg)",
 } satisfies Partial<Record<ComponentVar, SemanticRef>>;

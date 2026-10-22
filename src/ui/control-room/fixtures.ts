@@ -1,4 +1,9 @@
-import type { WorkerView } from "./model";
+import type { TaskView, WorkerView } from "./model";
+
+export const task: TaskView = { branch: "feat/policy-engine" };
+
+// Output bytes per 10 s bucket, oldest first; shape only, not real telemetry.
+const activity = [3, 4, 6, 5, 9, 8, 12, 10, 14, 11, 16, 13, 15, 12, 17, 14, 18, 15, 20, 16, 19, 22];
 
 const transcript = Array.from(
   { length: 8 },
@@ -43,6 +48,8 @@ export const running: WorkerView[] = [
     ...b,
     state: "running",
     summary: "Step 3 of 5: cargo check.",
+    step: { index: 3, total: 5, label: "cargo check" },
+    activity,
     transcript: "Compiling bezl-domain v0.1.0\nChecking bezl-app v0.1.0",
     branch: "feat/policy-engine",
     elapsed: "04:12",
@@ -67,6 +74,8 @@ export const longContent: WorkerView[] = [
     ...b,
     state: "running",
     summary: "Step 4 of 5: tests.",
+    step: { index: 4, total: 5, label: "tests" },
+    activity,
     transcript,
     branch: "feat/policy-engine",
     elapsed: "11:05",

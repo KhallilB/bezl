@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import "@kbui/css/styles.css";
 import { FacetedOperationsSkin } from "../skin/FacetedOperationsSkin";
 import { ControlRoom } from "./ControlRoom";
-import { blocked, idle, longContent, running } from "./fixtures";
+import { blocked, idle, longContent, running, task } from "./fixtures";
 
 const scenarios = { idle, running, blocked, longContent };
 const themes = ["light", "dark"] as const;
@@ -50,7 +50,7 @@ for (const theme of themes) {
         test("passes the accessibility scan", async () => {
           const el = await mount(
             <FacetedOperationsSkin enabled={skinned}>
-              <ControlRoom workers={workers} onStop={() => {}} />
+              <ControlRoom task={task} workers={workers} onStop={() => {}} />
             </FacetedOperationsSkin>,
             theme,
           );
@@ -64,7 +64,7 @@ for (const theme of themes) {
       const on = structure(
         await mount(
           <FacetedOperationsSkin>
-            <ControlRoom workers={workers} onStop={() => {}} />
+            <ControlRoom task={task} workers={workers} onStop={() => {}} />
           </FacetedOperationsSkin>,
           theme,
         ),
@@ -73,7 +73,7 @@ for (const theme of themes) {
       const off = structure(
         await mount(
           <FacetedOperationsSkin enabled={false}>
-            <ControlRoom workers={workers} onStop={() => {}} />
+            <ControlRoom task={task} workers={workers} onStop={() => {}} />
           </FacetedOperationsSkin>,
           theme,
         ),
@@ -89,7 +89,7 @@ test.each([800, 1200])(
     const el = await mount(
       <div style={{ width }}>
         <FacetedOperationsSkin>
-          <ControlRoom workers={running} onStop={() => {}} />
+          <ControlRoom task={task} workers={running} onStop={() => {}} />
         </FacetedOperationsSkin>
       </div>,
       "dark",
@@ -103,10 +103,24 @@ test.each([800, 1200])(
   },
 );
 
+test("orbit labels stay inside the drawing", async () => {
+  for (const workers of [running, blocked]) {
+    const el = await mount(<ControlRoom task={task} workers={workers} onStop={() => {}} />, "dark");
+    const svg = el.querySelector<SVGSVGElement>(".cr-orbit-map") as SVGSVGElement;
+    const { width } = svg.viewBox.baseVal;
+    for (const text of svg.querySelectorAll<SVGTextElement>("text")) {
+      const box = text.getBBox();
+      expect(box.x, text.textContent ?? "").toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, text.textContent ?? "").toBeLessThanOrEqual(width);
+    }
+    unmount();
+  }
+});
+
 test("skinned facet planes clip only the decorative pseudo-element, never the root", async () => {
   const el = await mount(
     <FacetedOperationsSkin>
-      <ControlRoom workers={running} onStop={() => {}} />
+      <ControlRoom task={task} workers={running} onStop={() => {}} />
     </FacetedOperationsSkin>,
     "dark",
   );

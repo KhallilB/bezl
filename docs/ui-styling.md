@@ -10,15 +10,22 @@ Bezl's own elements (`.cr-*` in `src/ui/control-room/control-room.css`) are styl
 
 Removing the skin (`enabled={false}`) must change values, never structure or behavior. `ControlRoom.browser.test.tsx` renders every Control Room state in light and dark, skinned and unskinned, runs axe, compares the markup of both, and checks that the banner fits 800 and 1200 px windows.
 
-## Design language
+## Design language: Lit Room
 
-Dark first, light validated. The page is a static dot grid on the background color; every worker is a surface plane cut on both corners, with lit chamfers, a top highlight and a divider under the header. Running lifts to the active plane with an info seam and rail; blocked takes the critical seam. Output sits in a sunken well that scrolls on its own. Status is always a chip with text and a shape icon, never color alone. Meta (role, provider, branch, elapsed) is small uppercase or mono text. Nothing moves on its own.
+Owner decision (2026-10-22): the room is lit by the work. No cut corners or bevels; rounded planes.
+
+- **Banner**: a floating glass capsule with the mark, the screen title and per-state summary chips.
+- **Orbit**: a map of the task worktree. The primary connects by a solid lit "writes" edge, reviewers by dashed "reads" edges, and each node shows its state. A packet travels the write edge only while the primary runs and reduced motion is off. The diagram's accessible name lists every worker, access and state.
+- **Bento**: the first running worker, else the first blocked one, is the hero panel. It carries large elapsed numerals, labelled step progress, a decorative output-rate trace and its output well. Other workers sit beside it.
+- **Light**: running workers cast an info-colored pool onto the floor and blocked workers a danger-colored one. These are bezl-owned elements behind each panel. Idle and finished cast none.
+- **Type**: Geist and Geist Mono, bundled through `@fontsource-variable` because the app runs offline. Meta (role, provider, access, branch, elapsed) is small uppercase mono.
+- Static grain, no ambient motion; status is always text plus a shape icon.
 
 Preview a state with `?sample=idle|running|blocked|longContent`.
 
 ## When a style cannot be reached
 
-If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Known gap: `Dialog` has no facet geometry yet, so the stop dialog is a plain plane with the shared radius.
+If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Pending in kbui: rounded glass planes, rim light and emission for `Facet` (the panels are still square and opaque until then), and a radius token for `Status` chips.
 
 kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/control-room/icons.tsx`) and 0010 (product skin is consumer-owned overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
 
