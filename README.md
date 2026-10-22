@@ -17,7 +17,7 @@ Bezl never calls a provider API, never holds a provider credential, and never re
 ## Layout
 
 ```text
-src/            React UI
+src/            React UI; src/ui/skin holds the Faceted Operations token overrides, see docs/ui-styling.md
 src-tauri/      Tauri shell and thin commands
 crates/         bezl-domain, bezl-app, bezl-infra (to come)
 spikes/         time-boxed proofs with thresholds; each has RESULT.md
@@ -27,10 +27,12 @@ spikes/         time-boxed proofs with thresholds; each has RESULT.md
 
 ```bash
 mise install && bun install
-bun run typecheck && bun run lint
+bun run check
 cargo check -p bezl
 bun tauri dev
 ```
+
+`bun run check` runs typecheck, Biome, the jsdom unit tests and the Chromium tests (axe scan of the Control Room in light and dark, skinned and unskinned). kbui is installed by path from `../kbui`; build it there first (`bun run build`).
 
 Spikes under `spikes/` build on their own; see each `RESULT.md` for the command and the verdict.
 
