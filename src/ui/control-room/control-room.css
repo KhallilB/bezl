@@ -242,29 +242,8 @@
   }
 }
 
-/* The work is the light source: running and blocked workers cast a pool onto the floor. */
 .cr-cell {
-  position: relative;
-  isolation: isolate;
   min-width: 0;
-}
-
-.cr-light {
-  position: absolute;
-  inset: 10% 8% -16%;
-  z-index: -1;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(56px);
-  opacity: 0.4;
-}
-
-.cr-cell[data-state="running"] > .cr-light {
-  background: radial-gradient(closest-side, var(--kb-color-info), transparent);
-}
-
-.cr-cell[data-state="blocked"] > .cr-light {
-  background: radial-gradient(closest-side, var(--kb-color-danger), transparent);
 }
 
 .cr-heading {

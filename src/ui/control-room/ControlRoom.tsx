@@ -48,12 +48,12 @@ function StopWorker({ worker, onStop }: WorkerProps) {
 function Output({ worker }: { worker: WorkerView }) {
   if (!worker.transcript) return null;
   return (
-    <Facet tone="sunken" aria-label={`${worker.name} output`}>
+    <Facet.Well role="region" aria-label={`${worker.name} output`}>
       {/* biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable output must take keyboard focus to scroll. */}
       <pre className="cr-transcript" tabIndex={0}>
         {worker.transcript}
       </pre>
-    </Facet>
+    </Facet.Well>
   );
 }
 
@@ -96,7 +96,6 @@ function WorkerPanel({ worker, onStop, hero }: WorkerProps & { hero: boolean }) 
   const meta = [worker.branch, hero ? undefined : worker.elapsed].filter(Boolean).join(" · ");
   return (
     <div className="cr-cell" data-state={worker.state} {...(hero ? { "data-hero": "" } : {})}>
-      <span className="cr-light" aria-hidden="true" />
       <Facet tone={view.tone} rail={view.rail} aria-labelledby={headingId}>
         <Facet.Header>
           <div className="cr-heading">

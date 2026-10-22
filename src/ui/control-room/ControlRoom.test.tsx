@@ -45,6 +45,11 @@ describe("ControlRoom", () => {
     expect(within(hero).queryByText("Step 3 of 5: cargo check.")).not.toBeInTheDocument();
   });
 
+  test("leaves light to kbui's facet glow instead of drawing its own pools", () => {
+    const { container } = render(<ControlRoom task={task} workers={blocked} onStop={noop} />);
+    expect(container.querySelector(".cr-light")).toBeNull();
+  });
+
   test("has no hero when nothing is running or blocked", () => {
     const { container } = render(<ControlRoom task={task} workers={idle} onStop={noop} />);
     expect(container.querySelector("[data-hero]")).toBeNull();
@@ -110,6 +115,7 @@ describe("ControlRoom", () => {
   test("puts output in a labelled, keyboard-scrollable well", () => {
     render(<ControlRoom task={task} workers={longContent} onStop={noop} />);
     const well = screen.getByRole("region", { name: "Worker B output" });
+    expect(well).toHaveClass("kb-facet-well");
     const scroller = well.querySelector("pre");
     expect(scroller).toHaveAttribute("tabindex", "0");
     expect(scroller?.textContent?.length ?? 0).toBeGreaterThan(400);

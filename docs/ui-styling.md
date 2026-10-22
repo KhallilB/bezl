@@ -17,7 +17,7 @@ Owner decision (2026-10-22): the room is lit by the work. No cut corners or beve
 - **Banner**: a floating glass capsule with the mark, the screen title and per-state summary chips.
 - **Orbit**: a map of the task worktree. The primary connects by a solid lit "writes" edge, reviewers by dashed "reads" edges, and each node shows its state. A packet travels the write edge only while the primary runs and reduced motion is off. The diagram's accessible name lists every worker, access and state.
 - **Bento**: the first running worker, else the first blocked one, is the hero panel. It carries large elapsed numerals, labelled step progress, a decorative output-rate trace and its output well. Other workers sit beside it.
-- **Light**: running workers cast an info-colored pool onto the floor and blocked workers a danger-colored one. These are bezl-owned elements behind each panel. Idle and finished cast none.
+- **Light**: running planes cast info light and blocked planes danger light through kbui's facet glow (`--kb-facet-glow-active`, `--kb-facet-glow-critical`), seen through a translucent, blurred plane (`--kb-facet-background`, `--kb-facet-backdrop`). Idle and finished cast none.
 - **Type**: Geist and Geist Mono, bundled through `@fontsource-variable` because the app runs offline. Meta (role, provider, access, branch, elapsed) is small uppercase mono.
 - Static grain, no ambient motion; status is always text plus a shape icon.
 
@@ -25,7 +25,7 @@ Preview a state with `?sample=idle|running|blocked|longContent`.
 
 ## When a style cannot be reached
 
-If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Pending in kbui: rounded glass planes, rim light and emission for `Facet` (the panels are still square and opaque until then), and a radius token for `Status` chips.
+If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Output sits in `Facet.Well`. Skin values are kbui semantic tokens, `color-mix` of a semantic color toward transparent, or (backdrop only) a blur and saturate filter; `src/ui/skin/faceted-operations.test.tsx` enforces those three forms.
 
 kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/control-room/icons.tsx`) and 0010 (product skin is consumer-owned overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
 

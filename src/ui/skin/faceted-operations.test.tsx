@@ -20,12 +20,36 @@ describe("faceted operations skin", () => {
     for (const key of keys) expect(documented.has(key), key).toBe(true);
   });
 
-  test("expresses every value through a kbui semantic color, space or radius token", () => {
+  test("derives every value from kbui tokens so both themes stay valid", () => {
+    const ref = /^var\((--kb-(?:color|space|radius)-[a-z0-9-]+)\)$/;
+    const mix = /^color-mix\(in oklab, var\((--kb-color-[a-z0-9-]+)\) \d{1,2}%, transparent\)$/;
+    const filter = /^(?:(?:blur\(\d+px\)|saturate\(\d+%\)) ?)+$/;
     for (const [key, value] of Object.entries(skin)) {
-      const match = /^var\((--kb-(?:color|space|radius)-[a-z0-9-]+)\)$/.exec(value);
-      expect(match, `${key}: ${value}`).not.toBeNull();
-      expect(semantic.has(match?.[1] ?? ""), `${key}: ${value}`).toBe(true);
+      if (key === tokens.facet.backdrop) {
+        expect(value, key).toMatch(filter);
+        continue;
+      }
+      const token = ref.exec(value)?.[1] ?? mix.exec(value)?.[1];
+      expect(semantic.has(token ?? ""), `${key}: ${value}`).toBe(true);
     }
+  });
+
+  test("lets the room's light through a translucent, blurred plane", () => {
+    expect(skin[tokens.facet.background]).toMatch(
+      /^color-mix\(in oklab, var\(--kb-color-surface\)/,
+    );
+    expect(skin[tokens.facet.backdrop]).toMatch(/blur\(\d+px\)/);
+  });
+
+  test("casts info light from running planes and danger light from blocked ones", () => {
+    expect(skin[tokens.facet["glow-active"]]).toContain(`var(${tokens.color.info})`);
+    expect(skin[tokens.facet["glow-critical"]]).toContain(`var(${tokens.color.danger})`);
+  });
+
+  test("rounds planes and turns status chips into glowing pills", () => {
+    expect(skin).toHaveProperty(tokens.facet.radius);
+    expect(skin[tokens.status.radius]).toBe(`var(${tokens.radius.full})`);
+    expect(skin).toHaveProperty(tokens.status.glow);
   });
 
   test("sets no cut-corner geometry: the owner dropped cuts for rounded planes", () => {
