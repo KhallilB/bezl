@@ -1,0 +1,6 @@
+node_modules
+dist
+target
+.infigraph
+.DS_Store
+*.log

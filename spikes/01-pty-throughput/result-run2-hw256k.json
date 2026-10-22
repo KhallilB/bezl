@@ -1,0 +1,56 @@
+{
+  "expected_bytes": 20526316,
+  "panes": [
+    {
+      "id": 0,
+      "bytes": 20526321,
+      "exit": 0,
+      "streamMs": 38278,
+      "renderMs": 38279
+    },
+    {
+      "id": 1,
+      "bytes": 20526321,
+      "exit": 0,
+      "streamMs": 38249,
+      "renderMs": 38249
+    },
+    {
+      "id": 2,
+      "bytes": 20526323,
+      "exit": 0,
+      "streamMs": 38214,
+      "renderMs": 38219
+    }
+  ],
+  "all_bytes_ok": false,
+  "total_stream_ms": 38327,
+  "echo_latency_ms": {
+    "median": 2,
+    "max": 5,
+    "samples": [
+      5,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      3,
+      2,
+      2
+    ]
+  },
+  "pid": 48053,
+  "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)"
+}

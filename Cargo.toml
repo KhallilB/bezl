@@ -1,0 +1,16 @@
+[workspace]
+resolver = "3"
+members = ["src-tauri"]
+# Spikes build their own native deps (Zig); keep them out of the product graph.
+exclude = ["spikes"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true

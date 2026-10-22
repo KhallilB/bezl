@@ -1,0 +1,9 @@
+[package]
+name = "spike-libghostty-vt"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+libghostty-vt = "0.2.2"
+portable-pty = "0.9.0"

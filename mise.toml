@@ -1,0 +1,4 @@
+[tools]
+bun = "1.3.11"
+node = "22"
+# Zig is only needed by spikes/02; upstream 0.15.2 cannot link libc on macOS 27, use `brew install zig@0.15`.
