@@ -33,3 +33,7 @@ bun tauri dev
 ```
 
 Spikes under `spikes/` build on their own; see each `RESULT.md` for the command and the verdict.
+
+## License
+
+[MIT](LICENSE)
