@@ -12,7 +12,7 @@ Bezl never calls a provider API, never holds a provider credential, and never re
 | Live terminal | `@xterm/xterm` + `portable-pty`, bytes over a raw IPC channel |
 | Evidence snapshots | `libghostty-vt` headless (spike 2), `@xterm/addon-serialize` as fallback |
 | Persistence | append-only JSONL events, TOML manifests, `.ai/` inside each target repo |
-| UI | React 19 + KBUI (path install from `../kbui`) |
+| UI | React 19 + KBUI 0.1.0 (GitHub release tarballs) |
 
 ## Layout
 
@@ -32,7 +32,7 @@ cargo check -p bezl
 bun tauri dev
 ```
 
-`bun run check` runs typecheck, Biome, the jsdom unit tests and the Chromium tests (axe scan of the Control Room in light and dark, skinned and unskinned). kbui is installed by path from `../kbui`; build it there first (`bun run build`).
+`bun run check` runs typecheck, Biome, the jsdom unit tests and the Chromium tests (axe scan of the Control Room in light and dark, skinned and unskinned). kbui is installed from its GitHub release tarballs, so no local kbui checkout is needed.
 
 Spikes under `spikes/` build on their own; see each `RESULT.md` for the command and the verdict.
 

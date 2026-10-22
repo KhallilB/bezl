@@ -10,6 +10,8 @@ If a look needs something kbui's tokens and parts do not expose, that is a kbui 
 
 kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/control-room/icons.tsx`) and 0010 (product skin is consumer-owned overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
 
-## Path install
+## Installing kbui
 
-kbui is installed by path (`../kbui/packages/*`). Its `@base-ui/react` resolves React from kbui's own `node_modules`, so `vite.config.ts` dedupes `react` and `react-dom`, and the jsdom tests inline those packages so the dedupe applies there too. After changing kbui, run `bun run build` there; after adding a component, also `bun install` here.
+`@kbui/react`, `@kbui/css` and `@kbui/tokens` are installed from the kbui v0.1.0 GitHub release tarballs. All three must name the same version; to upgrade, change the three URLs in `package.json` together.
+
+To work on kbui and bezl at once, install kbui by path instead (see kbui's `docs/guides/using-kbui.md`). Then kbui's `@base-ui/react` resolves React from kbui's own `node_modules`, so `vite.config.ts` dedupes `react` and `react-dom` and the jsdom tests inline `@kbui/*` so the dedupe applies there too.

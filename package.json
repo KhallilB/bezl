@@ -15,9 +15,9 @@
     "check": "bun run typecheck && bun run lint && bun run test && bun run test:browser"
   },
   "dependencies": {
-    "@kbui/css": "../kbui/packages/css",
-    "@kbui/react": "../kbui/packages/react",
-    "@kbui/tokens": "../kbui/packages/tokens",
+    "@kbui/css": "https://github.com/KhallilB/kbui/releases/download/v0.1.0/kbui-css-0.1.0.tgz",
+    "@kbui/react": "https://github.com/KhallilB/kbui/releases/download/v0.1.0/kbui-react-0.1.0.tgz",
+    "@kbui/tokens": "https://github.com/KhallilB/kbui/releases/download/v0.1.0/kbui-tokens-0.1.0.tgz",
     "@tauri-apps/api": "2.12.4",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-serialize": "0.14.0",
