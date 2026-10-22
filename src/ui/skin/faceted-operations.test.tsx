@@ -28,16 +28,8 @@ describe("faceted operations skin", () => {
     }
   });
 
-  test("sets leaf cut depths, since a wrapper override of the --kb-facet-cut alias stops there", () => {
-    expect(skin).not.toHaveProperty("--kb-facet-cut");
-    expect(skin).toHaveProperty(tokens.facet["cut-start"]);
-    expect(skin).toHaveProperty(tokens.facet["cut-end"]);
-  });
-
-  test("lights the chamfers, the top edge and the header divider", () => {
-    for (const key of ["cut-edge", "highlight", "divider"] as const) {
-      expect(skin, key).toHaveProperty(tokens.facet[key]);
-    }
+  test("sets no cut-corner geometry: the owner dropped cuts for rounded planes", () => {
+    for (const key of Object.keys(skin)) expect(key, key).not.toMatch(/^--kb-facet-cut/);
   });
 
   test("rounds controls into pills and dialogs into soft slabs", () => {

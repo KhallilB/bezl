@@ -1,8 +1,8 @@
 # UI styling: skins are token overrides
 
-Bezl's look, Faceted Operations, lives in `src/ui/skin/`. It is a set of kbui component custom properties applied inline on one wrapper by `FacetedOperationsSkin`: the `--kb-facet-*` and `--kb-status-*` groups, plus `--kb-button-radius` and `--kb-dialog-radius` so controls share the facets' tight geometry. Every value points at a kbui semantic token (`var(--kb-color-*)`, `var(--kb-space-*)`, `var(--kb-radius-*)`), so light and dark both stay valid and contrast stays kbui's problem. `src/ui/skin/faceted-operations.test.tsx` enforces this.
+Bezl's look, Faceted Operations, lives in `src/ui/skin/`. It is a set of kbui component custom properties applied inline on one wrapper by `FacetedOperationsSkin`: the `--kb-facet-*` and `--kb-status-*` groups, plus `--kb-button-radius` and `--kb-dialog-radius` so controls share the rounded geometry. Every value points at a kbui semantic token (`var(--kb-color-*)`, `var(--kb-space-*)`, `var(--kb-radius-*)`), so light and dark both stay valid and contrast stays kbui's problem. `src/ui/skin/faceted-operations.test.tsx` enforces this.
 
-Set leaf tokens, never aliases. kbui resolves an alias such as `--kb-facet-cut-start: var(--kb-facet-cut)` at `:root`, so overriding `--kb-facet-cut` on the wrapper changes nothing. Set `--kb-facet-cut-start` and `--kb-facet-cut-end` instead.
+Set the component token you mean. kbui resolves an alias at `:root`, so a wrapper override of the token it points at (for example `--kb-color-surface` behind `--kb-facet-background`) does not reach the alias.
 
 Overlays portal into the skin wrapper (`usePortalRoot`), so the stop dialog gets the skin too.
 
