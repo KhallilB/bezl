@@ -2,28 +2,47 @@ import { readFile } from "node:fs/promises";
 import { tokens } from "@kbui/tokens";
 import { render } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
-import { FacetedOperationsSkin } from "./FacetedOperationsSkin";
+import { FacetedOperationsSkin, usePortalRoot } from "./FacetedOperationsSkin";
 import { facetedOperations } from "./faceted-operations";
 
-const documented = new Set<string>([
-  ...Object.values(tokens.facet),
-  ...Object.values(tokens.status),
-]);
-const semantic = new Set<string>([...Object.values(tokens.color), ...Object.values(tokens.space)]);
+const documented = new Set<string>(
+  [tokens.facet, tokens.status, tokens.button, tokens.dialog].flatMap((g) => Object.values(g)),
+);
+const semantic = new Set<string>(
+  [tokens.color, tokens.space, tokens.radius].flatMap((g) => Object.values(g)),
+);
+const skin: Record<string, string> = facetedOperations;
 
 describe("faceted operations skin", () => {
-  test("sets documented --kb-facet-* and --kb-status-* properties only", () => {
-    const keys = Object.keys(facetedOperations);
+  test("sets documented facet, status, button and dialog properties only", () => {
+    const keys = Object.keys(skin);
     expect(keys.length).toBeGreaterThan(0);
     for (const key of keys) expect(documented.has(key), key).toBe(true);
   });
 
-  test("expresses every value through a kbui semantic color or space token", () => {
-    for (const [key, value] of Object.entries(facetedOperations)) {
-      const match = /^var\((--kb-(?:color|space)-[a-z0-9-]+)\)$/.exec(value);
+  test("expresses every value through a kbui semantic color, space or radius token", () => {
+    for (const [key, value] of Object.entries(skin)) {
+      const match = /^var\((--kb-(?:color|space|radius)-[a-z0-9-]+)\)$/.exec(value);
       expect(match, `${key}: ${value}`).not.toBeNull();
       expect(semantic.has(match?.[1] ?? ""), `${key}: ${value}`).toBe(true);
     }
+  });
+
+  test("sets leaf cut depths, since a wrapper override of the --kb-facet-cut alias stops there", () => {
+    expect(skin).not.toHaveProperty("--kb-facet-cut");
+    expect(skin).toHaveProperty(tokens.facet["cut-start"]);
+    expect(skin).toHaveProperty(tokens.facet["cut-end"]);
+  });
+
+  test("lights the chamfers, the top edge and the header divider", () => {
+    for (const key of ["cut-edge", "highlight", "divider"] as const) {
+      expect(skin, key).toHaveProperty(tokens.facet[key]);
+    }
+  });
+
+  test("gives buttons and dialogs the facets' tight radius", () => {
+    expect(skin[tokens.button.radius]).toBe(`var(${tokens.radius.sm})`);
+    expect(skin[tokens.dialog.radius]).toBe(`var(${tokens.radius.sm})`);
   });
 
   test("uses no .kb-* selectors and no !important", async () => {
@@ -43,7 +62,7 @@ describe("faceted operations skin", () => {
     const scope = container.firstElementChild as HTMLElement;
     expect(scope).toHaveAttribute("data-skin", "faceted-operations");
     expect(scope.children).toHaveLength(1);
-    for (const [key, value] of Object.entries(facetedOperations)) {
+    for (const [key, value] of Object.entries(skin)) {
       expect(scope.style.getPropertyValue(key), key).toBe(value);
     }
   });
@@ -58,5 +77,19 @@ describe("faceted operations skin", () => {
     expect(scope.tagName).toBe("DIV");
     expect(scope).not.toHaveAttribute("data-skin");
     expect(scope.getAttribute("style")).toBeNull();
+  });
+
+  test.each([true, false])("exposes its wrapper as the portal root (enabled=%s)", (enabled) => {
+    let root: HTMLElement | null = null;
+    function Probe() {
+      root = usePortalRoot();
+      return null;
+    }
+    const { container } = render(
+      <FacetedOperationsSkin enabled={enabled}>
+        <Probe />
+      </FacetedOperationsSkin>,
+    );
+    expect(root).toBe(container.firstElementChild);
   });
 });

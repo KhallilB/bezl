@@ -1,22 +1,27 @@
 import type { tokens } from "@kbui/tokens";
 
-type FacetVar = (typeof tokens.facet)[keyof typeof tokens.facet];
-type StatusVar = (typeof tokens.status)[keyof typeof tokens.status];
-type SemanticRef = `var(--kb-${"color" | "space"}-${string})`;
+type Group = "facet" | "status" | "button" | "dialog";
+type ComponentVar = { [G in Group]: (typeof tokens)[G][keyof (typeof tokens)[G]] }[Group];
+type SemanticRef = `var(--kb-${"color" | "space" | "radius"}-${string})`;
 
 /**
- * Faceted Operations: matte planes on the page background, quiet seams,
- * one deeper cut, the running worker lifts to the surface color with an info seam.
- * Only kbui's documented facet and status properties, only semantic tokens, so both themes hold.
+ * Faceted Operations: surface planes lifted off the page, both corners cut with lit chamfers,
+ * info for the running worker, tight radii so buttons and dialogs share the geometry.
+ * Leaf tokens only: wrapper overrides do not flow through kbui aliases such as --kb-facet-cut.
  */
 export const facetedOperations = {
-  "--kb-facet-background": "var(--kb-color-bg)",
-  "--kb-facet-background-active": "var(--kb-color-surface)",
+  "--kb-facet-background": "var(--kb-color-surface)",
   "--kb-facet-border": "var(--kb-color-border)",
   "--kb-facet-border-active": "var(--kb-color-info)",
-  "--kb-facet-cut": "var(--kb-space-5)",
-  "--kb-facet-padding": "var(--kb-space-5)",
-  "--kb-facet-rail": "var(--kb-color-muted)",
+  "--kb-facet-cut-start": "var(--kb-space-5)",
+  "--kb-facet-cut-end": "var(--kb-space-3)",
+  "--kb-facet-cut-edge": "var(--kb-color-info)",
+  "--kb-facet-highlight": "var(--kb-color-border)",
+  "--kb-facet-divider": "var(--kb-color-border)",
+  "--kb-facet-padding": "var(--kb-space-4)",
+  "--kb-facet-rail": "var(--kb-color-border)",
   "--kb-facet-rail-active": "var(--kb-color-info)",
   "--kb-status-running": "var(--kb-color-info)",
-} satisfies Partial<Record<FacetVar | StatusVar, SemanticRef>>;
+  "--kb-button-radius": "var(--kb-radius-sm)",
+  "--kb-dialog-radius": "var(--kb-radius-sm)",
+} satisfies Partial<Record<ComponentVar, SemanticRef>>;

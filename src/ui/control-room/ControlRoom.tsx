@@ -1,6 +1,8 @@
 import { Button, Dialog, Facet, Status } from "@kbui/react";
-import { StateIcon } from "./icons";
-import { presentation, type WorkerView } from "./model";
+import { usePortalRoot } from "../skin/FacetedOperationsSkin";
+import "./control-room.css";
+import { Mark, StateIcon } from "./icons";
+import { presentation, roleLabel, states, type WorkerView } from "./model";
 
 export type ControlRoomProps = {
   workers: WorkerView[];
@@ -11,10 +13,12 @@ export type ControlRoomProps = {
 type WorkerProps = { worker: WorkerView; onStop: ControlRoomProps["onStop"] };
 
 function StopWorker({ worker, onStop }: WorkerProps) {
+  const portal = usePortalRoot();
   return (
     <Dialog>
       <Dialog.Trigger render={<Button variant="secondary" size="sm" />}>Stop</Dialog.Trigger>
       <Dialog.Content
+        {...(portal ? { container: portal } : {})}
         title={`Stop ${worker.name}?`}
         description="The worker's process ends now. Its output so far stays in the evidence log."
       >
@@ -32,11 +36,16 @@ function StopWorker({ worker, onStop }: WorkerProps) {
 function WorkerFacet({ worker, onStop }: WorkerProps) {
   const view = presentation[worker.state];
   const headingId = `worker-${worker.id}-title`;
+  const meta = [worker.branch, worker.elapsed].filter(Boolean).join(" · ");
   return (
-    <Facet tone={view.tone} cut={view.cut} rail={view.rail} aria-labelledby={headingId}>
+    <Facet tone={view.tone} cut="both" rail={view.rail} aria-labelledby={headingId}>
       <Facet.Header>
-        <h2 id={headingId}>{worker.name}</h2>
+        <div className="cr-heading">
+          <p className="cr-eyebrow">{`${roleLabel[worker.role]} · ${worker.provider}`}</p>
+          <h2 id={headingId}>{worker.name}</h2>
+        </div>
         <Status
+          appearance="chip"
           tone={view.status.tone}
           icon={<StateIcon state={worker.state} />}
           live={view.status.live}
@@ -44,48 +53,65 @@ function WorkerFacet({ worker, onStop }: WorkerProps) {
           {view.status.label}
         </Status>
       </Facet.Header>
-      <Facet.Body>
-        <p style={{ margin: 0 }}>{worker.summary}</p>
+      <Facet.Body className="cr-body">
+        <p className="cr-line">{worker.summary}</p>
         {worker.transcript ? (
-          <pre
-            style={{
-              margin: "var(--kb-space-3) 0 0",
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere",
-              font: "var(--kb-size-sm) / 1.5 var(--kb-font-mono)",
-              color: "var(--kb-color-muted)",
-            }}
-          >
-            {worker.transcript}
-          </pre>
+          <Facet tone="sunken" cut="end" aria-label={`${worker.name} output`}>
+            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable output must take keyboard focus to scroll. */}
+            <pre className="cr-transcript" tabIndex={0}>
+              {worker.transcript}
+            </pre>
+          </Facet>
         ) : null}
       </Facet.Body>
-      {view.stoppable ? (
+      {meta || view.stoppable ? (
         <Facet.Footer>
-          <StopWorker worker={worker} onStop={onStop} />
+          {meta ? <span className="cr-meta">{meta}</span> : null}
+          {view.stoppable ? <StopWorker worker={worker} onStop={onStop} /> : null}
         </Facet.Footer>
       ) : null}
     </Facet>
   );
 }
 
+function Summary({ workers }: { workers: WorkerView[] }) {
+  const counts = states
+    .map((state) => [state, workers.filter((w) => w.state === state).length] as const)
+    .filter(([, n]) => n > 0);
+  return (
+    <ul className="cr-summary" aria-label="Workers by state">
+      {counts.map(([state, n]) => (
+        <li key={state}>
+          <Status
+            appearance="chip"
+            compact
+            tone={presentation[state].status.tone}
+            icon={<StateIcon state={state} />}
+          >
+            {`${n} ${state}`}
+          </Status>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function ControlRoom({ workers, onStop }: ControlRoomProps) {
   return (
-    <main
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-        gap: "var(--kb-space-4)",
-        padding: "var(--kb-space-4)",
-        minHeight: "100vh",
-        background: "var(--kb-color-bg)",
-        color: "var(--kb-color-fg)",
-        fontFamily: "var(--kb-font-sans)",
-      }}
-    >
-      {workers.map((worker) => (
-        <WorkerFacet key={worker.id} worker={worker} onStop={onStop} />
-      ))}
-    </main>
+    <div className="cr-room">
+      <header className="cr-bar">
+        <span className="cr-brand">
+          <Mark />
+          Bezl
+        </span>
+        <h1 className="cr-title">Control Room</h1>
+        <Summary workers={workers} />
+      </header>
+      <main className="cr-grid">
+        {workers.map((worker) => (
+          <WorkerFacet key={worker.id} worker={worker} onStop={onStop} />
+        ))}
+      </main>
+    </div>
   );
 }

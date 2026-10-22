@@ -83,6 +83,26 @@ for (const theme of themes) {
   }
 }
 
+test.each([800, 1200])(
+  "banner and grid fit a %ipx window without horizontal overflow",
+  async (width) => {
+    const el = await mount(
+      <div style={{ width }}>
+        <FacetedOperationsSkin>
+          <ControlRoom workers={running} onStop={() => {}} />
+        </FacetedOperationsSkin>
+      </div>,
+      "dark",
+    );
+    const room = el.querySelector<HTMLElement>(".cr-room") as HTMLElement;
+    expect(room.scrollWidth).toBeLessThanOrEqual(width);
+    const summary = el.querySelector<HTMLElement>(".cr-summary") as HTMLElement;
+    expect(summary.getBoundingClientRect().right).toBeLessThanOrEqual(
+      room.getBoundingClientRect().right,
+    );
+  },
+);
+
 test("skinned facet planes clip only the decorative pseudo-element, never the root", async () => {
   const el = await mount(
     <FacetedOperationsSkin>
