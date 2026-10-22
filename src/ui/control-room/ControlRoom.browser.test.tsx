@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, test } from "vitest";
 import "@kbui/css/styles.css";
-import { FacetedOperationsSkin } from "../skin/FacetedOperationsSkin";
+import { AppTheme } from "../theme/AppTheme";
 import { ControlRoom } from "./ControlRoom";
 import { blocked, idle, longContent, running, task } from "./fixtures";
 
@@ -33,25 +33,26 @@ function unmount() {
 
 afterEach(unmount);
 
-/** Markup minus the skin's inline style: what the skin must never change. */
+/** Markup minus the theme's inline style: what the theme must never change. */
 function structure(el: HTMLElement) {
   const clone = el.cloneNode(true) as HTMLElement;
   for (const node of clone.querySelectorAll("[style]")) node.removeAttribute("style");
-  for (const node of clone.querySelectorAll("[data-skin]")) node.removeAttribute("data-skin");
+  for (const node of clone.querySelectorAll("[data-app-theme]"))
+    node.removeAttribute("data-app-theme");
   // Base UI ids are per-mount counters, not structure.
   return clone.innerHTML.replaceAll(/base-ui-_r_[0-9a-z]+_/g, "base-ui-id");
 }
 
 for (const theme of themes) {
   for (const [name, workers] of Object.entries(scenarios)) {
-    for (const skinned of [false, true]) {
-      const label = `${name} ${theme} ${skinned ? "skinned" : "unskinned"}`;
+    for (const themed of [false, true]) {
+      const label = `${name} ${theme} ${themed ? "themed" : "unthemed"}`;
       describe(label, () => {
         test("passes the accessibility scan", async () => {
           const el = await mount(
-            <FacetedOperationsSkin enabled={skinned}>
+            <AppTheme enabled={themed}>
               <ControlRoom task={task} workers={workers} onStop={() => {}} />
-            </FacetedOperationsSkin>,
+            </AppTheme>,
             theme,
           );
           const result = await axe.run(el);
@@ -60,21 +61,21 @@ for (const theme of themes) {
       });
     }
 
-    test(`${name} ${theme}: removing the skin changes values, never structure`, async () => {
+    test(`${name} ${theme}: removing the app theme changes values, never structure`, async () => {
       const on = structure(
         await mount(
-          <FacetedOperationsSkin>
+          <AppTheme>
             <ControlRoom task={task} workers={workers} onStop={() => {}} />
-          </FacetedOperationsSkin>,
+          </AppTheme>,
           theme,
         ),
       );
       unmount();
       const off = structure(
         await mount(
-          <FacetedOperationsSkin enabled={false}>
+          <AppTheme enabled={false}>
             <ControlRoom task={task} workers={workers} onStop={() => {}} />
-          </FacetedOperationsSkin>,
+          </AppTheme>,
           theme,
         ),
       );
@@ -88,9 +89,9 @@ test.each([800, 1200])(
   async (width) => {
     const el = await mount(
       <div style={{ width }}>
-        <FacetedOperationsSkin>
+        <AppTheme>
           <ControlRoom task={task} workers={running} onStop={() => {}} />
-        </FacetedOperationsSkin>
+        </AppTheme>
       </div>,
       "dark",
     );
@@ -117,11 +118,11 @@ test("orbit labels stay inside the drawing", async () => {
   }
 });
 
-test("skinned panel planes clip only the decorative pseudo-element, never the root", async () => {
+test("themed panel planes clip only the decorative pseudo-element, never the root", async () => {
   const el = await mount(
-    <FacetedOperationsSkin>
+    <AppTheme>
       <ControlRoom task={task} workers={running} onStop={() => {}} />
-    </FacetedOperationsSkin>,
+    </AppTheme>,
     "dark",
   );
   for (const panel of el.querySelectorAll<HTMLElement>(".kb-panel")) {

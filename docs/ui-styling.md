@@ -1,16 +1,16 @@
-# UI styling: skins are token overrides
+# UI styling: the app theme is token overrides
 
-Bezl's look, Faceted Operations, lives in `src/ui/skin/`. It is a set of kbui component custom properties applied inline on one wrapper by `FacetedOperationsSkin`: the `--kb-panel-*` and `--kb-status-*` groups, plus `--kb-button-radius` and `--kb-dialog-radius` so controls share the rounded geometry. Every value points at a kbui semantic token (`var(--kb-color-*)`, `var(--kb-space-*)`, `var(--kb-radius-*)`), so light and dark both stay valid and contrast stays kbui's problem. `src/ui/skin/faceted-operations.test.tsx` enforces this.
+Bezl's look lives in `src/ui/theme/`. It is a set of kbui component custom properties applied inline on one wrapper by `AppTheme`: the `--kb-panel-*` and `--kb-status-*` groups, plus `--kb-button-radius` and `--kb-dialog-radius` so controls share the rounded geometry. Every value points at a kbui semantic token (`var(--kb-color-*)`, `var(--kb-space-*)`, `var(--kb-radius-*)`), so light and dark both stay valid and contrast stays kbui's problem. `src/ui/theme/AppTheme.test.tsx` enforces this.
 
 Set the component token you mean. kbui resolves an alias at `:root`, so a wrapper override of the token it points at (for example `--kb-color-surface` behind `--kb-panel-background`) does not reach the alias.
 
-Overlays portal into the skin wrapper (`usePortalRoot`), so the stop dialog gets the skin too.
+Overlays portal into the theme wrapper (`usePortalRoot`), so the stop dialog gets the theme too.
 
 Bezl's own elements (`.cr-*` in `src/ui/control-room/control-room.css`) are styled with kbui semantic tokens only. `src/ui/styles.test.ts` fails on a `.kb-*` selector, `!important`, a raw color, or a `--kb-*` override in any bezl stylesheet.
 
-Removing the skin (`enabled={false}`) must change values, never structure or behavior. `ControlRoom.browser.test.tsx` renders every Control Room state in light and dark, skinned and unskinned, runs axe, compares the markup of both, and checks that the banner fits 800 and 1200 px windows.
+Turning the theme off (`enabled={false}`) must change values, never structure or behavior. `ControlRoom.browser.test.tsx` renders every Control Room state in light and dark, with and without the theme, runs axe, compares the markup of both, and checks that the banner fits 800 and 1200 px windows.
 
-## Design language: Lit Room
+## Design language
 
 Owner decision (2026-10-22): the room is lit by the work, on rounded glass panels.
 
@@ -25,9 +25,9 @@ Preview a state with `?sample=idle|running|blocked|longContent`.
 
 ## When a style cannot be reached
 
-If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Output sits in `Panel.Well`. Skin values are kbui semantic tokens, `color-mix` of a semantic color toward transparent, or (backdrop only) a blur and saturate filter; `src/ui/skin/faceted-operations.test.tsx` enforces those three forms.
+If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Output sits in `Panel.Well`. Theme values are kbui semantic tokens, `color-mix` of a semantic color toward transparent, or (backdrop only) a blur and saturate filter; `src/ui/theme/AppTheme.test.tsx` enforces those three forms.
 
-kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/control-room/icons.tsx`) and 0010 (product skin is consumer-owned overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
+kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/control-room/icons.tsx`) and 0010 (the product look is consumer-owned token overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
 
 ## Installing kbui
 

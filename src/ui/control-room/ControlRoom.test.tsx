@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { FacetedOperationsSkin } from "../skin/FacetedOperationsSkin";
+import { AppTheme } from "../theme/AppTheme";
 import { ControlRoom } from "./ControlRoom";
 import { blocked, idle, longContent, running, task } from "./fixtures";
 
@@ -146,12 +146,12 @@ describe("ControlRoom", () => {
   });
 
   test.each([true, false])(
-    "opens the stop dialog inside the skin root (skin=%s)",
+    "opens the stop dialog inside the theme root (theme=%s)",
     async (enabled) => {
       const { container } = render(
-        <FacetedOperationsSkin enabled={enabled}>
+        <AppTheme enabled={enabled}>
           <ControlRoom task={task} workers={running} onStop={noop} />
-        </FacetedOperationsSkin>,
+        </AppTheme>,
       );
       await userEvent.click(screen.getByRole("button", { name: "Stop" }));
       const dialog = await screen.findByRole("dialog", { name: "Stop Worker B?" });

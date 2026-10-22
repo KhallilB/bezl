@@ -1,4 +1,4 @@
-/* Bezl's own elements only; kbui parts change through the skin's token overrides. */
+/* Bezl's own elements only; kbui parts change through the app theme's token overrides. */
 .cr-room {
   --cr-mono: "Geist Mono Variable", var(--kb-font-mono);
   --cr-glass: color-mix(in oklab, var(--kb-color-fg) 6%, transparent);

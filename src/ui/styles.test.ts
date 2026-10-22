@@ -19,7 +19,7 @@ async function cssFiles(dir: string): Promise<string[]> {
   return nested.flat();
 }
 
-// Bezl styles its own elements only; kbui looks change through the skin's token overrides.
+// Bezl styles its own elements only; kbui looks change through the app theme's token overrides.
 describe("bezl stylesheets", () => {
   test("exist", async () => {
     expect((await cssFiles(root)).length).toBeGreaterThan(0);

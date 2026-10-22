@@ -6,7 +6,7 @@ import { PtySpike, useSpikeConfig } from "./spike/PtySpike";
 import { ControlRoom } from "./ui/control-room/ControlRoom";
 import * as samples from "./ui/control-room/fixtures";
 import type { WorkerView } from "./ui/control-room/model";
-import { FacetedOperationsSkin } from "./ui/skin/FacetedOperationsSkin";
+import { AppTheme } from "./ui/theme/AppTheme";
 
 // Sample workers until the Rust domain projects real ones over IPC; ?sample= picks a state.
 function initialWorkers(): WorkerView[] {
@@ -25,7 +25,7 @@ export function App() {
   const [workers, setWorkers] = useState<WorkerView[]>(initialWorkers);
   if (cfg?.enabled) return <PtySpike config={cfg} />;
   return (
-    <FacetedOperationsSkin>
+    <AppTheme>
       <ControlRoom
         task={samples.task}
         workers={workers}
@@ -37,6 +37,6 @@ export function App() {
           )
         }
       />
-    </FacetedOperationsSkin>
+    </AppTheme>
   );
 }

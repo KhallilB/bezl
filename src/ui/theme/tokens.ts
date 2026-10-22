@@ -4,13 +4,13 @@ type Group = "panel" | "status" | "button" | "dialog";
 type ComponentVar = { [G in Group]: (typeof tokens)[G][keyof (typeof tokens)[G]] }[Group];
 type SemanticRef = `var(--kb-${"color" | "space" | "radius"}-${string})`;
 type Mix = `color-mix(in oklab, var(--kb-color-${string}) ${number}%, transparent)`;
-type SkinValue = SemanticRef | Mix | `blur(${string}`;
+type ThemeValue = SemanticRef | Mix | `blur(${string}`;
 
 /**
- * Lit Room: translucent rounded planes over a grainy floor; running and blocked workers cast
+ * App theme: translucent rounded planes over a grainy floor; running and blocked workers cast
  * their tone as light. Values mix kbui semantic colors so light and dark both hold.
  */
-export const facetedOperations = {
+export const themeTokens = {
   "--kb-panel-background": "color-mix(in oklab, var(--kb-color-surface) 62%, transparent)",
   "--kb-panel-backdrop": "blur(28px) saturate(150%)",
   "--kb-panel-sheen": "color-mix(in oklab, var(--kb-color-fg) 5%, transparent)",
@@ -30,4 +30,4 @@ export const facetedOperations = {
   "--kb-status-glow": "var(--kb-space-1)",
   "--kb-button-radius": "var(--kb-radius-full)",
   "--kb-dialog-radius": "var(--kb-radius-lg)",
-} satisfies Partial<Record<ComponentVar, SkinValue>>;
+} satisfies Partial<Record<ComponentVar, ThemeValue>>;

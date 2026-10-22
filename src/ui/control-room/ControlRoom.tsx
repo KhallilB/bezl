@@ -1,6 +1,6 @@
 import { Button, Dialog, Panel, Status } from "@kbui/react";
 import type { CSSProperties } from "react";
-import { usePortalRoot } from "../skin/FacetedOperationsSkin";
+import { usePortalRoot } from "../theme/AppTheme";
 import { ActivityTrace } from "./ActivityTrace";
 import "./control-room.css";
 import { StateIcon } from "./icons";
