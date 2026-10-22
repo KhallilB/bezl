@@ -21,7 +21,7 @@ Byte counts: every pane received the full payload plus a 1 to 7 byte surplus (ne
 - Peak memory misses 300 MB in both runs. The peak is transient and lands in WebKit's content and GPU processes, not in the Rust core. Idle returns to about 120 MB.
 - Without flow control the first attempt grew past 3 GB (unbounded Channel queue plus xterm write buffer). Flow control is not optional: the Rust reader blocks until xterm's write callback acks below the high-water mark (`spike_ack`).
 
-Recommendation: keep Tauri. Replace the 300 MB line with two trip-wires: idle under 150 MB, burst peak under 600 MB at the 1 MiB high-water mark. Revisit by trying the DOM or canvas renderer and a smaller scrollback if a real session breaches them. Electron would carry the same WebKit-class memory in Chromium plus Node.
+Decision (owner, 2026-10-22): keep Tauri. The 300 MB line is replaced by two trip-wires: idle under 150 MB, burst peak under 600 MB at the 1 MiB high-water mark (run 1 measured 789 MB at that mark, so the burst wire is a target the first real `TerminalPort` must meet, not a result already in hand). Revisit with the DOM or canvas renderer and a smaller scrollback if a real session breaches either wire. Electron would carry the same WebKit-class memory in Chromium plus Node.
 
 ## Findings that change the product
 

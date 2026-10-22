@@ -6,7 +6,7 @@ use std::io::{Read, Write};
 use std::sync::{Arc, Condvar, Mutex};
 
 // Bytes sent to the webview but not yet acked by xterm's write callback.
-const HIGH_WATER: usize = 256 * 1024;
+const HIGH_WATER: usize = 1 << 20;
 type Outstanding = Arc<(Mutex<usize>, Condvar)>;
 use tauri::State;
 use tauri::ipc::{Channel, InvokeResponseBody};
