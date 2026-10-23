@@ -101,6 +101,8 @@ Pointers need accurate code lookups. Bezl builds its own small module rather tha
 
 All are MIT or Apache-2.0. On LiveLeague, Go indexed in 9.6 seconds and TypeScript in 3.4 seconds once dependencies were installed. Indexes run per package config, since a single root config misses monorepo packages, and nothing is written into the worktree.
 
+Proposed in the [product vision](vision.md#context-you-can-read): use infigraph for these jobs instead of building the module. It already covers outlines (`skeleton`), callers and impact, changed symbols against a base (`detect-changes`), SCIP import and text search. On bezl's own branch, its raw output still listed local variables and markdown headings as changed symbols, and a TypeScript caller lookup came back empty, so Bezl would need to filter its output, reindex each worktree after every step, and import SCIP indexes. This is an open decision below, not a change of plan.
+
 ## Local models
 
 Spike 4 ran `gpt-oss:120b` on a 96 GB M2 Max. Through Codex it never answered: Codex's own prompt pushed the context past GPU memory. Called directly through Ollama's API with 2,758 prompt tokens it answered in 113.5 seconds, but missed the real defect and made two false findings. Local models are therefore used where their output is checked: summaries, sorting, drafts and candidate findings.
@@ -111,3 +113,4 @@ Spike 4 ran `gpt-oss:120b` on a 96 GB M2 Max. Through Codex it never answered: C
 - Whether workers run with an isolated config.
 - The third provider.
 - Whether to add OpenCode or Aider as runners for free cloud models.
+- Whether Code Facts uses infigraph instead of the module above, after a licence and packaging check.
