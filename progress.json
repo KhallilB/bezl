@@ -377,6 +377,45 @@
         }
       ],
       "commit": "15dd8e7"
+    },
+    {
+      "id": "2026-10-23-m0-foundation",
+      "subject": "m0-foundation",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Stack and interface foundation",
+      "passMark": "The three stack spikes have results, and the kbui adoption and app theme in bezl #1 and #3 are merged with their checks passing",
+      "result": "pass",
+      "summary": "The stack experiments have results, and kbui with the app theme is merged and its checks pass on main. The Claude reviewer probe still runs under M3.",
+      "measured": [
+        {
+          "label": "Stack spikes",
+          "value": "Terminal output partial, snapshots pass, Codex read-only pass"
+        },
+        {
+          "label": "Merged",
+          "value": "bezl #1 as 17b0dcf and #3 as 20f28ca"
+        },
+        {
+          "label": "Checks on main at 20f28ca",
+          "value": "bun run check exit 0: typecheck, Biome, 53 unit and 74 browser tests"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        },
+        {
+          "label": "App theme guard tests",
+          "path": "src/ui/theme/AppTheme.test.tsx"
+        },
+        {
+          "label": "Task screen browser tests",
+          "path": "src/ui/task/Task.browser.test.tsx"
+        }
+      ],
+      "commit": "20f28ca"
     }
   ]
 }
