@@ -17,6 +17,8 @@ export type Outcome = {
   usage: Record<string, Usage>;
   findings: RecordedFinding[];
   events: Event[];
+  // A review ran with writer and reviewer from one provider; scored apart.
+  sameProviderReview: boolean;
 };
 
 const MAX_DIFF_CHARS = 60_000;
@@ -112,7 +114,7 @@ function reviewBrief(task: Task, diff: string, checks: CheckResult[], candidates
 
 export async function runTask(task: Task, crew: Crew, runners: Record<string, Runner>, ws: Workspace): Promise<Outcome> {
   const { limits, roles } = crew;
-  const out: Outcome = { taskId: task.id, pattern: crew.pattern, status: "error", reason: "", rounds: 0, steps: 0, usage: {}, findings: [], events: [] };
+  const out: Outcome = { taskId: task.id, pattern: crew.pattern, status: "error", reason: "", rounds: 0, steps: 0, usage: {}, findings: [], events: [], sameProviderReview: false };
   const finish = (status: Status, reason: string) => {
     out.status = status;
     out.reason = reason;
@@ -155,6 +157,13 @@ export async function runTask(task: Task, crew: Crew, runners: Record<string, Ru
       const next = fallbacks.shift();
       if (!next) return finish("error", why);
       out.events.push({ kind: "fallback", round: out.rounds, binding: next.name, detail: `${writer.name} failed: ${why}` });
+      if (roles.reviewer && next.provider === roles.reviewer.provider)
+        out.events.push({
+          kind: "degraded",
+          round: out.rounds,
+          binding: next.name,
+          detail: `writer "${next.name}" shares provider "${next.provider}" with reviewer "${roles.reviewer.name}": the review is self-review`,
+        });
       writer = next;
     }
     if (answer.status === "blocked") return finish("blocked", answer.summary);
@@ -180,6 +189,7 @@ export async function runTask(task: Task, crew: Crew, runners: Record<string, Ru
       if (p.ok) candidates = cleanFindings((p.json as any)?.findings, limits);
     }
 
+    if (writer.provider === roles.reviewer.provider) out.sameProviderReview = true;
     const r = await call("reviewer", roles.reviewer, reviewBrief(task, diff, checks, candidates), false, REVIEW_SCHEMA);
     if (r === "capped") return finish("capped", "step cap reached");
     if (!r.ok) return finish("error", `reviewer failed: ${r.error}`);
