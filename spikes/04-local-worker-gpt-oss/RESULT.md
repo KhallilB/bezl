@@ -2,7 +2,7 @@
 
 Date: 2026-10-22. Question: can a local model, run through the official Codex CLI (`codex exec --oss --local-provider ollama`), serve as Bezl's third worker now that consumer Gemini CLI has ended?
 
-Verdict: **FAIL on this machine.** gpt-oss:120b never produced a response. The GPU ran out of memory on every request, at both 131k and 40k context. Cloud Codex passed the same review twice.
+Verdict: **FAIL on this machine.** Through Codex, gpt-oss:120b never produced a response: the GPU ran out of memory on every request, at both 131k and 40k context. Called directly through Ollama's API at 8k context it answered, but missed the real defect and reported two false findings. Cloud Codex passed the same review twice.
 
 ## Thresholds
 
@@ -42,10 +42,25 @@ error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory
 - 40k is near the floor: a trivial Codex call already sends about 23,000 input tokens, so a smaller context cannot hold Codex's own prompt.
 - The memory threshold was the wrong instrument. System free memory and swap stayed healthy while Metal refused the allocation. A future threshold should read GPU allocation failures from the Ollama log.
 
+## Follow-up: the same review through Ollama's API
+
+Same model, same prompt and schema, no tools, called with `POST /api/chat` at `num_ctx` 8192. Record in `results-direct-api.json`.
+
+| Measure | Value |
+|---|---|
+| Prompt tokens | 2,758, against about 26,000 through Codex |
+| Output tokens | 3,404 |
+| Wall time | 113.5 s, of which load 4.9 s, prompt 7.2 s, generation 101.4 s |
+| GPU memory | No error |
+| Review | FAIL. Missed the `:root` scoped-override defect. Two of four findings are false: it says `::after` lacks `clip-path` and `pointer-events: none`, but the diff sets both in the shared `.kb-facet::before, .kb-facet::after` rule. |
+
+Codex's own prompt, not the diff, is what pushed the context past GPU memory. Without tools the model fits, but on this task it is not a trustworthy reviewer.
+
 ## Findings that change the product
 
 - **A 120B local model cannot be a worker on a 96 GB Mac while other agents run.** Bezl cannot plan on it as the third provider.
 - **Codex's local mode has sharp edges.** It needs a model with reasoning support (devstral:24b was rejected earlier today), and it needs the exact `name:tag` of a local model or it tries to download it.
+- **A tool-free local call is feasible; a local agent is not.** For jobs with no tools, a direct API call needs a tenth of the context. Any local finding still needs confirmation by a test or a paid reviewer before a writer acts on it.
 - **Failures are silent to the user.** Codex retried five times and exited 1 with a generic stream error. The cause appeared only in Ollama's server log. Bezl's preflight for a local worker must read that log or run a short canary request.
 
 ## Not tried
