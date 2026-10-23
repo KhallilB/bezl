@@ -10,7 +10,7 @@ Each milestone has a pass mark. The same pass mark sits in `progress.json` as a 
 
 | | Milestone | Status |
 |---|---|---|
-| M0 | Stack and UI foundation | Mostly done |
+| M0 | Stack and UI foundation | Done |
 | M1 | Crew test | Ready to run, blocked |
 | M2 | Domain core | Not started |
 | M3 | Providers and preflight | Not started |
@@ -33,7 +33,7 @@ What: the three stack spikes, and kbui with the app theme, shown on a Task scree
 
 Pass mark: the three spikes have results, and the kbui adoption and app theme in bezl #1 and #3 are merged with their checks passing.
 
-Left to do: merge bezl #1 and #3, and run the Claude reviewer probe.
+Done: bezl #1 and #3 merged on 2026-10-23, with checks passing on `main`. The Claude reviewer probe moves with spike 3 into M3.
 
 ### M1. Crew test
 
@@ -152,4 +152,4 @@ Rules:
 
 ## Recording progress
 
-When a milestone is checked, update its entry in `progress.json`: set the date, the result (`pass`, `partial` or `fail`), what was measured and the evidence path at the commit. Spikes add their own `experiment` entries the same way. The portfolio site builds its project page from this file.
+When a milestone is checked, add a new entry to `progress.json` with the same `subject`: the date, the result (`pass`, `partial` or `fail`), what was measured and the evidence path at the commit. Entries already on `main` are never edited; the latest entry for a subject is its current state. Spikes add their own `experiment` entries the same way. The portfolio site builds its project page from this file.
