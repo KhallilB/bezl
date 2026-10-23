@@ -34,7 +34,7 @@ runner = "claude-code"          # codex | claude-code | ollama
 [bindings.codex]
 runner = "codex"
 [bindings.local]
-runner = "ollama"               # localhost only, no key
+runner = "ollama"               # loopback endpoint, no key
 model = "gpt-oss:120b"
 context = 8192
 
@@ -42,10 +42,9 @@ context = 8192
 writer = "claude"               # must be an agent CLI
 reviewer = "codex"              # must be a different provider from the writer
 pre_reviewer = "local"          # needs a reviewer to confirm it
-fallback = ["codex"]            # writer replacement if the writer fails
 ```
 
-`trains_on_data = true` on a binding is refused unless `[policy] allow_training_data = true`. The pattern is derived: `single` (writer only), `pair`, or `propose-confirm`. See `crew.example.toml` and `crew.baseline.toml`.
+`trains_on_data = true` on a binding is refused unless `[policy] allow_training_data = true`. An endpoint off this machine is refused unless `[policy] allow_remote_endpoints = true`. `fallback = [...]` lists writer replacements; each must be an agent CLI from a different provider than the reviewer. The pattern is derived: `single` (writer only), `pair`, or `propose-confirm`. See `crew.example.toml` and `crew.baseline.toml`.
 
 ## Running
 

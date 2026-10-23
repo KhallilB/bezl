@@ -48,13 +48,13 @@ context = 8192
 writer = "claude"
 reviewer = "codex"
 pre_reviewer = "local"
-fallback = ["codex"]
 ```
 
 Bezl refuses a crew that breaks these rules:
 
 - The writer and any fallback must be an agent CLI, because only those have tools.
-- The reviewer must come from a different provider than the writer.
+- The reviewer must come from a different provider than the writer and every fallback, since a fallback becomes the writer.
+- A model endpoint must be on this machine (localhost, 127.x or [::1]) unless `[policy] allow_remote_endpoints = true`.
 - A pre-reviewer needs a reviewer to confirm its findings.
 - A model marked `trains_on_data` is refused unless `[policy] allow_training_data = true`.
 

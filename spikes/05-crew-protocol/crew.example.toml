@@ -23,4 +23,4 @@ context = 8192
 writer = "claude"
 reviewer = "codex"
 pre_reviewer = "local"
-fallback = ["codex"]
+# No fallback: a Codex fallback would leave Codex reviewing its own change.

@@ -31,6 +31,20 @@ const LIMIT_KEYS: [keyof Limits, string][] = [
   ["maxFindingChars", "max_finding_chars"],
 ];
 
+const LOOPBACK = /^(localhost|127(\.\d{1,3}){3}|\[::1\])$/;
+
+function endpointProblem(endpoint: string, allowRemote: boolean): string | undefined {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return "must be an http or https URL";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return "must be an http or https URL";
+  if (!allowRemote && !LOOPBACK.test(url.hostname))
+    return "is not on this machine; set policy.allow_remote_endpoints = true to use it";
+}
+
 // Two local models are distinct providers: diversity is per model, not per vendor.
 const providerOf = (runner: RunnerKind, model?: string) =>
   runner === "codex" ? "openai" : runner === "claude-code" ? "anthropic" : `ollama:${model}`;
@@ -46,6 +60,7 @@ export function loadCrew(toml: string): CrewResult {
   }
   const errors: string[] = [];
   const allowTraining = raw.policy?.allow_training_data === true;
+  const allowRemote = raw.policy?.allow_remote_endpoints === true;
 
   const limits = { ...DEFAULT_LIMITS };
   for (const [key, tomlKey] of LIMIT_KEYS) {
@@ -64,13 +79,16 @@ export function loadCrew(toml: string): CrewResult {
       continue;
     }
     if (b.runner === "ollama" && !b.model) errors.push(`binding "${name}": ollama needs a model`);
+    const endpoint = String(b.endpoint ?? "http://127.0.0.1:11434");
+    const problem = endpointProblem(endpoint, allowRemote);
+    if (problem) errors.push(`binding "${name}": endpoint "${endpoint}" ${problem}`);
     bindings.set(name, {
       name,
       runner: b.runner,
       provider: providerOf(b.runner, b.model),
       model: b.model,
       context: b.context,
-      endpoint: b.endpoint ?? "http://127.0.0.1:11434",
+      endpoint,
       trainsOnData: b.trains_on_data === true,
     });
   }
@@ -94,6 +112,10 @@ export function loadCrew(toml: string): CrewResult {
   for (const f of fallback) if (!isAgent(f)) errors.push(`fallback "${f.name}" must be an agent CLI (codex or claude-code)`);
   if (writer && reviewer && writer.provider === reviewer.provider)
     errors.push(`reviewer "${reviewer.name}" shares provider "${writer.provider}" with the writer`);
+  // A fallback becomes the writer, so the pair rule holds for it too.
+  for (const f of fallback)
+    if (reviewer && f.provider === reviewer.provider)
+      errors.push(`fallback "${f.name}" shares provider "${f.provider}" with reviewer "${reviewer.name}"`);
   if (roles.pre_reviewer !== undefined && roles.reviewer === undefined)
     errors.push("pre_reviewer needs a reviewer to confirm its findings");
   for (const b of [writer, reviewer, preReviewer, ...fallback])

@@ -184,7 +184,7 @@ describe("runTask", () => {
 
   test("a failing writer hands over to the fallback binding", async () => {
     const crew = crewOf(
-      '[bindings.w]\nrunner = "claude-code"\n[bindings.f]\nrunner = "codex"\n[bindings.r]\nrunner = "codex"\n[roles]\nwriter = "w"\nreviewer = "r"\nfallback = ["f"]\n',
+      '[bindings.w]\nrunner = "claude-code"\n[bindings.f]\nrunner = "claude-code"\n[bindings.r]\nrunner = "codex"\n[roles]\nwriter = "w"\nreviewer = "r"\nfallback = ["f"]\n',
     );
     const out = await run(crew, {
       w: scripted([() => ({ ok: false, error: "usage limit reached", usage: { input: 0, output: 0, cached: 0 } })]),

@@ -77,6 +77,41 @@ describe("loadCrew", () => {
     ).toContain('fallback "l" must be an agent CLI (codex or claude-code)');
   });
 
+  test("a fallback may not share the reviewer's provider", () => {
+    expect(
+      errorsOf(
+        '[bindings.claude]\nrunner = "claude-code"\n[bindings.codex]\nrunner = "codex"\n[roles]\nwriter = "claude"\nreviewer = "codex"\nfallback = ["codex"]\n',
+      ),
+    ).toContain('fallback "codex" shares provider "openai" with reviewer "codex"');
+  });
+
+  describe("endpoints", () => {
+    const local = (endpoint: string, policy = "") =>
+      `${policy}[bindings.a]\nrunner = "codex"\n[bindings.l]\nrunner = "ollama"\nmodel = "m"\nendpoint = "${endpoint}"\n[roles]\nwriter = "a"\nreviewer = "l"\n`;
+    const endpointErrors = (toml: string) => errorsOf(toml).filter((e) => e.includes("endpoint"));
+
+    test.each(["http://127.0.0.1:11434", "http://localhost:11434", "http://[::1]:11434", "http://127.0.0.2:8080"])(
+      "accepts loopback %s",
+      (url) => expect(endpointErrors(local(url))).toEqual([]),
+    );
+
+    test("refuses an endpoint off this machine", () => {
+      expect(endpointErrors(local("https://ollama.example.com"))).toEqual([
+        'binding "l": endpoint "https://ollama.example.com" is not on this machine; set policy.allow_remote_endpoints = true to use it',
+      ]);
+    });
+
+    test("allows a remote endpoint when the policy says so", () => {
+      expect(endpointErrors(local("https://ollama.example.com", "[policy]\nallow_remote_endpoints = true\n"))).toEqual([]);
+    });
+
+    test("refuses an endpoint that is not an http URL", () => {
+      expect(endpointErrors(local("127.0.0.1:11434"))).toEqual([
+        'binding "l": endpoint "127.0.0.1:11434" must be an http or https URL',
+      ]);
+    });
+  });
+
   test("limits must be positive integers", () => {
     expect(errorsOf('[limits]\nmax_rounds = 0\n[bindings.a]\nrunner = "codex"\n[roles]\nwriter = "a"\n')).toContain(
       "limits.max_rounds must be a positive integer",
