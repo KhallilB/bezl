@@ -1,0 +1,26 @@
+# Pair plus propose-and-confirm: local model flags, Codex confirms, Claude writes.
+[limits]
+max_rounds = 3
+max_steps = 8
+max_findings = 10
+max_finding_chars = 500
+
+[policy]
+allow_training_data = false
+
+[bindings.claude]
+runner = "claude-code"
+
+[bindings.codex]
+runner = "codex"
+
+[bindings.local]
+runner = "ollama"
+model = "gpt-oss:120b"
+context = 8192
+
+[roles]
+writer = "claude"
+reviewer = "codex"
+pre_reviewer = "local"
+fallback = ["codex"]
