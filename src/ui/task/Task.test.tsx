@@ -32,9 +32,16 @@ describe("Task", () => {
     expect(focused.closest("[data-focused]")).not.toBeNull();
     expect(screen.getByRole("region", { name: "Worker A" }).closest("[data-focused]")).toBeNull();
     expect(within(focused).getByText("04:12")).toBeVisible();
-    const progress = within(focused).getByRole("progressbar", { name: "Step 3 of 5: cargo check" });
+    expect(within(focused).getByText("04:12").closest(".kb-stat")).toHaveAttribute(
+      "data-size",
+      "display",
+    );
+    expect(within(focused).getByText("Elapsed")).toBeVisible();
+    const progress = within(focused).getByRole("progressbar", { name: "cargo check" });
+    expect(progress.closest(".kb-progress")).not.toBeNull();
     expect(progress).toHaveAttribute("aria-valuenow", "3");
     expect(progress).toHaveAttribute("aria-valuemax", "5");
+    expect(progress).toHaveAttribute("aria-valuetext", "Step 3 of 5");
     expect(focused.querySelector('svg[data-part="trace"]')).toHaveAttribute("aria-hidden", "true");
   });
 
@@ -57,7 +64,10 @@ describe("Task", () => {
   test("names each worker's role and provider above its title", () => {
     render(<Task task={task} workers={running} onStop={noop} />);
     const region = screen.getByRole("region", { name: "Worker B" });
-    expect(within(region).getByText("Primary · Codex · writes")).toBeVisible();
+    const eyebrow = within(region).getByText("Primary · Codex · writes");
+    expect(eyebrow).toBeVisible();
+    expect(eyebrow.closest(".kb-badge")).toHaveAttribute("data-appearance", "plain");
+    expect(eyebrow.closest(".kb-badge")).toHaveAttribute("data-mono");
     const reviewer = screen.getByRole("region", { name: "Worker A" });
     expect(within(reviewer).getByText("Reviewer · Claude Code · reads")).toBeVisible();
   });
@@ -114,10 +124,10 @@ describe("Task", () => {
   test("puts output in a labelled, keyboard-scrollable well", () => {
     render(<Task task={task} workers={longContent} onStop={noop} />);
     const well = screen.getByRole("region", { name: "Worker B output" });
-    expect(well).toHaveClass("kb-panel-well");
-    const scroller = well.querySelector("pre");
-    expect(scroller).toHaveAttribute("tabindex", "0");
-    expect(scroller?.textContent?.length ?? 0).toBeGreaterThan(400);
+    expect(well.closest(".kb-scrollarea")).not.toBeNull();
+    expect(well.closest(".kb-panel-well")).not.toBeNull();
+    expect(well).toHaveAttribute("tabindex", "0");
+    expect(well.textContent?.length ?? 0).toBeGreaterThan(400);
   });
 
   test("shows branch and elapsed time in an unfocused worker's footer", () => {

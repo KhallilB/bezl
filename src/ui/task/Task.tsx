@@ -1,5 +1,4 @@
-import { Button, Dialog, Panel, Status } from "@kbui/react";
-import type { CSSProperties } from "react";
+import { Badge, Button, Dialog, Panel, Progress, ScrollArea, Stat, Status } from "@kbui/react";
 import { usePortalRoot } from "../theme/AppTheme";
 import { ActivityTrace } from "./ActivityTrace";
 import "./task.css";
@@ -48,11 +47,10 @@ function StopWorker({ worker, onStop }: WorkerProps) {
 function Output({ worker }: { worker: WorkerView }) {
   if (!worker.transcript) return null;
   return (
-    <Panel.Well role="region" aria-label={`${worker.name} output`}>
-      {/* biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable output must take keyboard focus to scroll. */}
-      <pre className="task-transcript" tabIndex={0}>
-        {worker.transcript}
-      </pre>
+    <Panel.Well>
+      <ScrollArea label={`${worker.name} output`} maxHeight="12rem">
+        <pre className="task-transcript">{worker.transcript}</pre>
+      </ScrollArea>
     </Panel.Well>
   );
 }
@@ -62,29 +60,20 @@ function Readout({ worker }: { worker: WorkerView }) {
   return (
     <div className="task-readout">
       {worker.elapsed ? (
-        <p className="task-elapsed">
-          <span className="task-num">{worker.elapsed}</span>
-          <span className="task-unit">{worker.state === "blocked" ? "waiting" : "elapsed"}</span>
-        </p>
+        <Stat
+          size="display"
+          label={worker.state === "blocked" ? "Waiting" : "Elapsed"}
+          value={worker.elapsed}
+        />
       ) : null}
       {step ? (
-        <div className="task-step">
-          <span>
-            <b>{`Step ${step.index} of ${step.total}`}</b>
-            {` · ${step.label}`}
-          </span>
-          <div
-            className="task-progress"
-            role="progressbar"
-            aria-label={`Step ${step.index} of ${step.total}: ${step.label}`}
-            aria-valuemin={0}
-            aria-valuenow={step.index}
-            aria-valuemax={step.total}
-            style={{ "--task-progress": step.index / step.total } as CSSProperties}
-          >
-            <span />
-          </div>
-        </div>
+        <Progress
+          className="task-step"
+          label={step.label}
+          value={step.index}
+          max={step.total}
+          valueText={`Step ${step.index} of ${step.total}`}
+        />
       ) : null}
     </div>
   );
@@ -103,9 +92,9 @@ function WorkerPanel({ worker, onStop, focused }: WorkerProps & { focused: boole
       <Panel tone={view.tone} rail={view.rail} aria-labelledby={headingId}>
         <Panel.Header>
           <div className="task-heading">
-            <p className="task-eyebrow">
+            <Badge appearance="plain" mono className="task-eyebrow">
               {`${roleLabel[worker.role]} · ${worker.provider} · ${accessLabel[worker.role]}`}
-            </p>
+            </Badge>
             <h2 id={headingId}>{worker.name}</h2>
           </div>
           <Status
@@ -129,7 +118,10 @@ function WorkerPanel({ worker, onStop, focused }: WorkerProps & { focused: boole
         </Panel.Body>
         {meta || view.stoppable ? (
           <Panel.Footer>
-            {meta ? <span className="task-meta">{meta}</span> : null}
+            {meta ? (
+              // Branch names are case-sensitive; mono Badge uppercases, so meta stays plain text.
+              <span className="task-meta">{meta}</span>
+            ) : null}
             {view.stoppable ? <StopWorker worker={worker} onStop={onStop} /> : null}
           </Panel.Footer>
         ) : null}

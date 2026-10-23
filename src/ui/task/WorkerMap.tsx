@@ -51,10 +51,6 @@ export function WorkerMap({ task, workers }: { task: TaskView; workers: WorkerVi
       aria-label={describe(task, workers)}
     >
       <defs>
-        <radialGradient id="task-map-pool">
-          <stop offset="0" className="task-pool-in" />
-          <stop offset="1" className="task-pool-out" />
-        </radialGradient>
         <linearGradient id="task-map-write" x1="0" x2="1">
           <stop offset="0" className="task-write-from" />
           <stop offset="1" className="task-write-to" />
@@ -76,7 +72,7 @@ export function WorkerMap({ task, workers }: { task: TaskView; workers: WorkerVi
       ))}
       {placed.map(({ worker, x, y, side }) => (
         <g key={worker.id} className="task-node" data-node={worker.id} data-state={worker.state}>
-          <circle className="task-node-pool" cx={x} cy={y} r={64} fill="url(#task-map-pool)" />
+          <circle className="task-node-pool" cx={x} cy={y} r={34} />
           <circle className="task-node-ring" cx={x} cy={y} r={15} />
           <circle className="task-node-core" cx={x} cy={y} r={5} />
           <text

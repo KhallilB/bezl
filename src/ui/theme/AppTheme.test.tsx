@@ -6,7 +6,9 @@ import { AppTheme, usePortalRoot } from "./AppTheme";
 import { themeTokens } from "./tokens";
 
 const documented = new Set<string>(
-  [tokens.panel, tokens.status, tokens.button, tokens.dialog].flatMap((g) => Object.values(g)),
+  [tokens.panel, tokens.status, tokens.button, tokens.dialog, tokens.progress, tokens.stat].flatMap(
+    (g) => Object.values(g),
+  ),
 );
 const semantic = new Set<string>(
   [tokens.color, tokens.space, tokens.radius].flatMap((g) => Object.values(g)),
@@ -14,7 +16,7 @@ const semantic = new Set<string>(
 const values: Record<string, string> = themeTokens;
 
 describe("app theme", () => {
-  test("sets documented panel, status, button and dialog properties only", () => {
+  test("sets documented panel, status, button, dialog, progress and stat properties only", () => {
     const keys = Object.keys(values);
     expect(keys.length).toBeGreaterThan(0);
     for (const key of keys) expect(documented.has(key), key).toBe(true);
@@ -24,9 +26,14 @@ describe("app theme", () => {
     const ref = /^var\((--kb-(?:color|space|radius)-[a-z0-9-]+)\)$/;
     const mix = /^color-mix\(in oklab, var\((--kb-color-[a-z0-9-]+)\) \d{1,2}%, transparent\)$/;
     const filter = /^(?:(?:blur\(\d+px\)|saturate\(\d+%\)) ?)+$/;
+    const weight = /^[1-9]00$/;
     for (const [key, value] of Object.entries(values)) {
       if (key === tokens.panel.backdrop) {
         expect(value, key).toMatch(filter);
+        continue;
+      }
+      if (key.endsWith("-weight")) {
+        expect(value, key).toMatch(weight);
         continue;
       }
       const token = ref.exec(value)?.[1] ?? mix.exec(value)?.[1];
@@ -50,6 +57,15 @@ describe("app theme", () => {
     expect(values).toHaveProperty(tokens.panel.radius);
     expect(values[tokens.status.radius]).toBe(`var(${tokens.radius.full})`);
     expect(values).toHaveProperty(tokens.status.glow);
+  });
+
+  test("fills step progress with info light", () => {
+    expect(values[tokens.progress.fill]).toBe(`var(${tokens.color.info})`);
+    expect(values).toHaveProperty(tokens.progress.glow);
+  });
+
+  test("sets headline numerals light", () => {
+    expect(values[tokens.stat["display-weight"]]).toBe("300");
   });
 
   test("rounds controls into pills and dialogs into soft slabs", () => {

@@ -118,6 +118,33 @@ test("worker map labels stay inside the drawing", async () => {
   }
 });
 
+test.each(["light", "dark"] as const)(
+  "worker map pools glow in the node's own color (%s)",
+  async (theme) => {
+    const el = await mount(<Task task={task} workers={running} onStop={() => {}} />, theme);
+    const pool = el.querySelector<SVGElement>('[data-node="b"] .task-node-pool') as SVGElement;
+    const ring = el.querySelector<SVGElement>('[data-node="b"] .task-node-ring') as SVGElement;
+    expect(getComputedStyle(pool).fill).toBe(getComputedStyle(ring).stroke);
+  },
+);
+
+test("branch names keep their case in footers", async () => {
+  const el = await mount(
+    <AppTheme>
+      <Task task={task} workers={running} onStop={() => {}} />
+    </AppTheme>,
+    "dark",
+  );
+  const footers = [...el.querySelectorAll<HTMLElement>(".kb-panel-footer")];
+  const meta = footers.flatMap((f) =>
+    [...f.querySelectorAll<HTMLElement>("*")].filter((n) =>
+      n.childNodes[0]?.textContent?.includes("feat/policy-engine"),
+    ),
+  );
+  expect(meta.length).toBeGreaterThan(0);
+  for (const node of meta) expect(getComputedStyle(node).textTransform).toBe("none");
+});
+
 test("themed panel planes clip only the decorative pseudo-element, never the root", async () => {
   const el = await mount(
     <AppTheme>

@@ -1,10 +1,10 @@
 import type { tokens } from "@kbui/tokens";
 
-type Group = "panel" | "status" | "button" | "dialog";
+type Group = "panel" | "status" | "button" | "dialog" | "progress" | "stat";
 type ComponentVar = { [G in Group]: (typeof tokens)[G][keyof (typeof tokens)[G]] }[Group];
 type SemanticRef = `var(--kb-${"color" | "space" | "radius"}-${string})`;
 type Mix = `color-mix(in oklab, var(--kb-color-${string}) ${number}%, transparent)`;
-type ThemeValue = SemanticRef | Mix | `blur(${string}`;
+type ThemeValue = SemanticRef | Mix | `blur(${string}` | `${number}00`;
 
 /**
  * App theme: translucent rounded planes over a grainy floor; running and blocked workers cast
@@ -25,6 +25,10 @@ export const themeTokens = {
   "--kb-panel-well-radius": "var(--kb-radius-lg)",
   "--kb-panel-rail": "var(--kb-color-border)",
   "--kb-panel-rail-active": "var(--kb-color-info)",
+  "--kb-progress-track": "color-mix(in oklab, var(--kb-color-fg) 12%, transparent)",
+  "--kb-progress-fill": "var(--kb-color-info)",
+  "--kb-progress-glow": "var(--kb-space-2)",
+  "--kb-stat-display-weight": "300",
   "--kb-status-running": "var(--kb-color-info)",
   "--kb-status-radius": "var(--kb-radius-full)",
   "--kb-status-glow": "var(--kb-space-1)",

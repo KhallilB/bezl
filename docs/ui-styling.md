@@ -1,6 +1,6 @@
 # UI styling: the app theme is token overrides
 
-Bezl's look lives in `src/ui/theme/`. It is a set of kbui component custom properties applied inline on one wrapper by `AppTheme`: the `--kb-panel-*` and `--kb-status-*` groups, plus `--kb-button-radius` and `--kb-dialog-radius` so controls share the rounded geometry. Every value points at a kbui semantic token (`var(--kb-color-*)`, `var(--kb-space-*)`, `var(--kb-radius-*)`), so light and dark both stay valid and contrast stays kbui's problem. `src/ui/theme/AppTheme.test.tsx` enforces this.
+Bezl's look lives in `src/ui/theme/`. It is a set of kbui component custom properties applied inline on one wrapper by `AppTheme`: the `--kb-panel-*`, `--kb-status-*`, `--kb-progress-*` and `--kb-stat-*` groups, plus `--kb-button-radius` and `--kb-dialog-radius` so controls share the rounded geometry. Every value points at a kbui semantic token (`var(--kb-color-*)`, `var(--kb-space-*)`, `var(--kb-radius-*)`), so light and dark both stay valid and contrast stays kbui's problem. `src/ui/theme/AppTheme.test.tsx` enforces this.
 
 Set the component token you mean. kbui resolves an alias at `:root`, so a wrapper override of the token it points at (for example `--kb-color-surface` behind `--kb-panel-background`) does not reach the alias.
 
@@ -25,7 +25,9 @@ Preview a state with `?sample=idle|running|blocked|longContent`.
 
 ## When a style cannot be reached
 
-If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Output sits in `Panel.Well`. Theme values are kbui semantic tokens, `color-mix` of a semantic color toward transparent, or (backdrop only) a blur and saturate filter; `src/ui/theme/AppTheme.test.tsx` enforces those three forms.
+If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Output sits in `Panel.Well`. Theme values are kbui semantic tokens, `color-mix` of a semantic color toward transparent, a blur and saturate filter (backdrop only), or a font weight (`*-weight` only); `src/ui/theme/AppTheme.test.tsx` enforces those forms.
+
+The Task screen uses kbui's `Progress` (step), `Stat` (elapsed time), plain mono `Badge` (role, provider, access) and `ScrollArea` (output, inside `Panel.Well`). Branch names in footers stay plain mono text: mono `Badge` uppercases, and branch names are case-sensitive. The worker map and activity trace are bezl's own.
 
 kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/task/icons.tsx`) and 0010 (the product look is consumer-owned token overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
 
