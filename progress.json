@@ -128,7 +128,7 @@
       "subject": "pty-memory",
       "date": "2026-10-22",
       "kind": "experiment",
-      "title": "Terminal memory trip-wires",
+      "title": "Terminal memory limits",
       "passMark": "Idle under 150 MB, and burst peak under 600 MB at the 1 MiB high-water mark, in the real TerminalPort",
       "result": "not-run",
       "summary": "Will check that the real terminal stays within new memory limits, both at rest and during heavy output.",
@@ -177,10 +177,10 @@
       "subject": "crew-harness",
       "date": "2026-10-22",
       "kind": "tests",
-      "title": "Crew protocol test harness",
+      "title": "A test bench for agent crews",
       "passMark": "Every harness behaviour is proven by a test that failed first, and the typecheck is clean",
       "result": "pass",
-      "summary": "The harness that runs the crew test validates crew files, runs each task in its own worktree, stops loops and scores against one agent alone.",
+      "summary": "It checks crew setups, gives each task its own copy of the code, stops runaway loops and compares crews with one agent.",
       "measured": [
         {
           "label": "Tests",
@@ -204,10 +204,10 @@
       "subject": "m0-foundation",
       "date": "2026-10-22",
       "kind": "milestone",
-      "title": "M0: stack and UI foundation",
+      "title": "Stack and interface foundation",
       "passMark": "The three stack spikes have results, and the Task screen is merged with its checks passing",
       "result": "partial",
-      "summary": "The stack spikes have results and the Task screen runs on kbui 0.4.0, but the screen is not merged yet.",
+      "summary": "The stack experiments have results and the task screen runs on kbui 0.4.0, but it is not merged yet.",
       "measured": [
         {
           "label": "Stack spikes",
@@ -231,7 +231,7 @@
       "subject": "m1-crew-test",
       "date": "2026-10-22",
       "kind": "experiment",
-      "title": "M1: crew test",
+      "title": "Crew test",
       "passMark": "4 of 5 tasks green with only a merge from the operator, no cap or loop stops, crew tokens at most twice one agent alone, and at least one real defect caught in review",
       "result": "not-run",
       "summary": "Will test whether a writer and a reviewer coordinated by Bezl beat one agent working alone.",
@@ -249,10 +249,10 @@
       "subject": "m2-domain-core",
       "date": "2026-10-22",
       "kind": "milestone",
-      "title": "M2: domain core",
+      "title": "The core task rules",
       "passMark": "Tests cover the writer lease, every state transition and rebuilding a task from its log, and a second writer on a worktree is refused",
       "result": "not-run",
-      "summary": "Will build the task rules in Rust: one writer per worktree, events in an append-only log.",
+      "summary": "Will build the task rules in Rust: one writer per copy of the code, and a log that is only ever added to.",
       "measured": [],
       "evidence": [
         {
@@ -267,10 +267,10 @@
       "subject": "m3-providers",
       "date": "2026-10-22",
       "kind": "milestone",
-      "title": "M3: providers and preflight",
+      "title": "Which assistants are ready",
       "passMark": "The Providers screen shows real preflight results for every installed CLI, every provider Bezl offers has a read-only probe result, and spikes/03-reviewer-readonly is deleted with its findings in docs/spikes",
       "result": "not-run",
-      "summary": "Will show which agent CLIs are installed, signed in, and how far each can be trusted.",
+      "summary": "Will show which assistants are installed and signed in, and how far each can be trusted.",
       "measured": [],
       "evidence": [
         {
@@ -285,7 +285,7 @@
       "subject": "m4-live-terminals",
       "date": "2026-10-22",
       "kind": "milestone",
-      "title": "M4: live terminals",
+      "title": "Live terminals",
       "passMark": "Three panes stream 20 MB each with no lost bytes, idle memory under 150 MB and bursts under 600 MB, and spikes 1 and 2 are deleted, including spike_pty.rs and src/spike, with their findings in docs/spikes",
       "result": "not-run",
       "summary": "Will stream real agent sessions into Task panels within the memory limits.",
@@ -303,10 +303,10 @@
       "subject": "m5-first-task",
       "date": "2026-10-22",
       "kind": "milestone",
-      "title": "M5: first real task, end to end",
+      "title": "A first real task, start to finish",
       "passMark": "A real task finishes with a writer and a read-only reviewer, one approval is answered in the app, and the evidence screen shows every event and snapshot",
       "result": "not-run",
-      "summary": "Will run a real task through Tasks, Task, Approvals and Evidence.",
+      "summary": "Will take a real task through every screen, from setup to approval and evidence.",
       "measured": [],
       "evidence": [
         {
@@ -321,10 +321,10 @@
       "subject": "m6-crew-in-bezl",
       "date": "2026-10-22",
       "kind": "milestone",
-      "title": "M6: Crew protocol in Bezl",
+      "title": "Crews inside Bezl",
       "passMark": "The five crew-test tasks, run inside Bezl, match or beat the harness results on every threshold, and spikes 4 and 5 are deleted with their findings in docs/spikes",
       "result": "not-run",
-      "summary": "Will move the Crew protocol into Bezl, if the crew test passes.",
+      "summary": "Will build crews into Bezl, if the crew test passes.",
       "measured": [],
       "evidence": [
         {
