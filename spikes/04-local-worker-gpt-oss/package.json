@@ -1,0 +1,7 @@
+{
+  "name": "spike-04",
+  "private": true,
+  "dependencies": {
+    "@openai/codex": "0.163.0"
+  }
+}
