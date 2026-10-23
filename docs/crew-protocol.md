@@ -48,15 +48,23 @@ context = 8192
 writer = "claude"
 reviewer = "codex"
 pre_reviewer = "local"
+fallback = ["codex"]
 ```
 
 Bezl refuses a crew that breaks these rules:
 
 - The writer and any fallback must be an agent CLI, because only those have tools.
-- The reviewer must come from a different provider than the writer and every fallback, since a fallback becomes the writer.
 - A model endpoint must be on this machine (localhost, 127.x or [::1]) unless `[policy] allow_remote_endpoints = true`.
 - A pre-reviewer needs a reviewer to confirm its findings.
 - A model marked `trains_on_data` is refused unless `[policy] allow_training_data = true`.
+
+Bezl loads a weaker crew but says so. Someone with one provider still gets a working crew:
+
+- **Self-review.** The reviewer should come from a different provider than the writer. If it shares one, the crew loads with a degradation. The reviewer is still a fresh, read-only session that sees only the diff, Bezl's checks and the brief, never the writer's transcript.
+- **Self-review after a handover.** A fallback becomes the writer. If it shares the reviewer's provider, the crew loads with a degradation; if it takes over, a `degraded` event is recorded and the task carries on.
+- **Scored apart.** A task reviewed by its writer's own provider is reported separately. It never counts toward the crew test's pass marks, and a task lost to one still counts against the green threshold.
+
+When the read-only probe has proven a second provider (M3), a handover can swap roles instead: the old writer becomes the reviewer.
 
 Before any task, a preflight proves every binding answers: `codex login status`, a one-line Claude canary, and that each Ollama model is pulled. Without it, a failing local model shows only a generic stream error (spike 4).
 

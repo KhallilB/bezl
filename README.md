@@ -1,6 +1,6 @@
 # Bezl
 
-Local control plane for AI coding workers. One native window directs the official agent CLIs (Claude Code and Codex today; the third provider is open) as separate account-authenticated workers: one primary with write authority per task worktree, read-only reviewers from a different provider, task-scoped capabilities, and an append-only local evidence trail.
+Local control plane for AI coding workers. One native window directs the official agent CLIs (Claude Code and Codex today; the third provider is open) as separate account-authenticated workers: one primary with write authority per task worktree, read-only reviewers (from a different provider when you have two), task-scoped capabilities, and an append-only local evidence trail.
 
 Bezl never holds a key and never relays one provider's output into another. It reaches models in two ways: it launches the official agent CLIs in PTYs, and it may call model endpoints on localhost, such as Ollama serving local models or Ollama's cloud models after `ollama signin`. Credentials stay with those tools. Bezl records what happened.
 

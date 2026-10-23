@@ -13,6 +13,7 @@ export type Score = {
   realDefects: number;
   unlabelled: number;
   preReview: { candidates: number; confirmed: number; labelledReal: number; labelledFalse: number };
+  selfReview: { tasks: number; green: number; taskIds: string[] };
   checks: Check[];
   pass: boolean;
 };
@@ -33,20 +34,31 @@ export function labelTemplate(os: Outcome[]): Labels {
   return Object.fromEntries([...keysOf(os, () => true)].map((k) => [k, "unlabelled"]));
 }
 
+// Self-review runs are reported apart: they cannot help the pass mark, and a
+// task lost to one still counts against the green threshold.
 export function score(crew: Outcome[], baseline: Outcome[], labels: Labels): Score {
-  const green = crew.filter((o) => o.status === "green").length;
+  const cross = crew.filter((o) => !o.sameProviderReview);
+  const self = crew.filter((o) => o.sameProviderReview);
+  const crossIds = new Set(cross.map((o) => o.taskId));
+  const green = cross.filter((o) => o.status === "green").length;
   const capOrLoop = crew.filter((o) => o.status === "capped" || o.status === "loop").length;
-  const crewTokens = tokens(crew);
-  const baselineTokens = tokens(baseline);
+  const crewTokens = tokens(cross);
+  const baselineTokens = tokens(baseline.filter((o) => crossIds.has(o.taskId)));
   const tokenRatio = baselineTokens ? Math.round((crewTokens / baselineTokens) * 100) / 100 : Infinity;
-  const reached = [...keysOf(crew, reachedWriter)];
+  const reached = [...keysOf(cross, reachedWriter)];
   const realDefects = reached.filter((k) => labels[k] === "real").length;
   const unlabelled = reached.filter((k) => labels[k] !== "real" && labels[k] !== "false").length;
   const candidates = crew.flatMap((o) => o.findings.filter(isCandidate).map((f) => ({ f, k: labelKey(o.taskId, f.fingerprint) })));
   const needGreen = Math.ceil(crew.length * 0.8);
 
   const checks: Check[] = [
-    { name: "green", pass: green >= needGreen, detail: `${green} of ${crew.length} green, need ${needGreen}` },
+    {
+      name: "green",
+      pass: green >= needGreen,
+      detail: `${green} of ${crew.length} green with cross-provider review, need ${needGreen}${
+        self.length ? `; ${self.length} self-review run${self.length === 1 ? "" : "s"} scored apart` : ""
+      }`,
+    },
     { name: "no caps or loops", pass: capOrLoop === 0, detail: `${capOrLoop} stopped by a cap or loop` },
     { name: "tokens", pass: tokenRatio <= 2, detail: `${crewTokens} vs baseline ${baselineTokens}, ratio ${tokenRatio}` },
     { name: "real defect", pass: realDefects >= 1, detail: `${realDefects} real, ${unlabelled} unlabelled` },
@@ -65,6 +77,11 @@ export function score(crew: Outcome[], baseline: Outcome[], labels: Labels): Sco
       confirmed: candidates.filter((c) => c.f.confirmed).length,
       labelledReal: candidates.filter((c) => labels[c.k] === "real").length,
       labelledFalse: candidates.filter((c) => labels[c.k] === "false").length,
+    },
+    selfReview: {
+      tasks: self.length,
+      green: self.filter((o) => o.status === "green").length,
+      taskIds: self.map((o) => o.taskId),
     },
     checks,
     pass: checks.every((c) => c.pass),

@@ -17,6 +17,8 @@ export type Crew = {
   pattern: Pattern;
   limits: Limits;
   roles: { writer: Binding; reviewer?: Binding; preReviewer?: Binding; fallback: Binding[] };
+  // Weaker but allowed setups, said out loud: one provider is still a crew.
+  degradations: string[];
 };
 
 export type CrewResult = { ok: true; crew: Crew } | { ok: false; errors: string[] };
@@ -59,6 +61,7 @@ export function loadCrew(toml: string): CrewResult {
     return { ok: false, errors: [`invalid TOML: ${(e as Error).message}`] };
   }
   const errors: string[] = [];
+  const degradations: string[] = [];
   const allowTraining = raw.policy?.allow_training_data === true;
   const allowRemote = raw.policy?.allow_remote_endpoints === true;
 
@@ -111,11 +114,12 @@ export function loadCrew(toml: string): CrewResult {
   if (writer && !isAgent(writer)) errors.push(`writer "${writer.name}" must be an agent CLI (codex or claude-code)`);
   for (const f of fallback) if (!isAgent(f)) errors.push(`fallback "${f.name}" must be an agent CLI (codex or claude-code)`);
   if (writer && reviewer && writer.provider === reviewer.provider)
-    errors.push(`reviewer "${reviewer.name}" shares provider "${writer.provider}" with the writer`);
-  // A fallback becomes the writer, so the pair rule holds for it too.
+    degradations.push(`reviewer "${reviewer.name}" shares provider "${writer.provider}" with writer "${writer.name}": the review is self-review`);
   for (const f of fallback)
     if (reviewer && f.provider === reviewer.provider)
-      errors.push(`fallback "${f.name}" shares provider "${f.provider}" with reviewer "${reviewer.name}"`);
+      degradations.push(
+        `fallback "${f.name}" shares provider "${f.provider}" with reviewer "${reviewer.name}": if it takes over, the review is self-review`,
+      );
   if (roles.pre_reviewer !== undefined && roles.reviewer === undefined)
     errors.push("pre_reviewer needs a reviewer to confirm its findings");
   for (const b of [writer, reviewer, preReviewer, ...fallback])
@@ -124,5 +128,5 @@ export function loadCrew(toml: string): CrewResult {
 
   if (errors.length || !writer) return { ok: false, errors: [...new Set(errors)] };
   const pattern: Pattern = preReviewer ? "propose-confirm" : reviewer ? "pair" : "single";
-  return { ok: true, crew: { pattern, limits, roles: { writer, reviewer, preReviewer, fallback } } };
+  return { ok: true, crew: { pattern, limits, roles: { writer, reviewer, preReviewer, fallback }, degradations } };
 }

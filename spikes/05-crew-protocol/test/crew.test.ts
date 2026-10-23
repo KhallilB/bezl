@@ -8,6 +8,11 @@ const errorsOf = (toml: string) => {
   const r = loadCrew(toml);
   return r.ok ? [] : r.errors;
 };
+const degradationsOf = (toml: string) => {
+  const r = loadCrew(toml);
+  if (!r.ok) throw new Error(r.errors.join("; "));
+  return r.crew.degradations;
+};
 
 describe("loadCrew", () => {
   test("accepts the example crew and derives propose-confirm", () => {
@@ -18,6 +23,9 @@ describe("loadCrew", () => {
     expect(r.crew.roles.writer.name).toBe("claude");
     expect(r.crew.roles.reviewer?.provider).toBe("openai");
     expect(r.crew.limits.maxRounds).toBe(3);
+    expect(r.crew.degradations).toEqual([
+      'fallback "codex" shares provider "openai" with reviewer "codex": if it takes over, the review is self-review',
+    ]);
   });
 
   test("baseline crew is a single agent with default limits", () => {
@@ -26,6 +34,7 @@ describe("loadCrew", () => {
     if (!r.ok) return;
     expect(r.crew.pattern).toBe("single");
     expect(r.crew.limits).toEqual({ maxRounds: 3, maxSteps: 8, maxFindings: 10, maxFindingChars: 500 });
+    expect(r.crew.degradations).toEqual([]);
   });
 
   test("rejects an unknown runner", () => {
@@ -40,10 +49,10 @@ describe("loadCrew", () => {
     ).toContain('writer "l" must be an agent CLI (codex or claude-code)');
   });
 
-  test("reviewer must come from a different provider than the writer", () => {
+  test("a reviewer from the writer's provider loads as self-review", () => {
     expect(
-      errorsOf('[bindings.a]\nrunner = "codex"\n[bindings.b]\nrunner = "codex"\n[roles]\nwriter = "a"\nreviewer = "b"\n'),
-    ).toContain('reviewer "b" shares provider "openai" with the writer');
+      degradationsOf('[bindings.a]\nrunner = "codex"\n[bindings.b]\nrunner = "codex"\n[roles]\nwriter = "a"\nreviewer = "b"\n'),
+    ).toEqual(['reviewer "b" shares provider "openai" with writer "a": the review is self-review']);
   });
 
   test("pre-reviewer needs a reviewer to confirm its findings", () => {
@@ -77,12 +86,12 @@ describe("loadCrew", () => {
     ).toContain('fallback "l" must be an agent CLI (codex or claude-code)');
   });
 
-  test("a fallback may not share the reviewer's provider", () => {
+  test("a fallback from the reviewer's provider loads, flagged", () => {
     expect(
-      errorsOf(
+      degradationsOf(
         '[bindings.claude]\nrunner = "claude-code"\n[bindings.codex]\nrunner = "codex"\n[roles]\nwriter = "claude"\nreviewer = "codex"\nfallback = ["codex"]\n',
       ),
-    ).toContain('fallback "codex" shares provider "openai" with reviewer "codex"');
+    ).toEqual(['fallback "codex" shares provider "openai" with reviewer "codex": if it takes over, the review is self-review']);
   });
 
   describe("endpoints", () => {

@@ -4,7 +4,7 @@ What Bezl is for, how the app is shaped around one task's journey, and how that 
 
 ## Why someone would use Bezl instead of Claude Code or Codex alone
 
-1. **A second opinion from another company's model, automatically.** Every agent's built-in review comes from the vendor that wrote the code ([research](research/agent-ui-baseline.md)). Bezl pairs a writer with a reviewer from a different provider, and the reviewer is blocked from writing (spike 3).
+1. **A second opinion from another company's model, when you have two.** Every agent's built-in review comes from the vendor that wrote the code ([research](research/agent-ui-baseline.md)). Bezl pairs a writer with a reviewer from a different provider, and the reviewer is blocked from writing (spike 3). With one provider, a fresh read-only session from that provider reviews instead, labelled as self-review.
 2. **Bezl checks the work itself.** An agent says "tests pass"; Bezl runs the checks in the worktree and believes only the result.
 3. **The task is not tied to one model.** You choose which model writes, which reviews and which local model sorts first. You can switch between steps. When one hits its usage limit or fails, the next takes over from the same task record. A chat ends with its session; a Bezl task does not.
 4. **Context you can read, which the models share.** Bezl keeps a map of the code, so it can say in plain words what a change touches. Every model gets the same small brief with pointers to the code, and you can read it too.
@@ -89,7 +89,7 @@ You bind each role to a model, and Bezl refuses a crew that breaks the rules in 
 | Role | Default | Rule |
 |---|---|---|
 | Writes | Claude Code | Must be an agent CLI, because only those have tools |
-| Reviews | Codex | Must come from a different provider than the writer, and be proven read-only |
+| Reviews | Codex | Should come from a different provider than the writer (one provider still works, labelled self-review), and must be proven read-only |
 | Sorts first | A local model through Ollama | Its findings count only once a reviewer or a test confirms them |
 | Takes over | Codex | Used when a model fails or nears a limit |
 

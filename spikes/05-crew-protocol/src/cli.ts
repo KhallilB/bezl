@@ -46,6 +46,7 @@ if (command === "run") {
   if (!crew.ok || !tasks.ok) fail(2, errors.map((e) => `invalid: ${e}`));
   const deps = realDeps({ codex: values.codex!, claude: values.claude! }, Number(values["timeout-min"]) * 60_000);
   if (crew.ok && tasks.ok) {
+    for (const d of crew.crew.degradations) console.log(`degraded: ${d}`);
     if (!values["skip-preflight"]) {
       const problems = await preflight(crew.crew, deps);
       if (problems.length) fail(3, problems.map((p) => `preflight: ${p}`));
@@ -74,6 +75,7 @@ if (command === "run") {
   writeFileSync(join(values["crew-run"]!, "score.json"), `${JSON.stringify(s, null, 2)}\n`);
   for (const c of s.checks) console.log(`${c.pass ? "PASS" : "FAIL"}  ${c.name}: ${c.detail}`);
   console.log(`pre-review: ${JSON.stringify(s.preReview)}`);
+  if (s.selfReview.tasks) console.log(`self-review, scored apart: ${JSON.stringify(s.selfReview)}`);
   console.log(s.pass ? "RESULT: PASS" : "RESULT: FAIL");
   process.exit(s.pass ? 0 : 1);
 } else {
