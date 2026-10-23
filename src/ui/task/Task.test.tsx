@@ -136,6 +136,9 @@ describe("Task", () => {
     const footer = region.querySelector(".kb-panel-footer");
     expect(footer).toHaveTextContent("feat/policy-engine");
     expect(footer).toHaveTextContent("00:42");
+    // kbui's case-preserving mono Badge, so branch names render as written.
+    const meta = footer?.querySelector(".kb-badge[data-mono][data-preserve-case]");
+    expect(meta).toHaveTextContent("feat/policy-engine");
   });
 
   test("stop asks for confirmation and fires onStop only when confirmed", async () => {

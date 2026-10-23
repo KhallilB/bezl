@@ -119,8 +119,9 @@ function WorkerPanel({ worker, onStop, focused }: WorkerProps & { focused: boole
         {meta || view.stoppable ? (
           <Panel.Footer>
             {meta ? (
-              // Branch names are case-sensitive; mono Badge uppercases, so meta stays plain text.
-              <span className="task-meta">{meta}</span>
+              <Badge appearance="plain" mono preserveCase className="task-meta">
+                {meta}
+              </Badge>
             ) : null}
             {view.stoppable ? <StopWorker worker={worker} onStop={onStop} /> : null}
           </Panel.Footer>

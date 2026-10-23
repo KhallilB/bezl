@@ -318,15 +318,13 @@
   overflow-wrap: anywhere;
 }
 
+/* Type comes from kbui's case-preserving mono Badge; this only lays it out and truncates. */
 .task-meta {
+  display: block;
   min-width: 0;
   margin-inline-end: auto;
   overflow: hidden;
-  color: var(--kb-color-muted);
-  font-family: var(--task-mono);
-  font-size: var(--kb-size-xs);
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -143,6 +143,8 @@ test("branch names keep their case in footers", async () => {
   );
   expect(meta.length).toBeGreaterThan(0);
   for (const node of meta) expect(getComputedStyle(node).textTransform).toBe("none");
+  // Long branches must truncate; an inline-flex badge would ignore the ellipsis.
+  for (const node of meta) expect(getComputedStyle(node).display).toBe("block");
 });
 
 test("themed panel planes clip only the decorative pseudo-element, never the root", async () => {
