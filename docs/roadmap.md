@@ -46,6 +46,8 @@ Blocked on:
 - Deciding whether workers run with an isolated config. Today they load the operator's global instructions, hooks and MCP servers, which inflates every context and skews the token score.
 - Deciding whether Bezl may pass typed, logged findings between providers. The README rule says it never relays one provider's output into another.
 
+If the test fails, delete `spikes/05-crew-protocol` once its result is recorded; the findings move to `docs/spikes/`.
+
 ### M2. Domain core
 
 What: the rules of a task in Rust, with no UI or terminals attached.
@@ -66,7 +68,7 @@ What: Bezl knows which agent CLIs it can use and how far it can trust each one.
 - Record how each capability is enforced: blocked by a launch flag, or instruction only.
 - Choose the third provider. Google stopped serving Gemini CLI on personal accounts on 18 June 2026. A 120B local model could not run as an agent on a 96 GB Mac (spike 4).
 
-Pass mark: the Providers screen shows real preflight results for every installed CLI, and the read-only probe has a result for every provider Bezl offers.
+Pass mark: the Providers screen shows real preflight results for every installed CLI, the read-only probe has a result for every provider Bezl offers, and `spikes/03-reviewer-readonly` is deleted with its findings moved to `docs/spikes/`.
 
 ### M4. Live terminals
 
@@ -75,7 +77,7 @@ What: real agent sessions streaming into Task panels.
 - Replace the spike's PTY code with a terminal port that applies backpressure.
 - Terminal snapshots into the evidence record through Ghostty's engine.
 
-Pass mark: three panes stream 20 MB each with no lost bytes, idle memory stays under 150 MB, and bursts stay under 600 MB.
+Pass mark: three panes stream 20 MB each with no lost bytes, idle memory stays under 150 MB, and bursts stay under 600 MB. Spikes 1 and 2 are deleted: `spikes/01-pty-throughput`, `spikes/02-libghostty-vt`, `src-tauri/src/spike_pty.rs` with its commands in `lib.rs`, and `src/spike/`. Their findings move to `docs/spikes/`.
 
 ### M5. First real task, end to end
 
@@ -97,7 +99,26 @@ Only if M1 passes. What: the [Crew protocol](crew-protocol.md) moves from the ha
 - Code Facts: file outlines, references and symbol diffs from tree-sitter, SCIP indexes and language servers, so briefs point at code instead of pasting it.
 - A local model lane through Ollama for summaries, sorting and candidate findings that a reviewer or a test confirms.
 
-Pass mark: the five M1 tasks, run inside Bezl, match or beat the harness results on every threshold.
+Pass mark: the five M1 tasks, run inside Bezl, match or beat the harness results on every threshold, and `spikes/04-local-worker-gpt-oss` and `spikes/05-crew-protocol` are deleted with their findings moved to `docs/spikes/`.
+
+## Spikes
+
+A spike answers one question and then goes away. Each one is absorbed by a milestone, and that milestone is not done until the spike is deleted.
+
+| Spike | Where it lives today | Absorbed by | Deleted in |
+|---|---|---|---|
+| 1. Terminal output | `spikes/01-pty-throughput`, `src-tauri/src/spike_pty.rs`, `src/spike/` | The terminal port with backpressure | M4 |
+| 2. Terminal snapshots | `spikes/02-libghostty-vt` | Snapshots in the evidence record | M4 |
+| 3. Read-only reviewers | `spikes/03-reviewer-readonly` | Preflight's read-only probe | M3 |
+| 4. Local 120B worker | `spikes/04-local-worker-gpt-oss`, in PR #4 | The local model lane | M6 |
+| 5. Crew harness | `spikes/05-crew-protocol`, in PR #6 | The Crew protocol in Bezl's core | M6, or after M1 if the crew test fails |
+
+Rules:
+
+- A spike lands on main as `RESULT.md` plus the least code needed to rerun it. Build output and `node_modules` are deleted once the result is recorded.
+- When a spike is deleted, its `RESULT.md` moves to `docs/spikes/` so the findings and decisions stay readable. Links to it are updated in the same change.
+- `progress.json` evidence stays valid after a deletion, because each entry points at a file at a fixed commit.
+- No app code may import from a spike. The spike 1 commands registered in `src-tauri/src/lib.rs` are the one exception, and M4 removes them.
 
 ## Recording progress
 
