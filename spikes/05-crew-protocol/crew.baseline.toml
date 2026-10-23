@@ -1,0 +1,6 @@
+# One agent alone: the baseline every crew is scored against.
+[bindings.codex]
+runner = "codex"
+
+[roles]
+writer = "codex"
