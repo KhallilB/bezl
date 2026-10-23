@@ -68,7 +68,7 @@
       "title": "A Claude Code reviewer cannot write",
       "passMark": "The write is refused and the refusal shows in the output",
       "result": "not-run",
-      "summary": "Not run yet: will check that a Claude Code reviewer is refused when it tries to change a file.",
+      "summary": "Will check that a Claude Code reviewer is refused when it tries to change a file.",
       "measured": [],
       "evidence": [{ "label": "RESULT.md", "path": "spikes/03-reviewer-readonly/RESULT.md" }],
       "commit": "01e47db"
@@ -81,7 +81,7 @@
       "title": "A Gemini CLI reviewer cannot write",
       "passMark": "The write is refused and the refusal shows in the output",
       "result": "not-run",
-      "summary": "Not run yet: will check that a Gemini CLI reviewer is refused when it tries to change a file.",
+      "summary": "Will check that a Gemini CLI reviewer is refused when it tries to change a file.",
       "measured": [],
       "evidence": [{ "label": "RESULT.md", "path": "spikes/03-reviewer-readonly/RESULT.md" }],
       "commit": "01e47db"
@@ -94,7 +94,7 @@
       "title": "Terminal memory trip-wires",
       "passMark": "Idle under 150 MB, and burst peak under 600 MB at the 1 MiB high-water mark, in the real TerminalPort",
       "result": "not-run",
-      "summary": "Not run yet: will check that the real terminal stays within new memory limits, both at rest and during heavy output.",
+      "summary": "Will check that the real terminal stays within new memory limits, both at rest and during heavy output.",
       "measured": [],
       "evidence": [{ "label": "Decision", "path": "spikes/01-pty-throughput/RESULT.md" }],
       "commit": "2230356"
