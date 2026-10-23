@@ -1,0 +1,382 @@
+{
+  "schema": 1,
+  "project": "bezl",
+  "entries": [
+    {
+      "id": "2026-10-22-pty-throughput",
+      "subject": "pty-throughput",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "Terminal output into the window",
+      "passMark": "No lost bytes, echo under 100 ms, memory under 300 MB",
+      "result": "partial",
+      "summary": "No terminal output is dropped and typing echoes with no noticeable delay; memory during heavy bursts missed the original limit.",
+      "measured": [
+        {
+          "label": "Bytes received",
+          "value": "Full payload in every pane, plus a 1 to 7 byte surplus whose source is not identified; never a deficit"
+        },
+        {
+          "label": "Echo latency, median",
+          "value": "2 ms (max 5 ms, 20 samples)"
+        },
+        {
+          "label": "Peak memory",
+          "value": "492 MB at 256 KiB high-water; 789 MB at 1 MiB"
+        },
+        {
+          "label": "Idle memory after",
+          "value": "About 120 MB"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "RESULT.md",
+          "path": "spikes/01-pty-throughput/RESULT.md"
+        }
+      ],
+      "commit": "2230356"
+    },
+    {
+      "id": "2026-10-22-libghostty-vt",
+      "subject": "libghostty-vt",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "Terminal snapshots from Ghostty’s engine",
+      "passMark": "Clean cargo build under 5 minutes on a clean runner, and a plain-text vim snapshot that matches",
+      "result": "pass",
+      "summary": "Ghostty's engine builds within its time budget and captures a vim screen snapshot that matches what was typed.",
+      "measured": [
+        {
+          "label": "Clean build",
+          "value": "42 s on macOS 27 with Homebrew zig@0.15"
+        },
+        {
+          "label": "Vim snapshot",
+          "value": "First line equals the typed text"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "RESULT.md",
+          "path": "spikes/02-libghostty-vt/RESULT.md"
+        }
+      ],
+      "commit": "01e47db"
+    },
+    {
+      "id": "2026-10-22-reviewer-readonly-codex",
+      "subject": "reviewer-readonly-codex",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "A Codex reviewer cannot write",
+      "passMark": "The write is refused and the refusal shows in the output",
+      "result": "pass",
+      "summary": "A read-only Codex probe is stopped by the operating system when it tries to change a file, and says so.",
+      "measured": [
+        {
+          "label": "target.txt after the probe",
+          "value": "Unchanged; blocked by the OS sandbox"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "RESULT.md",
+          "path": "spikes/03-reviewer-readonly/RESULT.md"
+        }
+      ],
+      "commit": "01e47db"
+    },
+    {
+      "id": "2026-10-22-reviewer-readonly-claude",
+      "subject": "reviewer-readonly-claude",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "A Claude Code reviewer cannot write",
+      "passMark": "The write is refused and the refusal shows in the output",
+      "result": "not-run",
+      "summary": "Will check that a Claude Code reviewer is refused when it tries to change a file.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "RESULT.md",
+          "path": "spikes/03-reviewer-readonly/RESULT.md"
+        }
+      ],
+      "commit": "01e47db"
+    },
+    {
+      "id": "2026-10-22-reviewer-readonly-gemini",
+      "subject": "reviewer-readonly-gemini",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "A Gemini CLI reviewer cannot write",
+      "passMark": "The write is refused and the refusal shows in the output",
+      "result": "not-run",
+      "summary": "Will check that a Gemini CLI reviewer is refused when it tries to change a file.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "RESULT.md",
+          "path": "spikes/03-reviewer-readonly/RESULT.md"
+        }
+      ],
+      "commit": "01e47db"
+    },
+    {
+      "id": "2026-10-22-pty-memory",
+      "subject": "pty-memory",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "Terminal memory limits",
+      "passMark": "Idle under 150 MB, and burst peak under 600 MB at the 1 MiB high-water mark, in the real TerminalPort",
+      "result": "not-run",
+      "summary": "Will check that the real terminal stays within new memory limits, both at rest and during heavy output.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Decision",
+          "path": "spikes/01-pty-throughput/RESULT.md"
+        }
+      ],
+      "commit": "2230356"
+    },
+    {
+      "id": "2026-10-22-local-worker-gpt-oss",
+      "subject": "local-worker-gpt-oss",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "A local 120B model as a third worker",
+      "passMark": "Answers a warm prompt within 30 s and finds the known defect in a real review, within 10 minutes",
+      "result": "fail",
+      "summary": "Through Codex the model ran out of GPU memory on every request; called directly it answered but missed the real defect.",
+      "measured": [
+        {
+          "label": "Through Codex",
+          "value": "No answer at 131k or 40k context; Metal out of memory"
+        },
+        {
+          "label": "Direct Ollama call, 8k context",
+          "value": "2,758 prompt tokens, 113.5 s, missed the defect, 2 of 4 findings false"
+        },
+        {
+          "label": "Cloud Codex, same review",
+          "value": "Found the defect twice, in 29 s and 100 s"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "RESULT.md",
+          "path": "spikes/04-local-worker-gpt-oss/RESULT.md"
+        }
+      ],
+      "commit": "55fd34a"
+    },
+    {
+      "id": "2026-10-22-crew-harness",
+      "subject": "crew-harness",
+      "date": "2026-10-22",
+      "kind": "tests",
+      "title": "A test bench for agent crews",
+      "passMark": "Every harness behaviour is proven by a test that failed first, and the typecheck is clean",
+      "result": "pass",
+      "summary": "It checks crew setups, gives each task its own copy of the code, stops runaway loops and compares crews with one agent.",
+      "measured": [
+        {
+          "label": "Tests",
+          "value": "51 pass"
+        },
+        {
+          "label": "Real preflight",
+          "value": "Codex and Ollama answered; stopped on the revoked Claude login, as designed"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "README.md",
+          "path": "spikes/05-crew-protocol/README.md"
+        }
+      ],
+      "commit": "d1cd9dc"
+    },
+    {
+      "id": "2026-10-22-m0-foundation",
+      "subject": "m0-foundation",
+      "date": "2026-10-22",
+      "kind": "milestone",
+      "title": "Stack and interface foundation",
+      "passMark": "The three stack spikes have results, and the kbui adoption and app theme in bezl #1 and #3 are merged with their checks passing",
+      "result": "partial",
+      "summary": "The stack experiments have results and the task screen runs on kbui 0.4.0, but it is not merged yet.",
+      "measured": [
+        {
+          "label": "Stack spikes",
+          "value": "Terminal output partial, snapshots pass, Codex read-only pass"
+        },
+        {
+          "label": "Task screen",
+          "value": "37 unit and 62 browser tests pass on kbui 0.4.0, in bezl #3"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "d298164"
+    },
+    {
+      "id": "2026-10-22-m1-crew-test",
+      "subject": "m1-crew-test",
+      "date": "2026-10-22",
+      "kind": "experiment",
+      "title": "Crew test",
+      "passMark": "4 of 5 tasks green with only a merge from the operator, no cap or loop stops, crew tokens at most twice one agent alone, and at least one real defect caught in review",
+      "result": "not-run",
+      "summary": "Will test whether a writer and a reviewer coordinated by Bezl beat one agent working alone.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "d298164"
+    },
+    {
+      "id": "2026-10-22-m2-domain-core",
+      "subject": "m2-domain-core",
+      "date": "2026-10-22",
+      "kind": "milestone",
+      "title": "The core task rules",
+      "passMark": "Tests cover the writer lease, every state transition and rebuilding a task from its log, and a second writer on a worktree is refused",
+      "result": "not-run",
+      "summary": "Will build the task rules in Rust: one writer per copy of the code, and a log that is only ever added to.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "d298164"
+    },
+    {
+      "id": "2026-10-22-m3-providers",
+      "subject": "m3-providers",
+      "date": "2026-10-22",
+      "kind": "milestone",
+      "title": "Which assistants are ready",
+      "passMark": "The Providers screen shows real preflight results for every installed CLI, every provider Bezl offers has a read-only probe result, and spikes/03-reviewer-readonly is deleted with its findings in docs/spikes",
+      "result": "not-run",
+      "summary": "Will show which assistants are installed and signed in, and how far each can be trusted.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "d298164"
+    },
+    {
+      "id": "2026-10-22-m4-live-terminals",
+      "subject": "m4-live-terminals",
+      "date": "2026-10-22",
+      "kind": "milestone",
+      "title": "Live terminals",
+      "passMark": "Three panes stream 20 MB each with no lost bytes, idle memory under 150 MB and bursts under 600 MB, and spikes 1 and 2 are deleted, including spike_pty.rs and src/spike, with their findings in docs/spikes",
+      "result": "not-run",
+      "summary": "Will stream real agent sessions into Task panels within the memory limits.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "d298164"
+    },
+    {
+      "id": "2026-10-22-m5-first-task",
+      "subject": "m5-first-task",
+      "date": "2026-10-22",
+      "kind": "milestone",
+      "title": "A first real task, start to finish",
+      "passMark": "A real task finishes with a writer and a read-only reviewer, one approval is answered in the app, and the evidence screen shows every event and snapshot",
+      "result": "not-run",
+      "summary": "Will take a real task through every screen, from setup to approval and evidence.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "d298164"
+    },
+    {
+      "id": "2026-10-22-m6-crew-in-bezl",
+      "subject": "m6-crew-in-bezl",
+      "date": "2026-10-22",
+      "kind": "milestone",
+      "title": "Crews inside Bezl",
+      "passMark": "The five crew-test tasks, run inside Bezl, match or beat the harness results on every threshold, and spikes 4 and 5 are deleted with their findings in docs/spikes",
+      "result": "not-run",
+      "summary": "Will build crews into Bezl, if the crew test passes.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "d298164"
+    },
+    {
+      "id": "2026-10-23-m7-preview-canvas",
+      "subject": "m7-preview-canvas",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "An interactive preview canvas",
+      "passMark": "A UI task's takes appear as artboards within 30 seconds of a step finishing; a pointed change and a drawn change each land in the right file; a recorded four-step flow replays on two takes and catches a seeded focus bug in one of them, then runs as a saved test; and a seeded contrast failure shows on Check with its evidence",
+      "result": "not-run",
+      "summary": "Will let people use, point at, draw on, record and compare live previews of every take.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        },
+        {
+          "label": "Product vision",
+          "path": "docs/vision.md"
+        }
+      ],
+      "commit": "15dd8e7"
+    },
+    {
+      "id": "2026-10-23-m8-explore",
+      "subject": "m8-explore",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Design directions from several models",
+      "passMark": "On five UI tasks, building from a chosen direction needs fewer review rounds than building straight from the brief",
+      "result": "not-run",
+      "summary": "Will let several models sketch design directions before any code is written.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        },
+        {
+          "label": "Product vision",
+          "path": "docs/vision.md"
+        }
+      ],
+      "commit": "15dd8e7"
+    }
+  ]
+}

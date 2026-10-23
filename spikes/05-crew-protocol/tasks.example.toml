@@ -1,0 +1,8 @@
+# One entry per task. The harness checks out `base` in a throwaway worktree.
+[[tasks]]
+id = "example"
+repo = "/path/to/repo"
+base = "main"
+goal = "Describe the change in one or two sentences."
+allowed_paths = ["src/"]
+checks = ["bun run typecheck", "bun test"]
