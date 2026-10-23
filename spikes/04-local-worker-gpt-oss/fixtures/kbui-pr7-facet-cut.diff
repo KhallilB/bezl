@@ -1,0 +1,238 @@
+diff --git a/packages/css/src/components/facet.css b/packages/css/src/components/facet.css
+index 59484ba..ca4799c 100644
+--- a/packages/css/src/components/facet.css
++++ b/packages/css/src/components/facet.css
+@@ -1,8 +1,11 @@
+-/* Anatomy: .kb-facet [data-tone=quiet|default|active|critical] [data-cut=none|start|end] [data-rail=none|accent|status] [data-density=compact|standard] > .kb-facet-header, .kb-facet-body, .kb-facet-footer, .kb-facet-rail */
++/* Anatomy: .kb-facet [data-tone=quiet|default|active|critical] [data-cut=none|start|end|both] [data-rail=none|accent|status] [data-density=compact|standard] [data-nested] [data-collapsible] [data-open] [data-closed] > .kb-facet-header > .kb-facet-toolbar, .kb-facet-toggle [data-panel-open]; .kb-facet-body, .kb-facet-footer, .kb-facet-rail; sibling .kb-facet-group [data-direction=row|column] */
+ .kb-facet {
+   --_facet-bg: var(--kb-facet-background);
+   --_facet-seam: var(--kb-facet-border);
++  --_facet-seam-width: var(--kb-facet-seam);
+   --_facet-rail: var(--kb-facet-rail);
++  --_facet-cut-start: 0px;
++  --_facet-cut-end: 0px;
+   position: relative;
+   isolation: isolate;
+   display: flex;
+@@ -12,32 +15,43 @@
+   color: var(--kb-color-fg);
+ }
+ 
+-/* The plane carries the clip; the root never does, so focus rings stay whole. */
+-.kb-facet::before {
++/* Two clipped planes: seam below, fill inset by the seam width. The root is never clipped. */
++.kb-facet::before,
++.kb-facet::after {
+   content: "";
+   position: absolute;
++  pointer-events: none;
++  clip-path: polygon(
++    var(--_facet-cut-start) 0,
++    100% 0,
++    100% calc(100% - var(--_facet-cut-end)),
++    calc(100% - var(--_facet-cut-end)) 100%,
++    0 100%,
++    0 var(--_facet-cut-start)
++  );
++  transition: background-color var(--kb-motion-duration-base) var(--kb-motion-easing-standard);
++}
++
++.kb-facet::before {
+   inset: 0;
++  z-index: -2;
++  background: var(--_facet-seam);
++}
++
++.kb-facet::after {
++  inset: var(--_facet-seam-width);
+   z-index: -1;
+-  pointer-events: none;
+   background: var(--_facet-bg);
+-  box-shadow: inset 0 0 0 1px var(--_facet-seam);
+-  transition:
+-    background-color var(--kb-motion-duration-base) var(--kb-motion-easing-standard),
+-    box-shadow var(--kb-motion-duration-base) var(--kb-motion-easing-standard);
+ }
+ 
+-.kb-facet[data-cut="start"]::before {
+-  clip-path: polygon(var(--kb-facet-cut) 0, 100% 0, 100% 100%, 0 100%, 0 var(--kb-facet-cut));
++.kb-facet[data-cut="start"],
++.kb-facet[data-cut="both"] {
++  --_facet-cut-start: var(--kb-facet-cut-start);
+ }
+ 
+-.kb-facet[data-cut="end"]::before {
+-  clip-path: polygon(
+-    0 0,
+-    100% 0,
+-    100% calc(100% - var(--kb-facet-cut)),
+-    calc(100% - var(--kb-facet-cut)) 100%,
+-    0 100%
+-  );
++.kb-facet[data-cut="end"],
++.kb-facet[data-cut="both"] {
++  --_facet-cut-end: var(--kb-facet-cut-end);
+ }
+ 
+ .kb-facet[data-tone="quiet"] {
+@@ -48,15 +62,18 @@
+ .kb-facet[data-tone="active"] {
+   --_facet-bg: var(--kb-facet-background-active);
+   --_facet-seam: var(--kb-facet-border-active);
++  --_facet-seam-width: var(--kb-facet-seam-active);
+   --_facet-rail: var(--kb-facet-rail-active);
+ }
+ 
+ .kb-facet[data-tone="critical"] {
+-  --_facet-seam: var(--kb-color-danger);
+-  --_facet-rail: var(--kb-color-danger);
++  --_facet-seam: var(--kb-facet-border-critical);
++  --_facet-seam-width: var(--kb-facet-seam-active);
++  --_facet-rail: var(--kb-facet-border-critical);
+ }
+ 
+-.kb-facet[data-density="compact"] {
++.kb-facet[data-density="compact"],
++.kb-facet[data-nested] {
+   gap: var(--kb-space-2);
+   padding: calc(var(--kb-facet-padding) / 2);
+ }
+@@ -94,6 +111,39 @@
+   font-weight: 600;
+ }
+ 
++.kb-facet-toolbar {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: var(--kb-space-1);
++  margin-inline-start: auto;
++}
++
++.kb-facet-toggle {
++  display: inline-flex;
++  align-items: center;
++  gap: var(--kb-space-1);
++  height: 2rem;
++  padding: 0 var(--kb-space-2);
++  border: 1px solid transparent;
++  border-radius: var(--kb-button-radius);
++  background: transparent;
++  color: var(--kb-color-fg);
++  font: inherit;
++  font-size: var(--kb-size-sm);
++  font-weight: 500;
++  cursor: pointer;
++}
++
++.kb-facet-toggle:hover {
++  border-color: var(--kb-color-border);
++}
++
++.kb-facet-toggle:focus-visible {
++  outline: 2px solid var(--kb-color-ring);
++  outline-offset: 2px;
++}
++
+ .kb-facet-body {
+   min-width: 0;
+ }
+@@ -106,8 +156,25 @@
+   gap: var(--kb-space-2);
+ }
+ 
++.kb-facet-group {
++  display: flex;
++  flex-direction: column;
++  gap: var(--kb-space-3);
++}
++
++.kb-facet-group[data-direction="row"] {
++  flex-direction: row;
++  flex-wrap: wrap;
++}
++
++.kb-facet-group[data-direction="row"] > .kb-facet {
++  flex: 1 1 16rem;
++  min-width: 0;
++}
++
+ @media (prefers-reduced-motion: reduce) {
+-  .kb-facet::before {
++  .kb-facet::before,
++  .kb-facet::after {
+     transition: none;
+   }
+ }
+diff --git a/packages/tokens/src/__snapshots__/build.test.ts.snap b/packages/tokens/src/__snapshots__/build.test.ts.snap
+index 2f0151f..5161e7f 100644
+--- a/packages/tokens/src/__snapshots__/build.test.ts.snap
++++ b/packages/tokens/src/__snapshots__/build.test.ts.snap
+@@ -109,7 +109,12 @@ exports[`tokens.json snapshot of the shipped css 1`] = `
+   --kb-facet-background-active: var(--kb-color-bg);
+   --kb-facet-border: var(--kb-color-border);
+   --kb-facet-border-active: var(--kb-color-accent);
++  --kb-facet-border-critical: var(--kb-color-danger);
+   --kb-facet-cut: 0.75rem;
++  --kb-facet-cut-start: var(--kb-facet-cut);
++  --kb-facet-cut-end: var(--kb-facet-cut);
++  --kb-facet-seam: 1px;
++  --kb-facet-seam-active: 2px;
+   --kb-facet-padding: var(--kb-space-4);
+   --kb-facet-rail: var(--kb-color-border);
+   --kb-facet-rail-active: var(--kb-color-accent);
+@@ -141,6 +146,9 @@ exports[`tokens.json snapshot of the shipped css 1`] = `
+   --kb-color-warning-fg: var(--kb-gray-950);
+   --kb-color-ring: var(--kb-blue-400);
+   --kb-color-overlay: rgb(0 0 0 / 0.7);
++  --kb-facet-background-active: var(--kb-gray-800);
++  --kb-facet-border-active: var(--kb-blue-400);
++  --kb-facet-border-critical: var(--kb-red-400);
+ }
+ 
+ @media (prefers-color-scheme: dark) {
+@@ -164,6 +172,9 @@ exports[`tokens.json snapshot of the shipped css 1`] = `
+     --kb-color-warning-fg: var(--kb-gray-950);
+     --kb-color-ring: var(--kb-blue-400);
+     --kb-color-overlay: rgb(0 0 0 / 0.7);
++    --kb-facet-background-active: var(--kb-gray-800);
++    --kb-facet-border-active: var(--kb-blue-400);
++    --kb-facet-border-critical: var(--kb-red-400);
+   }
+ }
+ "
+diff --git a/packages/tokens/tokens.json b/packages/tokens/tokens.json
+index e16ef81..8c4cfcf 100644
+--- a/packages/tokens/tokens.json
++++ b/packages/tokens/tokens.json
+@@ -185,10 +185,27 @@
+   },
+   "facet": {
+     "background": { "$type": "color", "$value": "{color.surface}" },
+-    "background-active": { "$type": "color", "$value": "{color.bg}" },
++    "background-active": {
++      "$type": "color",
++      "$value": "{color.bg}",
++      "$extensions": { "kb.dark": "{gray.800}" }
++    },
+     "border": { "$type": "color", "$value": "{color.border}" },
+-    "border-active": { "$type": "color", "$value": "{color.accent}" },
++    "border-active": {
++      "$type": "color",
++      "$value": "{color.accent}",
++      "$extensions": { "kb.dark": "{blue.400}" }
++    },
++    "border-critical": {
++      "$type": "color",
++      "$value": "{color.danger}",
++      "$extensions": { "kb.dark": "{red.400}" }
++    },
+     "cut": { "$type": "dimension", "$value": "0.75rem" },
++    "cut-start": { "$type": "dimension", "$value": "{facet.cut}" },
++    "cut-end": { "$type": "dimension", "$value": "{facet.cut}" },
++    "seam": { "$type": "dimension", "$value": "1px" },
++    "seam-active": { "$type": "dimension", "$value": "2px" },
+     "padding": { "$type": "dimension", "$value": "{space.4}" },
+     "rail": { "$type": "color", "$value": "{color.border}" },
+     "rail-active": { "$type": "color", "$value": "{color.accent}" }
