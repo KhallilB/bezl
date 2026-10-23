@@ -2,7 +2,7 @@
 
 Status: harness built and tested with fake runners. Not yet run against real models. The crew test it serves is M1 in the [roadmap](../../docs/roadmap.md#m1-crew-test), whose design supersedes the five-task thresholds below.
 
-Question this harness answers: do several models coordinated by Bezl's rules finish real coding tasks better than one agent alone? A crew file says which model plays which role; the harness runs every task under that crew and under a one-agent baseline, then scores both.
+Question this harness answers (M1): does a second reviewer, especially from another provider, raise the hidden-test pass rate over a writer alone at a matched token budget? It was first built to compare a crew with one agent alone. A crew file says which model plays which role; the harness runs every task under that crew and under a one-agent baseline, then scores both.
 
 ## How a task runs
 
@@ -22,9 +22,9 @@ It stops early when:
 | No change | the writer's diff is identical to the previous round's |
 | Repeated finding | a finding with the same file and normalised wording comes back after a fix attempt |
 | Blocked | the writer answers `blocked` |
-| Error | a runner fails and no fallback binding is left |
+| Error | a runner fails and no fallback binding is left, or the reviewer fails |
 
-Findings sent to a writer are typed and capped: at most `max_findings`, each clipped to `max_finding_chars`.
+Findings sent to a writer are typed and capped: at most `max_findings` (default 10), each clipped to `max_finding_chars` (default 500).
 
 ## Crew files
 
@@ -86,4 +86,5 @@ Set on 2026-10-22, before any real run. M1's two-phase design replaces them; `sc
 - **`claude login`.** The Claude runner's parser is tested against a hand-written sample only; capture a real `claude -p --output-format json --json-schema` transcript once signed in.
 - **Worker isolation.** Decided: workers run isolated. Not built yet: today they load the user's global `CLAUDE.md`, `AGENTS.md`, hooks and MCP servers, which inflates every context and can block tools.
 - **The handoff rules.** Review only after checks pass, verified evidence, disputes, and sending only `blocker` and `major` findings back. See the [Crew protocol](../../docs/crew-protocol.md#what-is-built-today).
+- **M1 scoring.** Review-only runs, hidden tests, several arms, pinned model versions, and paired intervals in `score`.
 - **More runners.** OpenCode, Aider and Antigravity CLI are not supported yet; the crew loader rejects them.

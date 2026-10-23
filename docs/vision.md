@@ -30,7 +30,7 @@ A task moves through seven stages: **Brief, Explore, Plan, Build, Check, Review,
 
 | Stage | What it shows | What you can do |
 |---|---|---|
-| Brief | Your words, the "done when" list (each item says who checks it), and what the code map found | Edit the brief; answer what Bezl asks |
+| Brief | Your words, the "done when" list (each item says who checks it), and, from M6, what the code map found | Edit the brief; answer what Bezl asks |
 | Explore (later) | Sketches of a few design directions, built from the project's own components | Keep parts of a sketch, drop directions, build one as a take |
 | Plan | One plan per take, with steps lighting up as they finish | Edit a plan; the writer adjusts from its next step |
 | Build | The take running live: its terminal line, and later its preview | Steer the writer, stop it, and later point, draw and record on the preview |
@@ -46,7 +46,7 @@ Questions from a worker, and requests for more access, are **needs you** items. 
 
 Most agent tools start writing code from the first sentence. Bezl puts a cheap step first, because the expensive mistake is building the wrong thing well.
 
-- **A brief that is ready.** A new task's brief is checked as you type against five things: what you want, who it is for, how you will know it is done, what to avoid or reuse, and a reference. Each missing item says why it matters and offers a one-click addition. Constraints come from the code, as in "Bezl found EmptyState in the code". You can always start anyway.
+- **A brief that is ready.** A new task's brief is checked as you type against five things: what you want, who it is for, how you will know it is done, what to avoid or reuse, and an example to follow. Each missing item says why it matters and offers a one-click addition. From M6, constraints come from the code, as in "Bezl found EmptyState in the code". You can always start anyway.
 - **Explore, later.** Before code, a few models sketch directions as wireframes that Bezl draws itself, and you keep the parts you like. This is frozen until the crew test shows a design step helps (M8).
 
 ![Explore](sketches/journey/screens/02-explore.jpg)
@@ -97,13 +97,13 @@ Earlier drafts crowded every screen with side panels and footnotes. These rules 
 7. Freed space goes to the work at full size, never to new panels.
 8. Colour stays scarce: teal on what is working, amber on what waits for you, red on a failure. The product being built keeps its own colours.
 
-A stage that needs more than a short paragraph or three boxes to explain itself should move something one level down.
+If a stage needs more than a short paragraph or three boxes to explain, move some of it one level deeper.
 
 ## Look and feel
 
 A near-black canvas with grain and a faint light from above, rounded surfaces with a lit top edge, and one accent: teal.
 
-State colours follow one rule: one hue per meaning, the same hue in light and dark. Working is teal and needs-you is amber. Failed is red and is shown, never glowing. Passed is green and quiet. Colour always comes with a word and an icon. The values, and the two kbui tokens they wait on, are in [UI styling](ui-styling.md#state-colours).
+State colours follow one rule: one hue per meaning, the same hue in light and dark. Working is teal and needs-you is amber. Failed is red and is shown, never glowing. Passed is green and quiet. Colour always comes with a word and an icon. The values, and the kbui changes they wait on, are in [UI styling](ui-styling.md#state-colours).
 
 The sketch hand-copies part of the app theme and points the accent at teal itself. The app theme cannot do that, by design, so the real app waits on kbui's button colour tokens.
 
@@ -138,15 +138,15 @@ What Claude Code and Codex already let you do, extended across models:
 | Switch a take's model, or hand over | The model menu on each take | M6 |
 | Check a flow after every step | Record, add an expectation, save as a test | M7a |
 | Say exactly what to change | Point at an element, or draw around an area | M7b |
-| Watch usage limits | Each provider's usage in the task list's header, "unknown" where a CLI reports nothing | M3 data, shown from M5 |
+| Watch usage limits | Each provider's usage in the task list's header, "unknown" where a CLI reports nothing | M5, from M3's data |
 | Choose when to be asked | One "Ask me before" setting, translated into each CLI's flags | Not scheduled |
-| Go back to any step | Rewind to the snapshot Bezl takes after every step | Not scheduled |
+| Go back to any step | Rewind to a worktree snapshot taken after every step (not designed yet) | Not scheduled |
 
 ## How the journey maps onto the milestones
 
 | Stage | First real in | What you get then | Grows in |
 |---|---|---|---|
-| Task list | M5 (data from M2) | Tasks with a status light; amber means it needs you | M6: usage per provider |
+| Task list | M5 (data from M2) | Tasks with a status light, amber when one needs you, and each provider's usage | |
 | Brief | M5 | Your words, the done-when list, the readiness check | M6: "Found in the code" from the code map |
 | Plan | M5 | One editable plan | M6: one plan per take |
 | Build | M5 | One take: live terminal line, Stop, the message box | M6: more takes and handover. M7a to M7c: the canvas |

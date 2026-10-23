@@ -2,7 +2,7 @@
 
 The app's areas, and where each one lives in the task journey. What Bezl is for is in the [north star](north-star.md); what using it looks like is in the [product vision](vision.md).
 
-Bezl runs the official agent CLIs as separate workers: Claude Code and Codex today, with the third provider open (M3 in the [roadmap](roadmap.md)). One writes to the task's worktree. Others review and cannot write. Bezl runs the checks and measures the change itself, and records every step in `.git/bezl/`. It never holds a key, and it passes between agents only what it produced or checked itself (the handoff rules in the [Crew protocol](crew-protocol.md#handoff-rules)).
+Bezl runs the official agent CLIs as separate workers: Claude Code and Codex for now, with the third provider open (M3 in the [roadmap](roadmap.md)). One writes to the task's worktree. Others review and cannot write. Bezl runs the checks and measures the change itself, and records every step in `.git/bezl/`. Most of this is planned; the [roadmap](roadmap.md) says what exists. It never holds a key, and it passes between agents only what it produced or checked itself (the handoff rules in the [Crew protocol](crew-protocol.md#handoff-rules)).
 
 The unit of work is the **task**: its takes, each with a worktree, one writer and its reviewers, their permissions, and the record. Screens are named after what they hold.
 

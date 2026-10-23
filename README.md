@@ -2,14 +2,14 @@
 
 **Any agent writes the change. Bezl measures it. You decide.**
 
-Bezl is a local app for working with AI coding agents. It runs the official agent CLIs, Claude Code and Codex today, as separate workers:
+Bezl is a local app for working with AI coding agents, in early development. The stack and UI (M0) are done, and the evidence engine (E1) is next; the [roadmap](docs/roadmap.md) says what exists today. Bezl will run the official agent CLIs, Claude Code and Codex for now, as separate workers:
 
 - one writer per task worktree;
 - reviewers that cannot write, from a different provider when you have two.
 
-Bezl runs the checks itself. It shows which changed code no test runs, and records every step on your machine.
+Bezl will run the checks itself, show which changed code no test runs, and record every step on your machine.
 
-Bezl never holds a key. Agent CLIs keep their own sign-in, and model endpoints such as Ollama run on this machine. Between agents, Bezl passes only what it produced or checked itself: the diff from git, its own check results, and verified findings. It never passes one agent's conversation or claims to another ([handoff rules](docs/crew-protocol.md#handoff-rules)).
+Bezl never holds a key. Agent CLIs keep their own sign-in, and model endpoints such as Ollama run on this machine by default. Between agents, Bezl passes only what it produced or checked itself: the diff from git, its own check results, and verified findings. It never passes one agent's conversation or claims to another ([handoff rules](docs/crew-protocol.md#handoff-rules)).
 
 ## Stack
 
@@ -51,7 +51,7 @@ bun tauri dev
 
 `bun run check` runs the typecheck, Biome, the jsdom unit tests and the Chromium tests. The Chromium tests run an axe scan of the Task screen in light and dark, with and without the app theme. kbui installs from its GitHub release tarballs, so no local kbui checkout is needed.
 
-Checks run locally until v1. The GitHub workflow in `.github/workflows/ci.yml` runs only when started by hand.
+Checks run locally until v1, the MVP release. The GitHub workflow in `.github/workflows/ci.yml` runs only when started by hand.
 
 Each spike under `spikes/` builds on its own; its `RESULT.md` or README gives the command and the verdict.
 

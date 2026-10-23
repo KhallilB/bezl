@@ -21,7 +21,7 @@ A milestone is done only when all of these are true:
 
 1. **The pass mark is measured, not claimed.** A new `progress.json` entry records the result, the numbers and the evidence at a commit. An agent's report is never evidence.
 2. **The demo runs.** Its recording, or the terminal log of a command-line demo, is saved and linked from the entry.
-3. **The checks pass locally at that commit.** That means `bun run check`, `cargo test` for Rust work, and `bun test` for harness work. CI is run by hand until v1.
+3. **The checks pass locally at that commit.** That means `bun run check`, `cargo test` for Rust work, and `bun test` for harness work. CI is run by hand until v1, the MVP release.
 4. **Behaviour was built test-first.** Each behaviour change has a test that failed before the change.
 5. **Absorbed spikes are gone.** Each spike the milestone absorbs is deleted, and its `RESULT.md` moves to `docs/spikes/`.
 6. **The docs match.** Docs the milestone changes are updated in the same pull request, including this page's status table.
@@ -33,7 +33,7 @@ A milestone is done only when all of these are true:
 |---|---|---|---|
 | M0 | Stack and UI foundation | Done | |
 | E1 | Evidence engine: `bezl verify` | Next | M0 |
-| M1 | Crew test | Runs beside E1; blocked on Claude sign-in and the review corpus | M0 |
+| M1 | Crew test | Runs beside E1; blocked on Claude sign-in and the review corpus | M0; Phase 1's evidence arms need E1 |
 | M2 | Domain core | Not started | E1 |
 | M3 | Providers and preflight | Not started | M0 |
 | M4 | Live terminals | Spiked | M0 |
@@ -44,7 +44,7 @@ A milestone is done only when all of these are true:
 | M7c | The multi-take canvas | Not started | M6, M7b |
 | M8 | Explore with several models | Frozen | M1, M7c |
 
-The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only second session, checked and measured by Bezl, with every step on the record. M6 to M8 come after it.
+The MVP, released as v1, is M0, E1, M2, M3, M4 and M5: a real task, written by one agent, reviewed by a read-only second session, checked and measured by Bezl, with every step on the record. M1 runs beside it and does not gate it. M6 to M8 come after it.
 
 ## M0. Stack and UI foundation
 
@@ -67,27 +67,27 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 **Builds:**
 
 - `bezl verify <branch>`, a command-line tool that works on any branch, with or without the app.
-- The join of three things: changed lines from the diff, symbol boundaries, and coverage blocks. The diff and coverage parsers are already ported from loupe (#15).
+- The join of three things: changed lines from the diff, symbol boundaries, and coverage blocks. The diff and coverage parsers are already ported (#15) from loupe, the earlier coverage prototype.
 - Swappable boundary sources: infigraph first, SCIP for TypeScript, tree-sitter as the fallback. Each one reports what it could not resolve.
 - Four buckets: every changed line is covered, uncovered, unknown or excluded, exactly one of them, and the report groups the lines by symbol. Each run lists its degradations, such as "no coverage for Rust" or "symbol not resolved".
-- A result bound to the commit and the number of uncommitted files, so it never answers about an old commit.
-- Output as a structured result, never a failing exit code. Whether a finding blocks a merge is the operator's policy.
+- A result bound to the commit and a hash of uncommitted changes, so it never answers about an old state.
+- Output as a structured result, never a failing exit code. Whether the result blocks a merge is your policy.
 
-**Demo:** run `bezl verify` on a real agent branch in a Go repository and a TypeScript repository. It prints the changed symbols that no test runs, and what it could not measure.
+**Demo:** run `bezl verify` on a real agent branch in a Go repository and in kbui (TypeScript). It prints the changed symbols that no test runs, and what it could not measure.
 
 **Pass mark:**
 
-- On 10 real agent branches, at least 3 have a real problem that the agent called done.
-- At most 1 false alarm per branch.
-- Findings are labelled blind: the labeller does not know which branch or tool produced them.
+- On 10 real agent branches, at least 3 branches have a real problem the agent called done, and no branch has more than 1 false alarm.
+- A real problem is a reported symbol that the labeller judges needs a test or hides a defect. A false alarm is a reported symbol that a test does run, or that needs no test.
+- Reported symbols are labelled blind: the labeller does not know which branch or tool produced them.
 - The four buckets add up to the changed lines on a Go repository and a TypeScript repository.
 - Every run lists its degradations.
 
-**Done when:** the 10 branches, their labels and the labelling rule are saved with the evidence.
+**Done when:** the labelling rule is committed before the first label. The 10 branches and their labels are saved with the evidence. The work is time-boxed to two weeks.
 
-**If it fails:** below 3 catches, or above 1 false alarm per branch, evidence is dropped as the moat. Bezl then stays a personal orchestrator, and M6 to M8 lose their investment.
+**If it fails:** evidence is dropped as the moat. M5 still ships, as a personal orchestrator, and M6 to M8 are paused until the roadmap is revisited.
 
-**Depends on:** M0. Starts in TypeScript inside the harness. Its contracts move into Rust in M2.
+**Depends on:** M0. It starts in TypeScript in the harness (`spikes/05-crew-protocol/src/evidence`), the one exception to the spike rule below. Its code moves into Rust in M2.
 
 ## M1. Crew test
 
@@ -97,12 +97,13 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 
 - the handoff rules in the [Crew protocol](crew-protocol.md#handoff-rules);
 - isolated workers and pinned model versions;
-- self-review scored apart (#14).
+- self-review scored apart (#14);
+- harness support for review-only runs, hidden tests, several arms per run, and paired 95% intervals in `score`.
 
 **Phase 1, review only.**
 
 - 30 diffs from bezl, kbui and one outside repository. 20 carry a seeded defect, such as an off-by-one, an inverted condition, a dropped null check or a missing `await`. 10 are clean, to count false alarms. A few reverted real bug fixes are added, because seeded bugs flatter recall.
-- Reviewer arms, each in a fresh session, 3 repeats each: Claude Code, Codex and the local model. Each runs with and without Bezl's evidence check.
+- Reviewer arms, each in a fresh session, 3 repeats each: Claude Code, Codex and the local model. Each runs twice: with and without E1's evidence in its brief.
 - Labels are blind.
 
 **Phase 2, the full loop.**
@@ -117,11 +118,20 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 
 **Demo:** `bun src/cli.ts score` on the Phase 2 runs prints each arm's hidden-test pass rate with its confidence interval, its tokens, and the self-review runs reported apart.
 
-**Pass mark:** in at least one writer direction, the cross-provider reviewer arm beats both the matched-budget writer and the same-provider reviewer on hidden-test pass rate. The paired 95% interval must sit above zero, at no more than twice the single writer's tokens. In Phase 1, verified findings that reach the writer have a precision of at least 0.5. The direction that passes becomes the default crew.
+**Pass mark:**
+
+- In at least one writer direction, the cross-provider reviewer arm beats both the matched-budget writer and the same-provider reviewer on hidden-test pass rate.
+- The paired 95% interval for each difference sits above zero.
+- That arm uses no more than twice the single writer's tokens.
+- In Phase 1, verified findings have a precision of at least 0.5 against the blind labels.
+
+The direction that passes becomes the default crew.
 
 **Done when:** the corpus, the hidden tests and the pre-registered thresholds are committed before the first run. Spike 5 gets its `RESULT.md`.
 
 **If it fails:** the crew stays out of Bezl. Review findings go to you, and you decide what reaches the writer. M6 keeps only its "always" half.
+
+**Depends on:** M0. Phase 1's evidence arms need E1.
 
 **Blocked on:** `claude login`, and building the Phase 1 corpus.
 
@@ -137,13 +147,13 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 - Records live in `.git/bezl/`, per clone and never tracked. Bezl writes nothing to tracked files except the agent's change. Export is an explicit command.
 - E1's contracts as domain types: the four buckets, degradations, and results bound to a commit.
 
-**Demo:** a test run that:
+**Demo:** on a clone of bezl, a test run that:
 
 1. creates a task;
 2. tries a second writer on the same worktree, which is refused;
 3. kills the process;
 4. rebuilds the task from its log in `.git/bezl/`;
-5. shows `git status` is still clean.
+5. shows `git status` on that clone is still clean.
 
 **Pass mark:**
 
@@ -168,7 +178,7 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 - What each CLI reports about usage limits. Where a CLI reports nothing, Bezl says "unknown".
 - A decision on the third provider. Google stopped serving Gemini CLI on personal accounts on 18 June 2026. A 120B local model could not run as an agent on a 96 GB Mac (spike 4).
 
-**Demo:** the Providers screen lists every installed CLI, with its version, sign-in state, read-only result and usage reporting. A fake `codex` on the path is rejected by name.
+**Demo:** the Providers screen lists every installed CLI, with its version, sign-in state, read-only result and usage reporting. A fake `codex` on the path is rejected, and the screen shows what its version output says it is.
 
 **Pass mark:**
 
@@ -176,6 +186,10 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 - The read-only probe has a result for every provider offered.
 - The contract tests pass against the pinned CLI versions.
 - `spikes/03-reviewer-readonly` is deleted.
+
+**Done when:** the third-provider decision is recorded here and in the crew protocol.
+
+**Depends on:** M0.
 
 **Unlocks:** once Claude Code is proven read-only, a handover can swap roles, so the old writer becomes the reviewer instead of the run degrading to self-review.
 
@@ -189,15 +203,18 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 - Input written into the worker's terminal, which M5's message box uses.
 - Terminal snapshots in the task's record, through Ghostty's engine.
 
-**Demo:** three agent sessions stream side by side for a minute of heavy output. Typing in one echoes at once. Its snapshot opens in the task's history.
+**Demo:** three agent sessions stream side by side for a minute of heavy output. Typing in one echoes without a visible lag. Its snapshot opens in the task's history.
 
 **Pass mark:**
 
 - Three panes stream 20 MB each with no lost bytes.
-- Idle memory stays under 150 MB.
-- Bursts stay under 600 MB, at the 1 MiB high-water mark.
+- The app's memory stays under 150 MB at rest and under 600 MB during bursts, with at most 1 MiB buffered per pane before the port pauses the agent.
+- Typed input echoes within 100 ms, spike 1's line.
+- Each pane's snapshot opens in the task's history and matches the screen.
 
 **Done when:** spikes 1 and 2 are deleted. That means `spikes/01-pty-throughput`, `spikes/02-libghostty-vt`, `src-tauri/src/spike_pty.rs` with its commands in `src-tauri/src/lib.rs`, `src/spike/`, and the `src/spike/PtySpike` import in `src/App.tsx`.
+
+**Depends on:** M0.
 
 ## M5. First real task, end to end
 
@@ -205,7 +222,7 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 
 **Builds:** the task journey from the [product vision](vision.md), with one take:
 
-- **Tasks:** create a task from a repository and branch. Its brief is checked for readiness. Choose the writer and reviewer from what passed preflight. Each task shows its state; amber means it needs you.
+- **Tasks:** create a task from a repository and branch. Its brief is checked for readiness. Choose the writer and reviewer from what passed preflight. Each task shows its state; amber means it needs you. The task list's header shows each provider's usage, or "unknown".
 - **Brief and Plan:** the brief, its "done when" list, and one editable plan.
 - **Build:** the take, driven by the domain, with its live terminal line, Stop, and the message box.
 - **Check:** problems first. They come from Bezl's own build, tests and lint, and from E1's evidence: the changed symbols that no test runs.
@@ -218,11 +235,12 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 **Pass mark:**
 
 - A real task finishes with a writer and a read-only reviewer.
-- The operator answers one question in the app.
+- You answer one question in the app.
 - Check shows E1's evidence for the change.
 - The task's history shows every event and snapshot.
+- Your minutes on the task (writing the brief, answering questions, reading findings, deciding) are recorded, beside your minutes on a comparable change made with Claude Code or Codex alone. This is the north star's metric, measured for the first time.
 
-**Depends on:** M2, M3, M4 and E1. The `attention` tone and the button colour tokens it needs come from kbui; see [UI styling](ui-styling.md#state-colours).
+**Depends on:** M2, M3, M4 and E1, plus a kbui release with the `attention` tone and button colour tokens ([UI styling](ui-styling.md#state-colours)).
 
 ## M6. Crew in Bezl
 
@@ -250,7 +268,7 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 
 **Done when:** spike 5 is deleted. Spike 4 is deleted when the local lane lands or is dropped, whichever comes first.
 
-**Depends on:** M5, and M1 for the automatic half.
+**Depends on:** M5, and M1 for the automatic half. If E1 fails, M6 waits for the roadmap to be revisited.
 
 ## M7a. Recorded flows as evidence
 
@@ -260,7 +278,7 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 
 - A preview runner per worktree. It starts from a run command you confirm, reloads after every step, and stops when the task ends.
 - Record: Bezl captures each click and entry as steps. You add expectations at any step.
-- Replay, then "Save as a test": the flow joins Bezl's checks.
+- Replay, then "Save as a test": the flow joins Bezl's checks. The saved test lives in `.git/bezl/`, and becomes a tracked file only if the writer adds it as part of the change.
 - Accessibility and contrast checks at wide and narrow sizes, shown on Check.
 - When the preview cannot start, Bezl says "could not run" instead of retrying silently.
 
@@ -280,7 +298,8 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 
 **Builds:**
 
-- Point: click an element and say what to change. The writer gets the element's source file and line, from the same boundary sources as E1.
+- A decision on how a rendered element maps to its source file and line (see [Still open](vision.md#still-open)).
+- Point: click an element and say what to change. The writer gets the element's source file and line.
 - Draw: drag a box around an area and describe it.
 - Marks are anchored to elements, not pixels, so they survive a resize.
 
@@ -323,11 +342,15 @@ The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only 
 
 ## M8. Explore with several models
 
-**Status:** frozen. It stays frozen until the crew test shows that a design step before coding helps.
+**Status:** frozen. It stays frozen until a separate test shows that a design step before coding helps. M1 does not test this.
 
 **Goal, if it thaws:** several models sketch design directions before any code is written, and building from a chosen direction needs fewer review rounds.
 
+**Demo, if it thaws:** three models sketch directions for one real UI task in bezl. You keep parts of two, and a take builds from them.
+
 **Pass mark, if it thaws:** on five UI tasks, building from a chosen direction needs fewer review rounds than building straight from the brief.
+
+**Depends on:** M1 and M7c.
 
 ## Spikes
 
@@ -339,12 +362,13 @@ A spike answers one question, then goes away. Each one is absorbed by a mileston
 | 2. Terminal snapshots | `spikes/02-libghostty-vt` | Snapshots in the task's record | M4 |
 | 3. Read-only reviewers | `spikes/03-reviewer-readonly` | Preflight's read-only probe | M3 |
 | 4. Local 120B worker | `spikes/04-local-worker-gpt-oss` | The local model lane | M6, or sooner if the lane is dropped |
-| 5. Crew harness | `spikes/05-crew-protocol` | E1's first version, and the crew in Bezl | M6, or after M1 if the crew test fails and E1 has moved to Rust |
+| 5. Crew harness | `spikes/05-crew-protocol` | The crew in Bezl | M6, or after M1 if the crew test fails; E1's code moves to Rust first |
 
 Rules:
 
 - A spike lands on `main` as a `RESULT.md` plus the least code needed to rerun it. Spike 5 is still running, so it has a README instead, and gets its `RESULT.md` when M1 runs.
 - When a spike is deleted, its `RESULT.md` moves to `docs/spikes/`, and links to it are updated in the same change.
+- E1 is built inside spike 5 until M2 moves it to Rust. That is the one exception to "the least code needed to rerun it".
 - No app code may import from a spike. The two exceptions, the spike 1 commands in `src-tauri/src/lib.rs` and the `PtySpike` import in `src/App.tsx`, go in M4.
 
 ## Recording progress

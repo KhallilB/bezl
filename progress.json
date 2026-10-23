@@ -423,7 +423,7 @@
       "date": "2026-10-23",
       "kind": "milestone",
       "title": "Evidence engine",
-      "passMark": "On 10 real agent branches, at least 3 real problems the agent called done and at most 1 false alarm per branch, labelled blind; the four buckets add up on a Go and a TypeScript repository; every run lists its degradations",
+      "passMark": "On 10 real agent branches, at least 3 branches have a real problem the agent called done and none has more than 1 false alarm, labelled blind; the four buckets add up on a Go and a TypeScript repository; every run lists its degradations",
       "result": "not-run",
       "summary": "Will show whether Bezl's evidence catches real problems in agent work that the agent called done.",
       "measured": [],

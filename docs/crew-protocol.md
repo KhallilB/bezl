@@ -32,7 +32,7 @@ Agents never share a conversation and never hand each other work. Every step rea
 | Writer → Bezl | The writer replies `done` or `blocked`, with a response to each finding | Status, a one-line summary kept in the record, and per-finding responses |
 | Bezl → reviewer | The writer is done, the diff changed, and Bezl's checks pass; or after two failed rounds, so the reviewer can help | The brief, Bezl's check results, the diff within budget, and verified candidates |
 | Reviewer → writer | The verdict is `request_changes`, with verified `blocker` or `major` findings | Findings by id |
-| Writer → you | A question, a disputed finding, or any stop | The question, or the finding with both sides' reasons |
+| Bezl → you | The writer asks a question or disputes a finding, or a stop rule fires | The question, the finding with both sides' reasons, or the stop and its reason |
 
 ### Verified evidence
 
@@ -73,8 +73,8 @@ For each finding, the writer either fixes it or disputes it with a one-sentence 
 
 | Stop | Rule |
 |---|---|
-| Round cap | `max_rounds`, default 3 |
-| Step cap | `max_steps` model calls, default 8 |
+| Round cap | `limits.max_rounds`, default 3 |
+| Step cap | `limits.max_steps` model calls, default 8 |
 | No change | The writer's diff is the same as last round |
 | Repeated finding | The same file and finding come back after a fix attempt |
 | Blocked | The writer asks you a question |
@@ -113,8 +113,8 @@ Bezl refuses a crew that cannot work:
 Bezl loads a weaker crew and says so. Someone with one provider still gets a working crew:
 
 - **Self-review.** The reviewer should come from a different provider than the writer. If it shares one, the crew loads with a degradation. The reviewer is still a fresh, read-only session that sees only the diff, Bezl's checks and the brief, never the writer's transcript.
-- **Self-review after a handover.** A fallback becomes the writer. If it shares the reviewer's provider, the crew loads with a degradation. If it takes over, Bezl records a `degraded` event and the task carries on.
-- **Scored apart.** A task reviewed by its writer's own provider is reported separately. It never counts toward the crew test's pass marks, and a task lost to self-review still counts against the green threshold.
+- **Self-review after a handover.** If a fallback shares the reviewer's provider, the crew still loads, listed as a degradation. If that fallback takes over, Bezl records a `degraded` event and the task carries on.
+- **Scored apart.** In M1, planned same-provider review is its own arm. A task in another arm that ends up reviewed by its writer's own provider, for example after a handover, counts as a failure for that arm. The harness's `score` reports such runs separately.
 
 Once M3 proves a second provider read-only, a handover can swap roles instead: the old writer becomes the reviewer.
 
@@ -200,7 +200,7 @@ Briefs point at code instead of pasting it, and E1 needs the same facts: symbol 
 2. **SCIP** indexes for TypeScript, from `scip-typescript`.
 3. **tree-sitter** as the fallback, for outlines when nothing better resolves.
 
-Each source reports what it could not resolve. That report becomes a degradation in the result, instead of a silent gap. Nothing is written into the worktree.
+Each source reports what it could not resolve. That report becomes a degradation in the result, instead of a silent gap. Bezl writes nothing tracked into the worktree: infigraph keeps its index in `.infigraph/`, which Bezl adds to the worktree's `.git/info/exclude`.
 
 ## Local models
 
