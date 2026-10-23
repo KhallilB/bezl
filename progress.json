@@ -10,7 +10,7 @@
       "title": "Terminal output into the window",
       "passMark": "No lost bytes, echo under 100 ms, memory under 300 MB",
       "result": "partial",
-      "summary": "No terminal output is lost and typing echoes instantly; memory during heavy bursts is still above the target.",
+      "summary": "No terminal output is dropped and typing echoes with no noticeable delay; memory during heavy bursts missed the original limit.",
       "measured": [
         {
           "label": "Bytes received",
@@ -34,7 +34,7 @@
       "title": "Terminal snapshots from Ghostty’s engine",
       "passMark": "Clean cargo build under 5 minutes on a clean runner, and a plain-text vim snapshot that matches",
       "result": "pass",
-      "summary": "Ghostty's engine builds quickly and captures an accurate text snapshot of a live vim screen.",
+      "summary": "Ghostty's engine builds within its time budget and captures a vim screen snapshot that matches what was typed.",
       "measured": [
         { "label": "Clean build", "value": "42 s on macOS 27 with Homebrew zig@0.15" },
         { "label": "Vim snapshot", "value": "First line equals the typed text" }
@@ -50,7 +50,7 @@
       "title": "A Codex reviewer cannot write",
       "passMark": "The write is refused and the refusal shows in the output",
       "result": "pass",
-      "summary": "A Codex reviewer is stopped by the operating system when it tries to change a file, and says so.",
+      "summary": "A read-only Codex probe is stopped by the operating system when it tries to change a file, and says so.",
       "measured": [
         {
           "label": "target.txt after the probe",
