@@ -36,4 +36,13 @@ describe("WorkerMap", () => {
     const view = render(<WorkerMap task={task} workers={blocked} />);
     expect(view.container.querySelector("[data-packet]")).toBeNull();
   });
+
+  test("measures the write gradient in user space so a straight edge still draws", () => {
+    // A level edge has a zero-height box, and objectBoundingBox gradients then render nothing.
+    const { container } = render(<WorkerMap task={task} workers={running} />);
+    const edge = container.querySelector('[data-access="write"]') as SVGPathElement;
+    const ref = /url\(["']?#([^)"']+)/.exec(edge.getAttribute("style") ?? "")?.[1] ?? "";
+    const gradient = container.querySelector(`[id="${ref}"]`);
+    expect(gradient?.getAttribute("gradientUnits")).toBe("userSpaceOnUse");
+  });
 });

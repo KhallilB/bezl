@@ -39,8 +39,8 @@ function structure(el: HTMLElement) {
   for (const node of clone.querySelectorAll("[style]")) node.removeAttribute("style");
   for (const node of clone.querySelectorAll("[data-app-theme]"))
     node.removeAttribute("data-app-theme");
-  // Base UI ids are per-mount counters, not structure.
-  return clone.innerHTML.replaceAll(/base-ui-_r_[0-9a-z]+_/g, "base-ui-id");
+  // React useId values (Base UI's and bezl's SVG ids) are per-mount counters, not structure.
+  return clone.innerHTML.replaceAll(/_r_[0-9a-z]+_/g, "_r_id_");
 }
 
 for (const theme of themes) {
@@ -127,6 +127,45 @@ test.each(["light", "dark"] as const)(
     expect(getComputedStyle(pool).fill).toBe(getComputedStyle(ring).stroke);
   },
 );
+
+test("worker map labels never overlap with a writer and five reviewers", async () => {
+  const crowd = [
+    ...running.filter((w) => w.role === "primary"),
+    ...Array.from({ length: 5 }, (_, i) => ({
+      id: `r${i}`,
+      name: `Reviewer ${i + 1}`,
+      role: "reviewer" as const,
+      provider: "Claude Code",
+      state: "idle" as const,
+      summary: "Waiting.",
+    })),
+  ];
+  const el = await mount(<Task task={task} workers={crowd} onStop={() => {}} />, "dark");
+  const svg = el.querySelector<SVGSVGElement>(".task-worker-map") as SVGSVGElement;
+  const { width, height } = svg.viewBox.baseVal;
+  const boxes = [...svg.querySelectorAll<SVGGElement>("[data-node]")].map((node) => {
+    const texts = [...node.querySelectorAll<SVGTextElement>("text")].map((t) => t.getBBox());
+    const x = Math.min(...texts.map((b) => b.x));
+    const y = Math.min(...texts.map((b) => b.y));
+    const right = Math.max(...texts.map((b) => b.x + b.width));
+    const bottom = Math.max(...texts.map((b) => b.y + b.height));
+    return { x, y, right, bottom };
+  });
+  for (const b of boxes) {
+    expect(b.x).toBeGreaterThanOrEqual(0);
+    expect(b.right).toBeLessThanOrEqual(width);
+    expect(b.y).toBeGreaterThanOrEqual(0);
+    expect(b.bottom).toBeLessThanOrEqual(height);
+  }
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i] as (typeof boxes)[number];
+      const b = boxes[j] as (typeof boxes)[number];
+      const apart = a.right <= b.x || b.right <= a.x || a.bottom <= b.y || b.bottom <= a.y;
+      expect(apart, `labels ${i} and ${j} overlap`).toBe(true);
+    }
+  }
+});
 
 test("branch names keep their case in footers", async () => {
   const el = await mount(
