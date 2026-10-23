@@ -13,24 +13,24 @@ export function ActivityTrace({ samples }: { samples: number[] }) {
   const line = `M ${pts.join(" L ")}`;
   return (
     <svg
-      className="cr-trace"
+      className="task-trace"
       data-part="trace"
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="cr-trace-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" className="cr-trace-from" />
-          <stop offset="1" className="cr-trace-to" />
+        <linearGradient id="task-trace-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" className="task-trace-from" />
+          <stop offset="1" className="task-trace-to" />
         </linearGradient>
       </defs>
       <path
-        className="cr-trace-fill"
+        className="task-trace-fill"
         d={`${line} L ${W} ${H} L 0 ${H} Z`}
-        fill="url(#cr-trace-fill)"
+        fill="url(#task-trace-fill)"
       />
-      <path className="cr-trace-line" d={line} vectorEffect="non-scaling-stroke" />
+      <path className="task-trace-line" d={line} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }

@@ -6,17 +6,17 @@ Set the component token you mean. kbui resolves an alias at `:root`, so a wrappe
 
 Overlays portal into the theme wrapper (`usePortalRoot`), so the stop dialog gets the theme too.
 
-Bezl's own elements (`.cr-*` in `src/ui/control-room/control-room.css`) are styled with kbui semantic tokens only. `src/ui/styles.test.ts` fails on a `.kb-*` selector, `!important`, a raw color, or a `--kb-*` override in any bezl stylesheet.
+Bezl's own elements (`.task-*` in `src/ui/task/task.css`) are styled with kbui semantic tokens only. `src/ui/styles.test.ts` fails on a `.kb-*` selector, `!important`, a raw color, or a `--kb-*` override in any bezl stylesheet.
 
-Turning the theme off (`enabled={false}`) must change values, never structure or behavior. `ControlRoom.browser.test.tsx` renders every Control Room state in light and dark, with and without the theme, runs axe, compares the markup of both, and checks that the banner fits 800 and 1200 px windows.
+Turning the theme off (`enabled={false}`) must change values, never structure or behavior. `Task.browser.test.tsx` renders every Task screen state in light and dark, with and without the theme, runs axe, compares the markup of both, and checks that the task header fits 800 and 1200 px windows.
 
 ## Design language
 
 Owner decision (2026-10-22): the room is lit by the work, on rounded glass panels.
 
-- **Banner**: a floating glass capsule with the mark, the screen title and per-state summary chips.
-- **Orbit**: a map of the task worktree. The primary connects by a solid lit "writes" edge, reviewers by dashed "reads" edges, and each node shows its state. A packet travels the write edge only while the primary runs and reduced motion is off. The diagram's accessible name lists every worker, access and state.
-- **Bento**: the first running worker, else the first blocked one, is the hero panel. It carries large elapsed numerals, labelled step progress, a decorative output-rate trace and its output well. Other workers sit beside it.
+- **Task header**: a floating glass capsule with the mark, the title ("Task" and the task's branch) and per-state summary chips.
+- **Worker map**: a map of the task worktree. The primary connects by a solid lit "writes" edge, reviewers by dashed "reads" edges, and each node shows its state. A packet travels the write edge only while the primary runs and reduced motion is off. The diagram's accessible name lists every worker, access and state.
+- **Focused worker**: the first running worker, else the first blocked one, gets the large panel. It carries large elapsed numerals, labelled step progress, a decorative output-rate trace and its output well. Other workers sit beside it.
 - **Light**: running planes cast info light and blocked planes danger light through kbui's panel glow (`--kb-panel-glow-active`, `--kb-panel-glow-critical`), seen through a translucent, blurred plane (`--kb-panel-background`, `--kb-panel-backdrop`). Idle and finished cast none.
 - **Type**: Geist and Geist Mono, bundled through `@fontsource-variable` because the app runs offline. Meta (role, provider, access, branch, elapsed) is small uppercase mono.
 - Static grain, no ambient motion; status is always text plus a shape icon.
@@ -27,12 +27,12 @@ Preview a state with `?sample=idle|running|blocked|longContent`.
 
 If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Output sits in `Panel.Well`. Theme values are kbui semantic tokens, `color-mix` of a semantic color toward transparent, or (backdrop only) a blur and saturate filter; `src/ui/theme/AppTheme.test.tsx` enforces those three forms.
 
-kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/control-room/icons.tsx`) and 0010 (the product look is consumer-owned token overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
+kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/task/icons.tsx`) and 0010 (the product look is consumer-owned token overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
 
 ## Installing kbui
 
 `@kbui/react`, `@kbui/css` and `@kbui/tokens` are installed from kbui GitHub release tarballs. All three must name the same version; to upgrade, change the three URLs in `package.json` together.
 
-The Control Room needs kbui's lit panel edges, `tone="sunken"` and `Status appearance="chip"`, which arrive after v0.1.0. Until a release carries them, `package.json` still names v0.1.0 and typecheck fails against it; bump the three URLs to that release.
+The Task screen needs kbui's rounded `Panel`, `Panel.Well` and `Status appearance="chip"`, which arrive after v0.1.0. Until a release carries them, `package.json` still names v0.1.0 and typecheck fails against it; bump the three URLs to that release.
 
 To work on kbui and bezl at once, install kbui by path instead (see kbui's `docs/guides/using-kbui.md`). Then kbui's `@base-ui/react` resolves React from kbui's own `node_modules`, so `vite.config.ts` dedupes `react` and `react-dom` and the jsdom tests inline `@kbui/*` so the dedupe applies there too.

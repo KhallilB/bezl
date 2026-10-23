@@ -3,9 +3,9 @@ import "@fontsource-variable/geist-mono";
 import "@kbui/css/styles.css";
 import { useState } from "react";
 import { PtySpike, useSpikeConfig } from "./spike/PtySpike";
-import { ControlRoom } from "./ui/control-room/ControlRoom";
-import * as samples from "./ui/control-room/fixtures";
-import type { WorkerView } from "./ui/control-room/model";
+import * as samples from "./ui/task/fixtures";
+import type { WorkerView } from "./ui/task/model";
+import { Task } from "./ui/task/Task";
 import { AppTheme } from "./ui/theme/AppTheme";
 
 // Sample workers until the Rust domain projects real ones over IPC; ?sample= picks a state.
@@ -26,7 +26,7 @@ export function App() {
   if (cfg?.enabled) return <PtySpike config={cfg} />;
   return (
     <AppTheme>
-      <ControlRoom
+      <Task
         task={samples.task}
         workers={workers}
         onStop={(id) =>

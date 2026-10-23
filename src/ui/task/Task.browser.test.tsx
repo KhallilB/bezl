@@ -4,8 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, test } from "vitest";
 import "@kbui/css/styles.css";
 import { AppTheme } from "../theme/AppTheme";
-import { ControlRoom } from "./ControlRoom";
 import { blocked, idle, longContent, running, task } from "./fixtures";
+import { Task } from "./Task";
 
 const scenarios = { idle, running, blocked, longContent };
 const themes = ["light", "dark"] as const;
@@ -51,7 +51,7 @@ for (const theme of themes) {
         test("passes the accessibility scan", async () => {
           const el = await mount(
             <AppTheme enabled={themed}>
-              <ControlRoom task={task} workers={workers} onStop={() => {}} />
+              <Task task={task} workers={workers} onStop={() => {}} />
             </AppTheme>,
             theme,
           );
@@ -65,7 +65,7 @@ for (const theme of themes) {
       const on = structure(
         await mount(
           <AppTheme>
-            <ControlRoom task={task} workers={workers} onStop={() => {}} />
+            <Task task={task} workers={workers} onStop={() => {}} />
           </AppTheme>,
           theme,
         ),
@@ -74,7 +74,7 @@ for (const theme of themes) {
       const off = structure(
         await mount(
           <AppTheme enabled={false}>
-            <ControlRoom task={task} workers={workers} onStop={() => {}} />
+            <Task task={task} workers={workers} onStop={() => {}} />
           </AppTheme>,
           theme,
         ),
@@ -85,29 +85,29 @@ for (const theme of themes) {
 }
 
 test.each([800, 1200])(
-  "banner and grid fit a %ipx window without horizontal overflow",
+  "task header and grid fit a %ipx window without horizontal overflow",
   async (width) => {
     const el = await mount(
       <div style={{ width }}>
         <AppTheme>
-          <ControlRoom task={task} workers={running} onStop={() => {}} />
+          <Task task={task} workers={running} onStop={() => {}} />
         </AppTheme>
       </div>,
       "dark",
     );
-    const room = el.querySelector<HTMLElement>(".cr-room") as HTMLElement;
+    const room = el.querySelector<HTMLElement>(".task-screen") as HTMLElement;
     expect(room.scrollWidth).toBeLessThanOrEqual(width);
-    const summary = el.querySelector<HTMLElement>(".cr-summary") as HTMLElement;
+    const summary = el.querySelector<HTMLElement>(".task-summary") as HTMLElement;
     expect(summary.getBoundingClientRect().right).toBeLessThanOrEqual(
       room.getBoundingClientRect().right,
     );
   },
 );
 
-test("orbit labels stay inside the drawing", async () => {
+test("worker map labels stay inside the drawing", async () => {
   for (const workers of [running, blocked]) {
-    const el = await mount(<ControlRoom task={task} workers={workers} onStop={() => {}} />, "dark");
-    const svg = el.querySelector<SVGSVGElement>(".cr-orbit-map") as SVGSVGElement;
+    const el = await mount(<Task task={task} workers={workers} onStop={() => {}} />, "dark");
+    const svg = el.querySelector<SVGSVGElement>(".task-worker-map") as SVGSVGElement;
     const { width } = svg.viewBox.baseVal;
     for (const text of svg.querySelectorAll<SVGTextElement>("text")) {
       const box = text.getBBox();
@@ -121,7 +121,7 @@ test("orbit labels stay inside the drawing", async () => {
 test("themed panel planes clip only the decorative pseudo-element, never the root", async () => {
   const el = await mount(
     <AppTheme>
-      <ControlRoom task={task} workers={running} onStop={() => {}} />
+      <Task task={task} workers={running} onStop={() => {}} />
     </AppTheme>,
     "dark",
   );

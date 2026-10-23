@@ -1,20 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 import { blocked, running, task } from "./fixtures";
-import { Orbit } from "./Orbit";
+import { WorkerMap } from "./WorkerMap";
 
-describe("Orbit", () => {
+describe("WorkerMap", () => {
   test("summarises the task worktree and every worker in its accessible name", () => {
-    render(<Orbit task={task} workers={running} />);
+    render(<WorkerMap task={task} workers={running} />);
     expect(
       screen.getByRole("img", {
-        name: "feat/policy-engine: Worker A reads, idle; Worker B writes, running; Worker C reads, finished",
+        name: "Task feat/policy-engine: Worker A reads, idle; Worker B writes, running; Worker C reads, finished",
       }),
     ).toBeInTheDocument();
   });
 
   test("draws a write edge to the primary and read edges to reviewers", () => {
-    const { container } = render(<Orbit task={task} workers={running} />);
+    const { container } = render(<WorkerMap task={task} workers={running} />);
     const edge = (id: string) => container.querySelector(`[data-edge="${id}"]`);
     expect(edge("b")).toHaveAttribute("data-access", "write");
     expect(edge("a")).toHaveAttribute("data-access", "read");
@@ -22,18 +22,18 @@ describe("Orbit", () => {
   });
 
   test("marks each node with its worker state", () => {
-    const { container } = render(<Orbit task={task} workers={blocked} />);
+    const { container } = render(<WorkerMap task={task} workers={blocked} />);
     expect(container.querySelector('[data-node="b"]')).toHaveAttribute("data-state", "blocked");
     expect(container.querySelector('[data-node="a"]')).toHaveAttribute("data-state", "idle");
   });
 
   test("labels the hub with the task branch", () => {
-    const { container } = render(<Orbit task={task} workers={running} />);
+    const { container } = render(<WorkerMap task={task} workers={running} />);
     expect(container.querySelector("[data-hub]")).toHaveTextContent("feat/policy-engine");
   });
 
   test("sends no packet along the write edge unless the primary is running", () => {
-    const view = render(<Orbit task={task} workers={blocked} />);
+    const view = render(<WorkerMap task={task} workers={blocked} />);
     expect(view.container.querySelector("[data-packet]")).toBeNull();
   });
 });

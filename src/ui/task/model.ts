@@ -46,8 +46,8 @@ export const accessLabel: Record<WorkerRole, "writes" | "reads"> = {
   reviewer: "reads",
 };
 
-/** The worker the room centres on: first running, else first blocked, else none. */
-export function heroOf(workers: WorkerView[]): WorkerView | undefined {
+/** The worker a task centres on: first running, else first blocked, else none. */
+export function focusedWorkerOf(workers: WorkerView[]): WorkerView | undefined {
   return workers.find((w) => w.state === "running") ?? workers.find((w) => w.state === "blocked");
 }
 
