@@ -21,12 +21,36 @@ This section describes the interim Task screen. The task journey in the [product
 - **Geometry**: `src/ui/task/geometry.ts` is pure and deterministic: the same task and workers give the same layout whatever their order (workers are placed by id). Writers sit right of the hub and readers left, each side a column spaced so two-line labels never overlap; the drawing grows with the count. Each edge is a `d3-shape` natural curve through the hub, a lifted midpoint and its node, so even a level edge reads as an arc; the activity trace uses `d3-scale` with a monotone curve, which never overshoots its samples. D3 only computes paths; React renders them.
 - **SVG ids**: gradients and edge paths take per-instance ids from React's `useId`, so two maps or traces on one page never reference each other's definitions.
 - **Focused worker**: the first running worker, else the first blocked one, gets the large panel. It carries large elapsed numerals, labelled step progress, a decorative output-rate trace and its output well. Other workers sit beside it.
-- **Light**: running planes cast info light and blocked planes danger light through kbui's panel glow (`--kb-panel-glow-active`, `--kb-panel-glow-critical`), seen through a translucent, blurred plane (`--kb-panel-background`, `--kb-panel-backdrop`). Idle and finished cast none.
-- **Type**: Geist and Geist Mono, bundled through `@fontsource-variable` because the app runs offline. Meta is small mono: role, provider and access in uppercase; branch and elapsed time keep their case.
-- **Motion**: state-driven and on kbui's easing tokens. Once on entry, the header and worker map fade in, panels rise in staggered by index, the write edge draws itself, nodes scale in and the trace sweeps in left to right. The only loop is the comet while a writer runs. Panels lift 2px on hover or focus. Under `prefers-reduced-motion: reduce` nothing moves. `Task.browser.test.tsx` checks each of these in a default and a reduced-motion Chromium.
+- **Light**: running planes cast info light through kbui's panel glow (`--kb-panel-glow-active`), seen through a translucent, blurred plane (`--kb-panel-background`, `--kb-panel-backdrop`). Blocked planes cast danger light (`--kb-panel-glow-critical`) for now; they move to amber once kbui has an `attention` tone (see [State colours](#state-colours)). Idle and finished cast none.
+- **Type**: Geist and Geist Mono, bundled through `@fontsource-variable` because the app runs offline. Meta is small mono: role, provider and access in uppercase; branch and elapsed time keep their case. The uppercase meta is for the interim screen only; the journey uses sentence case.
+- **Motion**: state-driven and on kbui's easing tokens. Once on entry, the header and worker map fade in, panels rise in staggered by index, the write edge draws itself, nodes scale in and the trace sweeps in left to right. The only loop is the comet while a writer runs. Panels lift 2px on hover or focus. Under `prefers-reduced-motion: reduce` nothing moves. `Task.browser.test.tsx` checks the panel rise, the edge draw, the trace sweep, the comet and that only the comet loops, in a default and a reduced-motion Chromium. The header fade, the node scale-in and the hover lift are not tested yet.
 - Static grain; status is always text plus a shape icon.
 
 Preview a state with `?sample=idle|running|blocked|longContent`.
+
+## State colours
+
+One hue per meaning, the same hue in both themes, one lightness per theme, and teal as the only accent. Values are fitted to the sRGB gamut. Contrast is measured against the page background.
+
+| Meaning | kbui token | Dark | Light |
+|---|---|---|---|
+| Working, and the accent | `info` | `#37d8c9`, 11.2:1 | `#087970`, 5.3:1 |
+| Needs you | `attention` (new) | `#eeb154`, 10.5:1 | `#8d5e05`, 5.6:1 |
+| Failed | `danger` | `#fea199`, 10.2:1 | `#a84440`, 5.9:1 |
+| Passed | `success` | `#7cd591`, 11.2:1 | `#287c42`, 5.2:1 |
+| Idle | `muted` | kbui gray-400 | kbui gray-500 |
+
+Rules:
+
+- Only Working and Needs you glow. Failed is shown, never glowing. Passed and Idle are quiet.
+- Colour always comes with a word and an icon.
+
+These are kbui semantic tokens, and the app theme cannot override semantic colours by design (`src/ui/theme/tokens.ts` and its tests). So they arrive in two steps:
+
+1. **kbui:** an `attention` colour with a Panel and Status tone; button colour tokens, so the primary button can be teal without overriding `--kb-color-accent`; and this palette as kbui's semantic values or as an opt-in palette.
+2. **bezl:** "blocked, waiting for you" maps to `attention`, and `danger` stays for failed and stopped. This changes `src/ui/task/model.ts` and its tests, test-first.
+
+Until then, the interim screen paints a waiting worker with `danger`, the same as a failure.
 
 ## When a style cannot be reached
 

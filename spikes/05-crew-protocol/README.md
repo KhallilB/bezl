@@ -1,6 +1,6 @@
 # Spike 5: crew protocol test harness
 
-Status: harness built and tested with fake runners. Not yet run against real models.
+Status: harness built and tested with fake runners. Not yet run against real models. The crew test it serves is M1 in the [roadmap](../../docs/roadmap.md#m1-crew-test), whose design supersedes the five-task thresholds below.
 
 Question this harness answers: do several models coordinated by Bezl's rules finish real coding tasks better than one agent alone? A crew file says which model plays which role; the harness runs every task under that crew and under a one-agent baseline, then scores both.
 
@@ -59,9 +59,9 @@ bun src/cli.ts score --crew-run runs/crew --baseline-run runs/baseline --labels 
 
 `run` refuses an invalid crew (exit 2), then preflights every binding before any task (exit 3): `codex login status`, a one-line Claude canary, and that each Ollama model is pulled. Each task writes `<id>.json` and `<id>.events.jsonl`; the run writes `outcomes.json`.
 
-## Pass thresholds
+## Original pass thresholds (superseded)
 
-Set on 2026-10-22, before any real run.
+Set on 2026-10-22, before any real run. M1's two-phase design replaces them; `score` still computes them.
 
 | Check | Pass |
 |---|---|
@@ -74,7 +74,7 @@ Set on 2026-10-22, before any real run.
 
 ## Verified
 
-- `bun test`: 51 tests pass. Crew validation, the three runners' argument builders and parsers, the protocol loop against a real temporary git repo with fake runners, scoring, task loading, run-all and preflight.
+- `bun test` passes. It covers crew validation, the three runners' argument builders and parsers, the protocol loop against a real temporary git repo with fake runners, scoring, task loading, run-all and preflight.
 - The Codex parser is tested against a real `codex exec --json` transcript from spike 4.
 - `bun run typecheck`: clean.
 - Real preflight on this machine with `crew.example.toml`: Codex and the local Ollama model passed. Claude failed with `OAuth access token has been revoked`, so `run` stopped before any task.
@@ -82,8 +82,8 @@ Set on 2026-10-22, before any real run.
 
 ## Not done before the real run
 
-- **Pick the five tasks.** `tasks.example.toml` shows the format; each task needs a repo, a base ref, a goal, allowed paths and checks that fail before the change.
+- **Build the M1 corpus and tasks.** Phase 1 needs 30 diffs with seeded defects and clean controls; Phase 2 needs real tasks with hidden tests. `tasks.example.toml` shows the task format.
 - **`claude login`.** The Claude runner's parser is tested against a hand-written sample only; capture a real `claude -p --output-format json --json-schema` transcript once signed in.
-- **Worker isolation.** Workers load the user's global `CLAUDE.md`, `AGENTS.md`, hooks and MCP servers, which inflates every context and can block tools. Decide whether runs use isolated settings before scoring tokens.
+- **Worker isolation.** Decided: workers run isolated. Not built yet: today they load the user's global `CLAUDE.md`, `AGENTS.md`, hooks and MCP servers, which inflates every context and can block tools.
+- **The handoff rules.** Review only after checks pass, verified evidence, disputes, and sending only `blocker` and `major` findings back. See the [Crew protocol](../../docs/crew-protocol.md#what-is-built-today).
 - **More runners.** OpenCode, Aider and Antigravity CLI are not supported yet; the crew loader rejects them.
-- **Relay rule.** Bezl's README still says it never relays one provider's output into another. This harness relays typed, capped findings between providers on purpose, because that is what it measures. The product rule needs a decision if the test passes.

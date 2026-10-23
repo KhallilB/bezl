@@ -1,155 +1,352 @@
-# MVP roadmap
+# Roadmap
 
-The MVP is done when Bezl can take a real task in a real repository and see it through: one agent writes in its own worktree, another reviews without being able to write, Bezl checks the work itself, and every step is on the record. If the crew test passes, the agents also coordinate through the [Crew protocol](crew-protocol.md); if it fails, the MVP ships with one writer and the operator passing review findings along.
+The milestones that take Bezl from a stack to the [north star](north-star.md): any agent writes the change, Bezl measures it, you decide.
 
-The app's shape for M5 onward is the task journey in the [product vision](vision.md). M7 and M8 come after the MVP.
+The order follows one bet. Evidence comes first, because it is the part nobody else has. Orchestration stays small until the evidence earns its keep. The crew runs as an experiment beside the main line and never blocks it.
 
-Each milestone has a pass mark. The same pass mark sits in `progress.json` as a `not-run` entry until the milestone is checked, then it records the result and the evidence. Nothing is marked done on the strength of an agent's report.
+## How to read a milestone
 
-## Milestones
+Each milestone has the same parts:
 
-| | Milestone | Status |
-|---|---|---|
-| M0 | Stack and UI foundation | Done |
-| M1 | Crew test | Ready to run, blocked |
-| M2 | Domain core | Not started |
-| M3 | Providers and preflight | Not started |
-| M4 | Live terminals | Spiked |
-| M5 | First real task, end to end | Not started |
-| M6 | Crew protocol in Bezl | Depends on M1 |
-| M7 | Preview canvas | After the MVP |
-| M8 | Explore with several models | After M6 and M7 |
+- **Goal:** one sentence on what it proves or delivers.
+- **Builds:** what gets made.
+- **Demo:** what you can show someone in a few minutes once it is done, on a real repository, not sample data.
+- **Pass mark:** the measured threshold, written before the work starts. It also sits in `progress.json` as a `not-run` entry until the milestone is checked.
+- **Done when:** the milestone's own checklist, on top of the shared Definition of Done below.
+- **Depends on:** the milestones that must pass first.
 
-M1 comes early because its answer changes the shape of M6 and how much the MVP promises. M2 to M5 are needed either way.
+### Definition of Done, for every milestone
 
-### M0. Stack and UI foundation
+A milestone is done only when all of these are true:
 
-What: the three stack spikes, and kbui with the app theme, shown on a Task screen with sample data.
+1. **The pass mark is measured, not claimed.** A new `progress.json` entry records the result, the numbers and the evidence at a commit. An agent's report is never evidence.
+2. **The demo runs.** Its recording, or the terminal log of a command-line demo, is saved and linked from the entry.
+3. **The checks pass locally at that commit.** That means `bun run check`, `cargo test` for Rust work, and `bun test` for harness work. CI is run by hand until v1.
+4. **Behaviour was built test-first.** Each behaviour change has a test that failed before the change.
+5. **Absorbed spikes are gone.** Each spike the milestone absorbs is deleted, and its `RESULT.md` moves to `docs/spikes/`.
+6. **The docs match.** Docs the milestone changes are updated in the same pull request, including this page's status table.
+7. **Known limits are written down.** Anything that is degraded, skipped or unmeasured is listed in the entry. Nothing is hidden behind a pass.
 
-- Spike 1: terminal output reaches the window with no lost bytes. Memory during bursts is over the original line; the accepted trip-wires are idle under 150 MB and bursts under 600 MB at a 1 MiB high-water mark.
-- Spike 2: Ghostty's engine builds and captures terminal snapshots.
-- Spike 3: a Codex reviewer is blocked from writing by the operating system. The Claude probe has not run because the Claude login is revoked.
-- The Task screen runs on kbui 0.4.0 with sample data in bezl #3, which builds on #1. Its worker map is replaced by the task journey in M5; the theme, the kbui adoption and their tests carry over.
+## Status
 
-Pass mark: the three spikes have results, and the kbui adoption and app theme in bezl #1 and #3 are merged with their checks passing.
+| | Milestone | Status | Depends on |
+|---|---|---|---|
+| M0 | Stack and UI foundation | Done | |
+| E1 | Evidence engine: `bezl verify` | Next | M0 |
+| M1 | Crew test | Runs beside E1; blocked on Claude sign-in and the review corpus | M0 |
+| M2 | Domain core | Not started | E1 |
+| M3 | Providers and preflight | Not started | M0 |
+| M4 | Live terminals | Spiked | M0 |
+| M5 | First real task, end to end | Not started | M2, M3, M4, E1 |
+| M6 | Crew in Bezl | Not started; half of it depends on M1 | M5, M1 |
+| M7a | Recorded flows as evidence | Not started | M5 |
+| M7b | Point and Draw | Not started | M7a |
+| M7c | The multi-take canvas | Not started | M6, M7b |
+| M8 | Explore with several models | Frozen | M1, M7c |
 
-Done: bezl #1 and #3 merged on 2026-10-23, with checks passing on `main`. The Claude reviewer probe moves with spike 3 into M3.
+The MVP is M0 to M5: a real task, written by one agent, reviewed by a read-only second session, checked and measured by Bezl, with every step on the record. M6 to M8 come after it.
 
-### M1. Crew test
+## M0. Stack and UI foundation
 
-What: decide whether several agents coordinated by Bezl beat one agent working alone. The harness is built and tested in `spikes/05-crew-protocol`.
+**Status:** done on 2026-10-23 (entry `2026-10-23-m0-foundation`).
 
-Five small real tasks, each with checks that fail before the change. One crew run (a writer and a reviewer from different providers) and one baseline run (one agent alone), scored on thresholds set before any run.
+**Goal:** prove the stack and give the app its look.
 
-Pass mark: at least 4 of 5 tasks green with only a merge from the operator, no task stopped by a cap or a loop, crew tokens at most twice the baseline, and at least one finding that reached the writer labelled a real defect.
+**Builds:** three stack spikes, and kbui 0.4.0 with the app theme, shown on an interim Task screen with sample data.
 
-Blocked on:
+**Demo:** `bun tauri dev` opens the Task screen in its idle, running and blocked states, in light and dark.
 
-- `claude login`.
-- Choosing the five tasks.
-- Deciding whether workers run with an isolated config. Today they load the operator's global instructions, hooks and MCP servers, which inflates every context and skews the token score.
-- Deciding whether Bezl may pass typed, logged findings between providers. The README rule says it never relays one provider's output into another.
+**Pass mark:** the three spikes have results, and the kbui adoption and app theme in bezl #1 and #3 are merged with their checks passing.
 
-If the test fails, delete `spikes/05-crew-protocol` once its result is recorded; the findings move to `docs/spikes/`.
+**What it left open:** the Claude reviewer probe moved to M3. Spike 1's burst-memory line moved to M4.
 
-### M2. Domain core
+## E1. Evidence engine: `bezl verify`
 
-What: the rules of a task in Rust, with no UI or terminals attached.
+**Goal:** test the moat. Show that Bezl's evidence catches real problems in agent work that the agent called done.
 
-- A task owns a worktree, one writer, any number of reviewers and their capabilities.
+**Builds:**
+
+- `bezl verify <branch>`, a command-line tool that works on any branch, with or without the app.
+- The join of three things: changed lines from the diff, symbol boundaries, and coverage blocks. The diff and coverage parsers are already ported from loupe (#15).
+- Swappable boundary sources: infigraph first, SCIP for TypeScript, tree-sitter as the fallback. Each one reports what it could not resolve.
+- Four buckets: every changed line is covered, uncovered, unknown or excluded, exactly one of them, and the report groups the lines by symbol. Each run lists its degradations, such as "no coverage for Rust" or "symbol not resolved".
+- A result bound to the commit and the number of uncommitted files, so it never answers about an old commit.
+- Output as a structured result, never a failing exit code. Whether a finding blocks a merge is the operator's policy.
+
+**Demo:** run `bezl verify` on a real agent branch in a Go repository and a TypeScript repository. It prints the changed symbols that no test runs, and what it could not measure.
+
+**Pass mark:**
+
+- On 10 real agent branches, at least 3 have a real problem that the agent called done.
+- At most 1 false alarm per branch.
+- Findings are labelled blind: the labeller does not know which branch or tool produced them.
+- The four buckets add up to the changed lines on a Go repository and a TypeScript repository.
+- Every run lists its degradations.
+
+**Done when:** the 10 branches, their labels and the labelling rule are saved with the evidence.
+
+**If it fails:** below 3 catches, or above 1 false alarm per branch, evidence is dropped as the moat. Bezl then stays a personal orchestrator, and M6 to M8 lose their investment.
+
+**Depends on:** M0. Starts in TypeScript inside the harness. Its contracts move into Rust in M2.
+
+## M1. Crew test
+
+**Goal:** find out whether a second reviewer helps, and which direction to use (Claude Code writing and Codex reviewing, or the reverse).
+
+**Builds:** the test, on the harness in `spikes/05-crew-protocol`. The protocol is fixed in place first:
+
+- the handoff rules in the [Crew protocol](crew-protocol.md#handoff-rules);
+- isolated workers and pinned model versions;
+- self-review scored apart (#14).
+
+**Phase 1, review only.**
+
+- 30 diffs from bezl, kbui and one outside repository. 20 carry a seeded defect, such as an off-by-one, an inverted condition, a dropped null check or a missing `await`. 10 are clean, to count false alarms. A few reverted real bug fixes are added, because seeded bugs flatter recall.
+- Reviewer arms, each in a fresh session, 3 repeats each: Claude Code, Codex and the local model. Each runs with and without Bezl's evidence check.
+- Labels are blind.
+
+**Phase 2, the full loop.**
+
+- 10 to 12 real tasks, each with hidden tests the writer never sees.
+- Both writer directions. Four arms for each direction:
+  - the writer alone;
+  - the writer alone, given the same token budget for retries;
+  - the writer plus a same-provider reviewer;
+  - the writer plus the other provider's reviewer.
+- 3 repeats to start. The final count comes from Phase 1's variance.
+
+**Demo:** `bun src/cli.ts score` on the Phase 2 runs prints each arm's hidden-test pass rate with its confidence interval, its tokens, and the self-review runs reported apart.
+
+**Pass mark:** in at least one writer direction, the cross-provider reviewer arm beats both the matched-budget writer and the same-provider reviewer on hidden-test pass rate. The paired 95% interval must sit above zero, at no more than twice the single writer's tokens. In Phase 1, verified findings that reach the writer have a precision of at least 0.5. The direction that passes becomes the default crew.
+
+**Done when:** the corpus, the hidden tests and the pre-registered thresholds are committed before the first run. Spike 5 gets its `RESULT.md`.
+
+**If it fails:** the crew stays out of Bezl. Review findings go to you, and you decide what reaches the writer. M6 keeps only its "always" half.
+
+**Blocked on:** `claude login`, and building the Phase 1 corpus.
+
+## M2. Domain core
+
+**Goal:** the rules of a task, in Rust, with no UI or terminals attached.
+
+**Builds:**
+
+- A task owns its takes. Each take owns a worktree and one writer, with any number of reviewers and their capabilities. M5 uses one take.
 - One writer per worktree, enforced by a lease.
-- Every state change is an event, appended to a JSONL log with a schema version.
-- The task's state is rebuilt by replaying the log.
+- Every state change is an event, appended to a JSONL log with a schema version. The task's state is rebuilt by replaying the log.
+- Records live in `.git/bezl/`, per clone and never tracked. Bezl writes nothing to tracked files except the agent's change. Export is an explicit command.
+- E1's contracts as domain types: the four buckets, degradations, and results bound to a commit.
 
-Pass mark: tests cover the writer lease, every state transition, and rebuilding a task from its log; a second writer on the same worktree is refused.
+**Demo:** a test run that:
 
-### M3. Providers and preflight
+1. creates a task;
+2. tries a second writer on the same worktree, which is refused;
+3. kills the process;
+4. rebuilds the task from its log in `.git/bezl/`;
+5. shows `git status` is still clean.
 
-What: Bezl knows which agent CLIs it can use and how far it can trust each one.
+**Pass mark:**
 
-- Find each CLI and confirm what it is from its version output, not its file name. The `codex` on this machine's path turned out to be an unrelated static-site generator.
-- Check sign-in: `codex login status`, and a one-line canary for Claude Code, which has no status command.
-- Record how each capability is enforced: blocked by a launch flag, or instruction only.
-- Choose the third provider. Google stopped serving Gemini CLI on personal accounts on 18 June 2026. A 120B local model could not run as an agent on a 96 GB Mac (spike 4).
+- Tests cover the writer lease, every state transition, and rebuilding a task from its log.
+- A second writer on the same worktree is refused.
+- A property test shows the four buckets always add up to the changed lines.
+- No test run writes a tracked file.
 
-Pass mark: the Providers screen shows real preflight results for every installed CLI, the read-only probe has a result for every provider Bezl offers, and `spikes/03-reviewer-readonly` is deleted with its findings moved to `docs/spikes/`.
+**Depends on:** E1, whose contracts it adopts.
 
-### M4. Live terminals
+## M3. Providers and preflight
 
-What: real agent sessions streaming into Task panels.
+**Goal:** Bezl knows which agent CLIs it can use and how far it can trust each one.
 
-- Replace the spike's PTY code with a terminal port that applies backpressure.
-- Terminal snapshots into the evidence record through Ghostty's engine.
+**Builds:**
 
-Pass mark: three panes stream 20 MB each with no lost bytes, idle memory stays under 150 MB, and bursts stay under 600 MB. Spikes 1 and 2 are deleted: `spikes/01-pty-throughput`, `spikes/02-libghostty-vt`, `src-tauri/src/spike_pty.rs` with its commands in `lib.rs`, and `src/spike/`. Their findings move to `docs/spikes/`.
+- Each CLI is found and identified from its version output, not its file name. The `codex` on this machine's path turned out to be an unrelated static-site generator.
+- Sign-in is checked: `codex login status`, plus a one-line canary for Claude Code, which has no status command.
+- How each capability is enforced is recorded: blocked by a launch flag, or instruction only.
+- The read-only probe runs for every provider Bezl offers, Claude Code included.
+- Contract tests per CLI version, so a CLI update that changes its output fails a test instead of a task.
+- What each CLI reports about usage limits. Where a CLI reports nothing, Bezl says "unknown".
+- A decision on the third provider. Google stopped serving Gemini CLI on personal accounts on 18 June 2026. A 120B local model could not run as an agent on a 96 GB Mac (spike 4).
 
-### M5. First real task, end to end
+**Demo:** the Providers screen lists every installed CLI, with its version, sign-in state, read-only result and usage reporting. A fake `codex` on the path is rejected by name.
 
-What: the whole loop in the app, on a real repository, as the task journey in the [product vision](vision.md) with one take.
+**Pass mark:**
 
-- Tasks: create a task from a repository and branch with a brief checked for readiness, and choose the writer and reviewer. The task list shows each task's state; amber means it needs you.
-- Brief and Plan: the brief, its "done when" list, and one editable plan.
-- Build: the take driven by the domain, with its live terminal line, Stop and the message box.
-- Check: problems first, from Bezl's own build, tests and lint in the worktree.
-- Review: the read-only reviewer's verdict. Worker questions and capability requests are the approvals; they wait on you in this stage and on the task list.
-- Ship and history: the pull request with how the task got here, and the evidence: the event timeline, terminal snapshots and each worker's changes.
+- The Providers screen shows real preflight results for every installed CLI.
+- The read-only probe has a result for every provider offered.
+- The contract tests pass against the pinned CLI versions.
+- `spikes/03-reviewer-readonly` is deleted.
 
-Pass mark: a real task finishes with a writer and a read-only reviewer, the operator answers one approval in the app, and the evidence screen shows every event and snapshot for the task.
+**Unlocks:** once Claude Code is proven read-only, a handover can swap roles, so the old writer becomes the reviewer instead of the run degrading to self-review.
 
-### M6. Crew protocol in Bezl
+## M4. Live terminals
 
-Only if M1 passes. What: the [Crew protocol](crew-protocol.md) moves from the harness into Bezl's core.
+**Goal:** real agent sessions stream into the app without losing bytes or memory.
 
-- Crew files: roles bound to agent CLIs and localhost model endpoints.
-- Small briefs, typed answers, checks run by Bezl, and loop stops.
-- Code Facts: file outlines, references and symbol diffs, so briefs point at code instead of pasting it. Whether they come from the home-grown module in the Crew protocol or from infigraph is an open decision there.
-- A local model lane through Ollama for summaries, sorting and candidate findings that a reviewer or a test confirms. The same lane drafts Explore's sketches as structured wireframes that Bezl draws itself.
-- In the journey: several takes per task, a model menu on each take, and handover to the next model before a usage limit stops a task.
+**Builds:**
 
-Pass mark: the five M1 tasks, run inside Bezl, match or beat the harness results on every threshold, and `spikes/04-local-worker-gpt-oss` and `spikes/05-crew-protocol` are deleted with their findings moved to `docs/spikes/`.
+- A terminal port with backpressure, replacing the spike's PTY code.
+- Input written into the worker's terminal, which M5's message box uses.
+- Terminal snapshots in the task's record, through Ghostty's engine.
 
-### M7. Preview canvas
+**Demo:** three agent sessions stream side by side for a minute of heavy output. Typing in one echoes at once. Its snapshot opens in the task's history.
 
-After the MVP. What: the baseline for interactive previews, described in the [product vision](vision.md#the-preview-canvas).
+**Pass mark:**
 
-- A preview runner per worktree, started from a run command the operator confirms, reloaded after every step and stopped when the task ends.
-- The canvas: every take as an artboard on one board you can pan and zoom, at wide and narrow sizes.
-- Five ways to work: Use, Point (an element and an instruction, sent with its source file and line), Draw (a region and an instruction), Record, and Compare against `main`.
-- Recordings stored as events, annotated with expectations at any step, replayed on every take, and saved as tests that Bezl's check runner runs after each step.
-- Accessibility and visual checks at both sizes, shown as evidence on Check. Annotations anchored to elements, not pixels.
+- Three panes stream 20 MB each with no lost bytes.
+- Idle memory stays under 150 MB.
+- Bursts stay under 600 MB, at the 1 MiB high-water mark.
 
-Pass mark: a UI task's takes appear as artboards within 30 seconds of a step finishing; a pointed change and a drawn change each land in the right file; a recorded four-step flow replays on two takes and catches a seeded focus bug in one of them, then runs as a saved test; and a seeded contrast failure shows on Check with its evidence.
+**Done when:** spikes 1 and 2 are deleted. That means `spikes/01-pty-throughput`, `spikes/02-libghostty-vt`, `src-tauri/src/spike_pty.rs` with its commands in `src-tauri/src/lib.rs`, `src/spike/`, and the `src/spike/PtySpike` import in `src/App.tsx`.
 
-Later, each as its own small milestone once the baseline holds: app states (empty, many, loading, error) side by side, live design-token tweaks, device and theme presets, shared annotations, and recordings as video.
+## M5. First real task, end to end
 
-### M8. Explore with several models
+**Goal:** the whole loop in the app, on a real repository, with one take.
 
-After M6 and M7. What: Explore with sketches from several providers.
+**Builds:** the task journey from the [product vision](vision.md), with one take:
 
-- Sketches from more than one provider, blending keepers into new directions, and the direction board in every brief.
-- Two new checks: "Matches its direction", and "Design system", which flags a take that adds a component instead of reusing one.
+- **Tasks:** create a task from a repository and branch. Its brief is checked for readiness. Choose the writer and reviewer from what passed preflight. Each task shows its state; amber means it needs you.
+- **Brief and Plan:** the brief, its "done when" list, and one editable plan.
+- **Build:** the take, driven by the domain, with its live terminal line, Stop, and the message box.
+- **Check:** problems first. They come from Bezl's own build, tests and lint, and from E1's evidence: the changed symbols that no test runs.
+- **Review:** the read-only reviewer's verdict. A same-provider review is labelled "Reviewed by the same provider that wrote it".
+- **Needs you:** worker questions and capability requests wait on the task list and inside the stage where they came up.
+- **Ship and history:** the pull request with how the task got here. The history shows the event timeline, terminal snapshots and each worker's changes.
 
-Pass mark: on five UI tasks, building from a chosen direction needs fewer review rounds than building straight from the brief.
+**Demo:** take a small real change, such as a bug fix in bezl itself, from the brief to an open pull request. Answer one question along the way. Show Check pointing at an untested changed function.
+
+**Pass mark:**
+
+- A real task finishes with a writer and a read-only reviewer.
+- The operator answers one question in the app.
+- Check shows E1's evidence for the change.
+- The task's history shows every event and snapshot.
+
+**Depends on:** M2, M3, M4 and E1. The `attention` tone and the button colour tokens it needs come from kbui; see [UI styling](ui-styling.md#state-colours).
+
+## M6. Crew in Bezl
+
+**Goal:** more than one model per task, in the app.
+
+**Builds, always:**
+
+- Several takes per task.
+- A model menu on each take.
+- Handover to the next model after a failure or an exhausted quota.
+- The local model lane through Ollama, for summaries, sorting and candidate findings that a reviewer confirms with its own evidence.
+- Briefs that point at code through the boundary sources instead of pasting it.
+
+**Builds, only if M1 passes:**
+
+- Verified findings go to the writer automatically.
+- Propose-and-confirm with a pre-reviewer.
+
+**Demo:** two takes of one task on different models. One hits its quota and hands over, and the history shows the handover. If M1 passed, a reviewer's verified finding reaches the writer and gets fixed without you relaying it.
+
+**Pass mark:**
+
+- If M1 passed: the M1 Phase 2 tasks, run inside Bezl, match or beat the harness results on every threshold.
+- If it failed: three real tasks complete with a handover and a model switch, and every review finding reaches you.
+
+**Done when:** spike 5 is deleted. Spike 4 is deleted when the local lane lands or is dropped, whichever comes first.
+
+**Depends on:** M5, and M1 for the automatic half.
+
+## M7a. Recorded flows as evidence
+
+**Goal:** prove behaviour, not only coverage. A recorded flow with expectations becomes a check that runs on every step.
+
+**Builds:**
+
+- A preview runner per worktree. It starts from a run command you confirm, reloads after every step, and stops when the task ends.
+- Record: Bezl captures each click and entry as steps. You add expectations at any step.
+- Replay, then "Save as a test": the flow joins Bezl's checks.
+- Accessibility and contrast checks at wide and narrow sizes, shown on Check.
+- When the preview cannot start, Bezl says "could not run" instead of retrying silently.
+
+**Demo:** record a four-step flow on a take, add "the name field should be focused", and save it as a test. A later step breaks focus, and Check shows the failing step with its recording.
+
+**Pass mark:**
+
+- A recorded four-step flow catches a seeded focus bug and runs as a saved test.
+- A seeded contrast failure shows on Check with its evidence.
+- A project with no working run command reports "could not run".
+
+**Depends on:** M5.
+
+## M7b. Point and Draw
+
+**Goal:** say exactly what to change by showing it on the running app.
+
+**Builds:**
+
+- Point: click an element and say what to change. The writer gets the element's source file and line, from the same boundary sources as E1.
+- Draw: drag a box around an area and describe it.
+- Marks are anchored to elements, not pixels, so they survive a resize.
+
+**Demo:** point at a button and ask for a new label. Then draw around a card and ask for more spacing. Each change lands in the right file.
+
+**Pass mark:**
+
+- A pointed change and a drawn change each land in the right file on a real project.
+- A mark stays on its element when the preview switches from wide to narrow.
+
+**Depends on:** M7a.
+
+## M7c. The multi-take canvas
+
+**Goal:** compare takes side by side on one board.
+
+**Builds:**
+
+- Every take as an artboard on one board you can pan and zoom.
+- Compare against `main` with a before/after slider.
+- Replay a recorded flow on every take.
+- Ship shows the kept take's preview.
+
+**Demo:** two takes of one UI task side by side. One recorded flow replays on both and marks which take fails which step.
+
+**Pass mark:**
+
+- A UI task's takes appear as artboards within 30 seconds of a step finishing.
+- A recorded flow replays on two takes and catches a seeded bug in one of them.
+
+**Later, each as its own small milestone once M7c holds:**
+
+- app states (empty, many, loading, error) side by side;
+- live design-token tweaks;
+- device and theme presets;
+- shared annotations;
+- recordings as video.
+
+**Depends on:** M6 for several takes, and M7b.
+
+## M8. Explore with several models
+
+**Status:** frozen. It stays frozen until the crew test shows that a design step before coding helps.
+
+**Goal, if it thaws:** several models sketch design directions before any code is written, and building from a chosen direction needs fewer review rounds.
+
+**Pass mark, if it thaws:** on five UI tasks, building from a chosen direction needs fewer review rounds than building straight from the brief.
 
 ## Spikes
 
-A spike answers one question and then goes away. Each one is absorbed by a milestone, and that milestone is not done until the spike is deleted.
+A spike answers one question, then goes away. Each one is absorbed by a milestone, and that milestone is not done until the spike is deleted.
 
-| Spike | Where it lives today | Absorbed by | Deleted in |
+| Spike | Lives in | Absorbed by | Deleted in |
 |---|---|---|---|
-| 1. Terminal output | `spikes/01-pty-throughput`, `src-tauri/src/spike_pty.rs`, `src/spike/` | The terminal port with backpressure | M4 |
-| 2. Terminal snapshots | `spikes/02-libghostty-vt` | Snapshots in the evidence record | M4 |
+| 1. Terminal output | `spikes/01-pty-throughput`, `src-tauri/src/spike_pty.rs`, `src/spike/` | The terminal port | M4 |
+| 2. Terminal snapshots | `spikes/02-libghostty-vt` | Snapshots in the task's record | M4 |
 | 3. Read-only reviewers | `spikes/03-reviewer-readonly` | Preflight's read-only probe | M3 |
-| 4. Local 120B worker | `spikes/04-local-worker-gpt-oss`, in PR #4 | The local model lane | M6 |
-| 5. Crew harness | `spikes/05-crew-protocol`, in PR #6 | The Crew protocol in Bezl's core | M6, or after M1 if the crew test fails |
+| 4. Local 120B worker | `spikes/04-local-worker-gpt-oss` | The local model lane | M6, or sooner if the lane is dropped |
+| 5. Crew harness | `spikes/05-crew-protocol` | E1's first version, and the crew in Bezl | M6, or after M1 if the crew test fails and E1 has moved to Rust |
 
 Rules:
 
-- A spike lands on main as `RESULT.md` plus the least code needed to rerun it. Build output and `node_modules` are deleted once the result is recorded.
-- When a spike is deleted, its `RESULT.md` moves to `docs/spikes/` so the findings and decisions stay readable. Links to it are updated in the same change.
-- `progress.json` evidence stays valid after a deletion, because each entry points at a file at a fixed commit.
-- No app code may import from a spike. The spike 1 commands registered in `src-tauri/src/lib.rs` are the one exception, and M4 removes them.
+- A spike lands on `main` as a `RESULT.md` plus the least code needed to rerun it. Spike 5 is still running, so it has a README instead, and gets its `RESULT.md` when M1 runs.
+- When a spike is deleted, its `RESULT.md` moves to `docs/spikes/`, and links to it are updated in the same change.
+- No app code may import from a spike. The two exceptions, the spike 1 commands in `src-tauri/src/lib.rs` and the `PtySpike` import in `src/App.tsx`, go in M4.
 
 ## Recording progress
 
-When a milestone is checked, add a new entry to `progress.json` with the same `subject`: the date, the result (`pass`, `partial` or `fail`), what was measured and the evidence path at the commit. Entries already on `main` are never edited; the latest entry for a subject is its current state. Spikes add their own `experiment` entries the same way. The portfolio site builds its project page from this file.
+`progress.json` is append-only. Entries on `main` are never edited. When a milestone is checked, or its pass mark changes, add a new entry with the same `subject`, today's date, the result (`pass`, `partial`, `fail` or `not-run`), what was measured, and the evidence path at a commit. The newest entry for a subject is the current one. The portfolio site builds Bezl's project page from this file.

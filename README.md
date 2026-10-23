@@ -1,48 +1,69 @@
 # Bezl
 
-Local control plane for AI coding workers. One native window directs the official agent CLIs (Claude Code and Codex today; the third provider is open) as separate account-authenticated workers: one primary with write authority per task worktree, read-only reviewers (from a different provider when you have two), task-scoped capabilities, and an append-only local evidence trail.
+**Any agent writes the change. Bezl measures it. You decide.**
 
-Bezl never holds a key and never relays one provider's output into another. It reaches models in two ways: it launches the official agent CLIs in PTYs, and it may call model endpoints on localhost, such as Ollama serving local models or Ollama's cloud models after `ollama signin`. Credentials stay with those tools. Bezl records what happened.
+Bezl is a local app for working with AI coding agents. It runs the official agent CLIs, Claude Code and Codex today, as separate workers:
+
+- one writer per task worktree;
+- reviewers that cannot write, from a different provider when you have two.
+
+Bezl runs the checks itself. It shows which changed code no test runs, and records every step on your machine.
+
+Bezl never holds a key. Agent CLIs keep their own sign-in, and model endpoints such as Ollama run on this machine. Between agents, Bezl passes only what it produced or checked itself: the diff from git, its own check results, and verified findings. It never passes one agent's conversation or claims to another ([handoff rules](docs/crew-protocol.md#handoff-rules)).
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
-| Host | Tauri 2, Rust core owns domain and policy |
-| Live terminal | `@xterm/xterm` + `portable-pty`, bytes over a raw IPC channel |
-| Evidence snapshots | `libghostty-vt` headless (spike 2), `@xterm/addon-serialize` as fallback |
-| Persistence | append-only JSONL events, TOML manifests, `.ai/` inside each target repo |
-| UI | React 19 + KBUI 0.4.0 (GitHub release tarballs) |
-| Model endpoints | Ollama on localhost, local or cloud, for jobs without tools (spike 4) |
+| Host | Tauri 2; the Rust core owns the domain and policy |
+| Live terminal | `@xterm/xterm` and `portable-pty`, bytes over a raw IPC channel |
+| Terminal snapshots | `libghostty-vt` headless (spike 2), with `@xterm/addon-serialize` as the fallback |
+| Records | Append-only JSONL events and TOML manifests in `.git/bezl/`, per clone and never tracked |
+| UI | React 19 and kbui 0.4.0, from GitHub release tarballs |
+| Model endpoints | Ollama on this machine, local or cloud models, for jobs without tools (spike 4) |
 
 ## Layout
 
 ```text
-src/            React UI; src/ui/task is the interim Task screen (the task journey replaces it in M5), src/ui/theme the app theme (see docs/ui-styling.md, docs/product.md, docs/vision.md)
+src/            React UI. src/ui/task is the interim Task screen (replaced by the task journey in M5); src/ui/theme is the app theme
 src-tauri/      Tauri shell and thin commands
-crates/         bezl-domain, bezl-app, bezl-infra (to come)
-spikes/         time-boxed proofs with thresholds; each has RESULT.md
+crates/         bezl-domain, bezl-app, bezl-infra (from M2)
+spikes/         time-boxed experiments; each finished one has a RESULT.md
 ```
 
 ## Develop
 
 ```bash
 mise install && bun install
+```
+
+```bash
 bun run check
+```
+
+```bash
 cargo check -p bezl
+```
+
+```bash
 bun tauri dev
 ```
 
-`bun run check` runs typecheck, Biome, the jsdom unit tests and the Chromium tests (axe scan of the Task screen in light and dark, with and without the app theme). kbui is installed from its GitHub release tarballs, so no local kbui checkout is needed.
+`bun run check` runs the typecheck, Biome, the jsdom unit tests and the Chromium tests. The Chromium tests run an axe scan of the Task screen in light and dark, with and without the app theme. kbui installs from its GitHub release tarballs, so no local kbui checkout is needed.
 
-Spikes under `spikes/` build on their own; see each `RESULT.md` for the command and the verdict.
+Checks run locally until v1. The GitHub workflow in `.github/workflows/ci.yml` runs only when started by hand.
+
+Each spike under `spikes/` builds on its own; its `RESULT.md` or README gives the command and the verdict.
 
 ## Docs
 
 - [North star](docs/north-star.md): who Bezl is for, the one metric, the moat hypothesis and the non-goals. Every other doc answers to it.
-- [MVP roadmap](docs/roadmap.md): the milestones, each with the pass mark it is recorded against in `progress.json`.
-- [Crew protocol](docs/crew-protocol.md): how several models work on one task without looping or wasting tokens.
-- [Product vision](docs/vision.md): the task journey the app is shaped around, the preview canvas, and how both map onto the milestones. Interactive sketch in [docs/sketches/journey](docs/sketches/journey/README.md).
+- [Roadmap](docs/roadmap.md): each milestone's goal, demo, pass mark and Definition of Done.
+- [Product vision](docs/vision.md): the task journey the app is shaped around, and the preview canvas. Interactive sketch in [docs/sketches/journey](docs/sketches/journey/README.md).
+- [Crew protocol](docs/crew-protocol.md): how several models work on one task, what may pass between them, and when it stops.
+- [Product outline](docs/product.md): the app's areas and where each one sits in the journey.
+- [UI styling](docs/ui-styling.md): the app theme, the state colours and the kbui rules.
+- [Glossary](docs/glossary.md): one word for each idea.
 
 ## License
 

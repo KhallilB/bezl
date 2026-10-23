@@ -25,7 +25,7 @@ An agent says "done, tests pass", and you either believe it or re-read the whole
 Orchestrating several agent CLIs is not a moat: GitHub Agent HQ, Conductor and vibe-kanban already do it. What Bezl combines is:
 
 1. **Intent.** Bezl owns the task, so it knows the goal, the "done when" checks and the allowed paths. A verifier with no task cannot tell a deliberate omission from a gap.
-2. **Evidence.** Bezl joins the diff, symbol boundaries and coverage to say which changed symbols no test runs. Every symbol lands in exactly one bucket (covered, uncovered, unknown or excluded), and every run lists what it could not measure. The evidence is never a model's opinion.
+2. **Evidence.** Bezl joins the diff, symbol boundaries and coverage to say which changed symbols no test runs. Every changed line lands in exactly one bucket (covered, uncovered, unknown or excluded), and every run lists what it could not measure. The evidence is never a model's opinion.
 3. **The loop.** Evidence goes back to a writer as typed findings, and a second provider can write the missing test. This is the crew, and it is still an experiment ([M1](roadmap.md)).
 
 This is a hypothesis until E1 passes: on 10 real agent branches, at least 3 real problems the agent called done, at most 1 false alarm per branch, labelled blind. Below that, evidence is dropped as the moat, and Bezl stays a personal orchestrator.
@@ -43,6 +43,6 @@ This is a hypothesis until E1 passes: on 10 real agent branches, at least 3 real
 1. **E1, the evidence engine (`bezl verify`)** comes next, ahead of the domain core. It is a command-line tool, usable on any branch, and it tests the moat in about two weeks.
 2. **The crew experiment (M1)** runs alongside it, on the same artifacts. Its result decides M6. It never blocks M2 to M5.
 3. **Orchestration stays minimal** until E1 passes: one task, one take, the calm journey.
-4. **The design canvas** splits three ways. Recorded flows and accessibility checks are behavioural evidence and sit next to M5 (M7a). Point and Draw come later (M7b). The multi-take board and add-ons come after that (M7c). Explore (M8) is frozen until the crew shows the design step helps.
+4. **The design canvas** splits three ways. Recorded flows and accessibility checks are behavioural evidence and come right after M5 (M7a). Point and Draw come later (M7b). The multi-take board and add-ons come after that (M7c). Explore (M8) is frozen until the crew shows the design step helps.
 
-The [roadmap](roadmap.md) and [product vision](vision.md) still describe the earlier ordering, and the README and [product outline](product.md) still put records in `.ai/`. A follow-up docs change brings them in line with this page.
+The [roadmap](roadmap.md) gives each milestone its demo, pass mark and Definition of Done. The [glossary](glossary.md) fixes the words.
