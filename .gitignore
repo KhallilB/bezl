@@ -4,3 +4,5 @@ target
 .infigraph
 .DS_Store
 *.log
+.claude/worktrees/
+.vitest/

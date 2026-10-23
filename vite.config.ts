@@ -5,6 +5,8 @@ import { defineConfig } from "vite";
 // Watch only the frontend; Rust and spike build output must not trigger page reloads.
 export default defineConfig({
   plugins: [react()],
+  // Path-installed kbui symlinks into ../kbui: resolve from this node_modules for one React.
+  resolve: { preserveSymlinks: true, dedupe: ["react", "react-dom"] },
   clearScreen: false,
   server: {
     port: 1420,
