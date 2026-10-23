@@ -205,7 +205,7 @@
       "date": "2026-10-22",
       "kind": "milestone",
       "title": "Stack and interface foundation",
-      "passMark": "The three stack spikes have results, and the Task screen is merged with its checks passing",
+      "passMark": "The three stack spikes have results, and the kbui adoption and app theme in bezl #1 and #3 are merged with their checks passing",
       "result": "partial",
       "summary": "The stack experiments have results and the task screen runs on kbui 0.4.0, but it is not merged yet.",
       "measured": [
@@ -333,6 +333,50 @@
         }
       ],
       "commit": "d298164"
+    },
+    {
+      "id": "2026-10-23-m7-preview-canvas",
+      "subject": "m7-preview-canvas",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "An interactive preview canvas",
+      "passMark": "A UI task's takes appear as artboards within 30 seconds of a step finishing; a pointed change and a drawn change each land in the right file; a recorded four-step flow replays on two takes and catches a seeded focus bug in one of them, then runs as a saved test; and a seeded contrast failure shows on Check with its evidence",
+      "result": "not-run",
+      "summary": "Will let people use, point at, draw on, record and compare live previews of every take.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        },
+        {
+          "label": "Product vision",
+          "path": "docs/vision.md"
+        }
+      ],
+      "commit": "15dd8e7"
+    },
+    {
+      "id": "2026-10-23-m8-explore",
+      "subject": "m8-explore",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Design directions from several models",
+      "passMark": "On five UI tasks, building from a chosen direction needs fewer review rounds than building straight from the brief",
+      "result": "not-run",
+      "summary": "Will let several models sketch design directions before any code is written.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        },
+        {
+          "label": "Product vision",
+          "path": "docs/vision.md"
+        }
+      ],
+      "commit": "15dd8e7"
     }
   ]
 }
