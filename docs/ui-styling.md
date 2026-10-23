@@ -18,7 +18,7 @@ Owner decision (2026-10-22): the room is lit by the work, on rounded glass panel
 - **Worker map**: a map of the task worktree. The primary connects by a solid lit "writes" edge, reviewers by dashed "reads" edges, and each node shows its state. A packet travels the write edge only while the primary runs and reduced motion is off. The diagram's accessible name lists every worker, access and state.
 - **Focused worker**: the first running worker, else the first blocked one, gets the large panel. It carries large elapsed numerals, labelled step progress, a decorative output-rate trace and its output well. Other workers sit beside it.
 - **Light**: running planes cast info light and blocked planes danger light through kbui's panel glow (`--kb-panel-glow-active`, `--kb-panel-glow-critical`), seen through a translucent, blurred plane (`--kb-panel-background`, `--kb-panel-backdrop`). Idle and finished cast none.
-- **Type**: Geist and Geist Mono, bundled through `@fontsource-variable` because the app runs offline. Meta (role, provider, access, branch, elapsed) is small uppercase mono.
+- **Type**: Geist and Geist Mono, bundled through `@fontsource-variable` because the app runs offline. Meta is small mono: role, provider and access in uppercase; branch and elapsed time keep their case.
 - Static grain, no ambient motion; status is always text plus a shape icon.
 
 Preview a state with `?sample=idle|running|blocked|longContent`.
@@ -27,7 +27,7 @@ Preview a state with `?sample=idle|running|blocked|longContent`.
 
 If a look needs something kbui's tokens and parts do not expose, that is a kbui primitive gap. File it against kbui (a new token, part, or prop) rather than adding a `.kb-*` selector, an `!important`, or a raw color here. Bezl never patches kbui's structure. Output sits in `Panel.Well`. Theme values are kbui semantic tokens, `color-mix` of a semantic color toward transparent, a blur and saturate filter (backdrop only), or a font weight (`*-weight` only); `src/ui/theme/AppTheme.test.tsx` enforces those forms.
 
-The Task screen uses kbui's `Progress` (step), `Stat` (elapsed time), plain mono `Badge` (role, provider, access) and `ScrollArea` (output, inside `Panel.Well`). Branch names in footers stay plain mono text: mono `Badge` uppercases, and branch names are case-sensitive. The worker map and activity trace are bezl's own.
+The Task screen uses kbui's `Progress` (step), `Stat` (elapsed time), plain mono `Badge` (role, provider, access; and, with `preserveCase`, the footer's branch and elapsed time, since branch names are case-sensitive) and `ScrollArea` (output, inside `Panel.Well`). The worker map and activity trace are bezl's own.
 
 kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/task/icons.tsx`) and 0010 (the product look is consumer-owned token overrides, designed dark first, light validated). `index.html` sets `data-theme="dark"`.
 
