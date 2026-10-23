@@ -39,6 +39,7 @@ Spikes under `spikes/` build on their own; see each `RESULT.md` for the command 
 
 ## Docs
 
+- [North star](docs/north-star.md): who Bezl is for, the one metric, the moat hypothesis and the non-goals. Every other doc answers to it.
 - [MVP roadmap](docs/roadmap.md): the milestones, each with the pass mark it is recorded against in `progress.json`.
 - [Crew protocol](docs/crew-protocol.md): how several models work on one task without looping or wasting tokens.
 - [Product vision](docs/vision.md): the task journey the app is shaped around, the preview canvas, and how both map onto the milestones. Interactive sketch in [docs/sketches/journey](docs/sketches/journey/README.md).
