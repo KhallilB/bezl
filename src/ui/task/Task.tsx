@@ -1,4 +1,5 @@
 import { Badge, Button, Dialog, Panel, Progress, ScrollArea, Stat, Status } from "@kbui/react";
+import type { CSSProperties } from "react";
 import { usePortalRoot } from "../theme/AppTheme";
 import { ActivityTrace } from "./ActivityTrace";
 import "./task.css";
@@ -79,7 +80,12 @@ function Readout({ worker }: { worker: WorkerView }) {
   );
 }
 
-function WorkerPanel({ worker, onStop, focused }: WorkerProps & { focused: boolean }) {
+function WorkerPanel({
+  worker,
+  onStop,
+  focused,
+  index,
+}: WorkerProps & { focused: boolean; index: number }) {
   const view = presentation[worker.state];
   const headingId = `worker-${worker.id}-title`;
   const meta = [worker.branch, focused ? undefined : worker.elapsed].filter(Boolean).join(" · ");
@@ -88,6 +94,7 @@ function WorkerPanel({ worker, onStop, focused }: WorkerProps & { focused: boole
       className="task-cell"
       data-state={worker.state}
       {...(focused ? { "data-focused": "" } : {})}
+      style={{ "--task-i": index } as CSSProperties}
     >
       <Panel tone={view.tone} rail={view.rail} aria-labelledby={headingId}>
         <Panel.Header>
@@ -175,9 +182,15 @@ export function Task({ task, workers, onStop }: TaskProps) {
         <WorkerMap task={task} workers={workers} />
       </section>
       <main className="task-grid" data-layout={focused ? "bento" : "grid"}>
-        {focused ? <WorkerPanel worker={focused} onStop={onStop} focused /> : null}
-        {rest.map((worker) => (
-          <WorkerPanel key={worker.id} worker={worker} onStop={onStop} focused={false} />
+        {focused ? <WorkerPanel worker={focused} onStop={onStop} focused index={0} /> : null}
+        {rest.map((worker, i) => (
+          <WorkerPanel
+            key={worker.id}
+            worker={worker}
+            onStop={onStop}
+            focused={false}
+            index={i + (focused ? 1 : 0)}
+          />
         ))}
       </main>
     </div>

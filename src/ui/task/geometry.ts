@@ -1,5 +1,5 @@
 import { scaleLinear } from "d3-scale";
-import { area, curveMonotoneX, line, linkHorizontal } from "d3-shape";
+import { area, curveMonotoneX, curveNatural, line } from "d3-shape";
 import type { TaskView, WorkerView } from "./model";
 
 export const MAP_WIDTH = 1000;
@@ -32,10 +32,9 @@ export type MapLayout = {
 
 const round = (n: number) => Math.round(n * 10) / 10;
 const byId = (a: WorkerView, b: WorkerView) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-const link = linkHorizontal<
-  { source: [number, number]; target: [number, number] },
-  [number, number]
->();
+/** Peak of each edge above its higher endpoint: the arc reads as a link even when level. */
+const LIFT = 64;
+const arc = line<[number, number]>().curve(curveNatural);
 
 /**
  * Pure: same task and workers give the same geometry, whatever their order.
@@ -61,7 +60,12 @@ export function layoutWorkerMap(_task: TaskView, workers: WorkerView[]): MapLayo
         y,
         access: worker.role === "primary" ? "write" : "read",
         side: dir === 1 ? "start" : "end",
-        edge: link({ source: [hub.x, hub.y], target: [x, y] }) ?? "",
+        edge:
+          arc([
+            [hub.x, hub.y],
+            [round((hub.x + x) / 2), round(Math.min(hub.y, y) - LIFT)],
+            [x, y],
+          ]) ?? "",
       };
     });
 

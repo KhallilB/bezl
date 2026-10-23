@@ -44,6 +44,19 @@ describe("layoutWorkerMap", () => {
     }
   });
 
+  test.each([
+    ["a level writer", running],
+    ["stacked reviewers", blocked],
+  ])("arcs every edge above its endpoints, including %s", (_, workers) => {
+    const { hub, nodes } = layoutWorkerMap(task, workers);
+    for (const n of nodes) {
+      // d3 paths are flat x,y pairs, so every second number is a y.
+      const nums: number[] = n.edge.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g)?.map(Number) ?? [];
+      const ys = nums.filter((_v, i) => i % 2 === 1);
+      expect(Math.min(...ys), n.id).toBeLessThan(Math.min(hub.y, n.y) - 20);
+    }
+  });
+
   test("draws each edge from the hub to its node", () => {
     const { hub, nodes } = layoutWorkerMap(task, running);
     for (const n of nodes) {

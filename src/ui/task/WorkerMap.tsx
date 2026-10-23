@@ -48,6 +48,7 @@ export function WorkerMap({ task, workers }: { task: TaskView; workers: WorkerVi
           data-edge={n.id}
           data-access={n.access}
           data-state={n.worker.state}
+          {...(n.access === "write" ? { pathLength: 1 } : {})}
           style={
             n.access === "write" && n.worker.state !== "blocked"
               ? { stroke: `url(#${write})` }
@@ -55,6 +56,20 @@ export function WorkerMap({ task, workers }: { task: TaskView; workers: WorkerVi
           }
         />
       ))}
+      {reduced
+        ? null
+        : nodes
+            .filter((n) => n.access === "write" && n.worker.state === "running")
+            .map((n) => (
+              // Painted under nodes and hub, so it emerges from beneath the pill.
+              <path
+                key={`comet-${n.id}`}
+                className="task-comet"
+                d={n.edge}
+                pathLength={1}
+                data-packet
+              />
+            ))}
       {nodes.map((n) => {
         const lx = n.side === "start" ? n.x + 26 : n.x - 26;
         return (
@@ -80,17 +95,6 @@ export function WorkerMap({ task, workers }: { task: TaskView; workers: WorkerVi
           task worktree
         </text>
       </g>
-      {reduced
-        ? null
-        : nodes
-            .filter((n) => n.access === "write" && n.worker.state === "running")
-            .map((n) => (
-              <circle key={`packet-${n.id}`} className="task-packet" r={3} data-packet>
-                <animateMotion dur="1.8s" repeatCount="indefinite">
-                  <mpath href={`#${edgeId(n.id)}`} />
-                </animateMotion>
-              </circle>
-            ))}
     </svg>
   );
 }

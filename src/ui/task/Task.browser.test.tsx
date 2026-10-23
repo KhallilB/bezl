@@ -167,6 +167,79 @@ test("worker map labels never overlap with a writer and five reviewers", async (
   }
 });
 
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+test("panels rise in once, staggered, unless motion is reduced", async () => {
+  const el = await mount(
+    <AppTheme>
+      <Task task={task} workers={running} onStop={() => {}} />
+    </AppTheme>,
+    "dark",
+  );
+  const styles = [...el.querySelectorAll<HTMLElement>(".task-cell")].map((c) =>
+    getComputedStyle(c),
+  );
+  expect(styles.length).toBe(3);
+  if (reducedMotion()) {
+    for (const s of styles) expect(s.animationName).toBe("none");
+    return;
+  }
+  for (const s of styles) {
+    expect(s.animationName).toBe("task-rise");
+    expect(s.animationIterationCount).toBe("1");
+  }
+  const delay = (s: CSSStyleDeclaration) => Number.parseFloat(s.animationDelay);
+  expect(delay(styles[1] as CSSStyleDeclaration)).toBeGreaterThan(
+    delay(styles[0] as CSSStyleDeclaration),
+  );
+});
+
+test("the write edge draws in and the activity trace sweeps in, once", async () => {
+  const el = await mount(<Task task={task} workers={running} onStop={() => {}} />, "dark");
+  const expected: [string, string][] = [
+    ['.task-edge[data-access="write"]', "task-draw"],
+    [".task-trace-line", "task-reveal"],
+    [".task-trace-fill", "task-reveal"],
+  ];
+  for (const [selector, name] of expected) {
+    const s = getComputedStyle(el.querySelector(selector) as Element);
+    if (reducedMotion()) expect(s.animationName, selector).toBe("none");
+    else {
+      expect(s.animationName, selector).toBe(name);
+      expect(s.animationIterationCount, selector).toBe("1");
+    }
+  }
+});
+
+test("the comet runs beneath the hub, never over its label", async () => {
+  const el = await mount(<Task task={task} workers={running} onStop={() => {}} />, "dark");
+  const comet = el.querySelector("[data-packet]");
+  if (reducedMotion()) {
+    expect(comet).toBeNull();
+    return;
+  }
+  const hub = el.querySelector("[data-hub]") as Element;
+  expect(comet?.compareDocumentPosition(hub)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+});
+
+test.each(["running", "blocked"] as const)(
+  "only a running writer moves continuously (%s)",
+  async (state) => {
+    const workers = state === "running" ? running : blocked;
+    const el = await mount(<Task task={task} workers={workers} onStop={() => {}} />, "dark");
+    const looping = [...el.querySelectorAll<Element>("*")].filter((n) => {
+      const s = getComputedStyle(n);
+      return s.animationName !== "none" && s.animationIterationCount === "infinite";
+    });
+    if (reducedMotion() || state === "blocked") {
+      expect(looping).toEqual([]);
+      return;
+    }
+    expect(looping.length).toBeGreaterThan(0);
+    for (const n of looping) expect(n.closest("[data-packet]")).not.toBeNull();
+  },
+);
+
 test("branch names keep their case in footers", async () => {
   const el = await mount(
     <AppTheme>
