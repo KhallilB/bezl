@@ -1,0 +1,4 @@
+mode: atomic
+server/internal/example/example.go:10.1,12.2 2 1
+server/internal/example/example.go:14.1,16.2 3 0
+server/internal/example/example.go:20.1,22.2 1 1

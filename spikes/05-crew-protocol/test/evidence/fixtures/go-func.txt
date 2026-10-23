@@ -1,0 +1,4 @@
+server/internal/example/example.go:10: firstFunc 100.0%
+server/internal/example/example.go:14: secondFunc 0.0%
+server/internal/example/example.go:20: thirdFunc 100.0%
+total: (statements) 50.0%
