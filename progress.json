@@ -416,6 +416,239 @@
         }
       ],
       "commit": "20f28ca"
+    },
+    {
+      "id": "2026-10-23-e1-evidence-engine",
+      "subject": "e1-evidence-engine",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Evidence engine",
+      "passMark": "On 10 real agent branches, at least 3 branches have a real problem the agent called done and none has more than 1 false alarm, labelled blind; the four buckets add up on a Go and a TypeScript repository; every run lists its degradations",
+      "result": "not-run",
+      "summary": "Will show whether Bezl's evidence catches real problems in agent work that the agent called done.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m1-crew-test",
+      "subject": "m1-crew-test",
+      "date": "2026-10-23",
+      "kind": "experiment",
+      "title": "Crew test",
+      "passMark": "In one writer direction, cross-provider review beats the matched-budget writer and same-provider review on hidden-test pass rate (paired 95% interval above zero) at no more than twice the tokens; verified findings have precision of at least 0.5",
+      "result": "not-run",
+      "summary": "Redesigned: a review-only phase, then the full loop with hidden tests, in both writer directions.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m2-domain-core",
+      "subject": "m2-domain-core",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Domain core",
+      "passMark": "Tests cover the writer lease, every state transition and rebuilding a task from its log; a second writer is refused; the four buckets always add up; no test writes a tracked file",
+      "result": "not-run",
+      "summary": "Will build the task rules in Rust, keep records in .git/bezl and adopt the evidence engine's contracts.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m3-providers",
+      "subject": "m3-providers",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Providers and preflight",
+      "passMark": "Real preflight results for every installed CLI, a read-only result for every provider offered, contract tests passing against pinned CLI versions, and spike 3 deleted",
+      "result": "not-run",
+      "summary": "Will show which agent CLIs are installed and signed in, which reviewers cannot write, and what each reports.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m4-live-terminals",
+      "subject": "m4-live-terminals",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Live terminals",
+      "passMark": "Three panes stream 20 MB each with no lost bytes, idle memory under 150 MB and bursts under 600 MB at the 1 MiB high-water mark, and spikes 1 and 2 deleted",
+      "result": "not-run",
+      "summary": "Will stream real agent sessions into the app without losing bytes, within the memory limits.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m5-first-task",
+      "subject": "m5-first-task",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "First real task, end to end",
+      "passMark": "A real task finishes with a writer and a read-only reviewer, the operator answers one question in the app, Check shows the evidence engine's result, and the history shows every event and snapshot",
+      "result": "not-run",
+      "summary": "Will take a real task from brief to pull request in the app, with evidence on Check.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m6-crew-in-bezl",
+      "subject": "m6-crew-in-bezl",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Crew in Bezl",
+      "passMark": "If M1 passed, its Phase 2 tasks run in Bezl match or beat the harness on every threshold; otherwise three real tasks complete with a handover and a model switch, with every finding reaching the operator",
+      "result": "not-run",
+      "summary": "Will add takes, model switching and handover; automatic findings to the writer only if the crew test passes.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m7-preview-canvas-split",
+      "subject": "m7-preview-canvas",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Preview canvas",
+      "result": "not-run",
+      "summary": "Split into M7a, M7b and M7c, each tracked under its own subject from now on.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m7a-recorded-flows",
+      "subject": "m7a-recorded-flows",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Recorded flows as evidence",
+      "passMark": "A recorded four-step flow catches a seeded focus bug and runs as a saved test, a seeded contrast failure shows on Check, and a project with no working run command reports could not run",
+      "result": "not-run",
+      "summary": "Will turn recorded flows and accessibility checks on a live preview into checks that run after every step.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m7b-point-draw",
+      "subject": "m7b-point-draw",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Point and Draw",
+      "passMark": "A pointed change and a drawn change each land in the right file on a real project, and a mark stays on its element when the preview is resized",
+      "result": "not-run",
+      "summary": "Will let people point at or draw on the running app to say what to change.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m7c-multi-take-canvas",
+      "subject": "m7c-multi-take-canvas",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "The multi-take canvas",
+      "passMark": "Takes appear as artboards within 30 seconds of a step finishing, and a recorded flow replays on two takes and catches a seeded bug in one",
+      "result": "not-run",
+      "summary": "Will show every take side by side on one board, with replay and compare.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-m8-explore-frozen",
+      "subject": "m8-explore",
+      "date": "2026-10-23",
+      "kind": "milestone",
+      "title": "Explore with several models",
+      "passMark": "On five UI tasks, building from a chosen direction needs fewer review rounds than building straight from the brief",
+      "result": "not-run",
+      "summary": "Frozen until the crew test shows that a design step before coding helps.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
+    },
+    {
+      "id": "2026-10-23-reviewer-readonly-gemini",
+      "subject": "reviewer-readonly-gemini",
+      "date": "2026-10-23",
+      "kind": "experiment",
+      "title": "A Gemini CLI reviewer cannot write",
+      "passMark": "The write is refused and the refusal shows in the output",
+      "result": "not-run",
+      "summary": "Will not run: Google stopped serving Gemini CLI on personal accounts on 18 June 2026, so Bezl no longer offers it.",
+      "measured": [],
+      "evidence": [
+        {
+          "label": "Roadmap, M3",
+          "path": "docs/roadmap.md"
+        }
+      ],
+      "commit": "7bc51cb"
     }
   ]
 }
