@@ -38,8 +38,8 @@ A milestone is done only when all of these are true:
 | M3 | Providers and preflight | Not started | M0 |
 | M4 | Live terminals | Spiked | M0 |
 | M5 | First real task, end to end | Not started | M2, M3, M4, E1 |
-| M6 | Crew in Bezl | Not started; half of it depends on M1 | M5, M1 |
-| M7a | Recorded flows as evidence | Not started | M5 |
+| M6 | Crew in Bezl | Not started; half of it depends on M1 | M5, E1 passed, M1 |
+| M7a | Recorded flows as evidence | Not started | M5, E1 passed |
 | M7b | Point and Draw | Not started | M7a |
 | M7c | The multi-take canvas | Not started | M6, M7b |
 | M8 | Explore with several models | Frozen | M1, M7c |
@@ -85,9 +85,9 @@ The MVP, released as v1, is M0, E1, M2, M3, M4 and M5: a real task, written by o
 
 **Done when:** the labelling rule is committed before the first label. The 10 branches and their labels are saved with the evidence. The work is time-boxed to two weeks.
 
-**If it fails:** evidence is dropped as the moat. M5 still ships, as a personal orchestrator, and M6 to M8 are paused until the roadmap is revisited.
+**If it fails:** evidence is dropped as the moat. M5 still ships, as a personal orchestrator, and M6 to M8 pause until the roadmap is revisited (owner decision, 2026-10-23).
 
-**Depends on:** M0. It starts in TypeScript in the harness (`spikes/05-crew-protocol/src/evidence`), the one exception to the spike rule below. Its code moves into Rust in M2.
+**Depends on:** M0. It is built in TypeScript in the harness (`spikes/05-crew-protocol/src/evidence`), the one exception to the spike rule below (owner decision, 2026-10-23). Its code moves into Rust in M2.
 
 ## M1. Crew test
 
@@ -268,7 +268,7 @@ The direction that passes becomes the default crew.
 
 **Done when:** spike 5 is deleted. Spike 4 is deleted when the local lane lands or is dropped, whichever comes first.
 
-**Depends on:** M5, and M1 for the automatic half. If E1 fails, M6 waits for the roadmap to be revisited.
+**Depends on:** M5, E1 passing, and M1 for the automatic half.
 
 ## M7a. Recorded flows as evidence
 
@@ -290,7 +290,7 @@ The direction that passes becomes the default crew.
 - A seeded contrast failure shows on Check with its evidence.
 - A project with no working run command reports "could not run".
 
-**Depends on:** M5.
+**Depends on:** M5, and E1 passing.
 
 ## M7b. Point and Draw
 

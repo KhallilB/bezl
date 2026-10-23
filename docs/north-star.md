@@ -29,7 +29,7 @@ Orchestrating several agent CLIs is not a moat: as of October 2026, GitHub Agent
 2. **Evidence.** Bezl joins the diff, symbol boundaries and coverage to say which changed symbols no test runs. Every changed line lands in exactly one bucket (covered, uncovered, unknown or excluded), and every run lists what it could not measure. The evidence is never a model's opinion.
 3. **The loop.** Evidence goes back to a writer as typed findings, and a second provider can write the missing test. This is the crew, and it is still an experiment ([M1](roadmap.md)).
 
-This is a hypothesis until E1 passes: on 10 real agent branches, at least 3 branches have a real problem the agent called done, no branch has more than 1 false alarm, and the labels are blind. Below that, evidence is dropped as the moat, and Bezl stays a personal orchestrator.
+This is a hypothesis until E1 passes: on 10 real agent branches, at least 3 branches have a real problem the agent called done, no branch has more than 1 false alarm, and the labels are blind. Below that, evidence is dropped as the moat: Bezl ships M5 as a personal orchestrator, and M6 to M8 pause until the roadmap is revisited.
 
 ## Non-goals
 

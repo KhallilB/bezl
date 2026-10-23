@@ -8,18 +8,18 @@ The unit of work is the **task**: its takes, each with a worktree, one writer an
 
 ## Areas
 
-The owner confirmed these six areas and their navigation labels on 2026-10-22. The journey, added on 2026-10-23, regroups them as the last column shows.
+The owner confirmed these six areas and their navigation labels on 2026-10-22, and renamed Evidence to History on 2026-10-23. The journey, added on 2026-10-23, regroups them as the last column shows.
 
 | Area | Holds | Status | In the journey |
 |---|---|---|---|
 | Tasks | Create a task from a repository and branch, choose the writer and reviewers, list and archive tasks | Not built | The task list, with a brief checked for readiness when a task starts |
 | Task | One task, live | Interim screen built with sample data (`src/ui/task/`) | The journey itself, from M5 |
 | Approvals | Everything that waits on you: worker questions and requests for more access | Not built | "Needs you": amber items on the task list, and inline in the stage where they came up |
-| Evidence | The task's record: event timeline, terminal snapshots, what each worker changed | Not built | The task's history, and Ship's "how it got here" |
+| History | The task's record: event timeline, terminal snapshots, what each worker changed | Not built | The task's history, and Ship's "how it got here" |
 | Providers | Installed CLIs and versions from preflight, sign-in state, how each capability is enforced ("blocked by launch flag" or "instruction only"), and what each reports about usage | Not built | The writer and reviewer menus, offering only what passed preflight |
 | Settings | Record retention and export, theme, keyboard shortcuts | Not built | Unchanged |
 
-What Bezl measures about a change (failing checks, and the changed code no test runs) shows on Check, inside the task. The Evidence area holds the task's record of what happened.
+What Bezl measures about a change (failing checks, and the changed code no test runs) shows on Check, inside the task. That is evidence; the History area holds the record of what happened.
 
 ## Decisions
 
