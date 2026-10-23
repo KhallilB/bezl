@@ -34,6 +34,11 @@ bun tauri dev
 
 Spikes under `spikes/` build on their own; see each `RESULT.md` for the command and the verdict.
 
+## Docs
+
+- [MVP roadmap](docs/roadmap.md): the milestones, each with the pass mark it is recorded against in `progress.json`.
+- [Crew protocol](docs/crew-protocol.md): how several models work on one task without looping or wasting tokens.
+
 ## License
 
 [MIT](LICENSE)
