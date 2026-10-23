@@ -386,7 +386,7 @@
       "title": "Stack and interface foundation",
       "passMark": "The three stack spikes have results, and the kbui adoption and app theme in bezl #1 and #3 are merged with their checks passing",
       "result": "pass",
-      "summary": "The stack experiments have results, and kbui with the app theme is merged and its checks pass on main. The Claude reviewer probe still runs under M3.",
+      "summary": "kbui with the app theme is merged and passes its checks on main; the Claude reviewer probe runs under M3.",
       "measured": [
         {
           "label": "Stack spikes",
