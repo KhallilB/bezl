@@ -23,4 +23,5 @@ context = 8192
 writer = "claude"
 reviewer = "codex"
 pre_reviewer = "local"
+# If Codex takes over, Codex reviews its own change: loads as a degradation.
 fallback = ["codex"]

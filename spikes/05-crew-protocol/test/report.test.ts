@@ -14,6 +14,7 @@ const outcome = (taskId: string, over: Partial<Outcome> = {}): Outcome => ({
   usage: { w: u(100) },
   findings: [],
   events: [],
+  sameProviderReview: false,
   ...over,
 });
 const f = (fp: string, by = "r", confirmed?: boolean): RecordedFinding => ({
@@ -94,5 +95,39 @@ describe("loadTasks", () => {
     const t = '[[tasks]]\nid = "x"\nrepo = "/r"\nbase = "m"\ngoal = "g"\nallowed_paths = []\nchecks = ["true"]\n';
     const r = loadTasks(t + t);
     expect(!r.ok && r.errors).toContain('duplicate task id "x"');
+  });
+});
+
+describe("score with self-review runs", () => {
+  const baseline = five(() => ({ pattern: "single", usage: { w: u(100) } }));
+  const selfReview = (ids: number[]) => (i: number): Partial<Outcome> => (ids.includes(i) ? { sameProviderReview: true } : {});
+
+  test("reports self-review runs apart and never counts them toward the pass mark", () => {
+    const s = score(five(selfReview([5])), baseline, {});
+    expect(s.selfReview).toEqual({ tasks: 1, green: 1, taskIds: ["t5"] });
+    expect(s.green).toBe(4);
+    expect(s.checks.find((c) => c.name === "green")).toEqual({
+      name: "green",
+      pass: true,
+      detail: "4 of 5 green with cross-provider review, need 4; 1 self-review run scored apart",
+    });
+  });
+
+  test("two self-review runs leave too few cross-provider greens", () => {
+    expect(score(five(selfReview([4, 5])), baseline, {}).checks.find((c) => c.name === "green")?.pass).toBe(false);
+  });
+
+  test("a defect found only under self-review does not count", () => {
+    const crew = five((i) => (i === 1 ? { sameProviderReview: true, findings: [f("real bug")] } : {}));
+    const s = score(crew, baseline, { [labelKey("t1", "real bug")]: "real" });
+    expect(s.realDefects).toBe(0);
+  });
+
+  test("tokens compare cross-provider runs with the baseline for the same tasks", () => {
+    const crew = five((i) => (i === 5 ? { sameProviderReview: true, usage: { w: u(10_000) } } : { usage: { w: u(150) } }));
+    const s = score(crew, baseline, {});
+    expect(s.crewTokens).toBe(600);
+    expect(s.baselineTokens).toBe(400);
+    expect(s.tokenRatio).toBe(1.5);
   });
 });

@@ -34,18 +34,17 @@ runner = "claude-code"          # codex | claude-code | ollama
 [bindings.codex]
 runner = "codex"
 [bindings.local]
-runner = "ollama"               # localhost only, no key
+runner = "ollama"               # loopback endpoint, no key
 model = "gpt-oss:120b"
 context = 8192
 
 [roles]
 writer = "claude"               # must be an agent CLI
-reviewer = "codex"              # must be a different provider from the writer
+reviewer = "codex"              # best from a different provider; same one loads as self-review
 pre_reviewer = "local"          # needs a reviewer to confirm it
-fallback = ["codex"]            # writer replacement if the writer fails
 ```
 
-`trains_on_data = true` on a binding is refused unless `[policy] allow_training_data = true`. The pattern is derived: `single` (writer only), `pair`, or `propose-confirm`. See `crew.example.toml` and `crew.baseline.toml`.
+`trains_on_data = true` on a binding is refused unless `[policy] allow_training_data = true`. An endpoint off this machine is refused unless `[policy] allow_remote_endpoints = true`. `fallback = [...]` lists writer replacements, each an agent CLI. A reviewer from the writer's provider, or a fallback from the reviewer's provider, still loads, listed as a degradation; a handover that leaves one provider writing and reviewing records a `degraded` event. The pattern is derived: `single` (writer only), `pair`, or `propose-confirm`. See `crew.example.toml` and `crew.baseline.toml`.
 
 ## Running
 
@@ -71,7 +70,7 @@ Set on 2026-10-22, before any real run.
 | tokens | crew input plus output tokens at most twice the baseline |
 | real defect | at least one finding that reached a writer is labelled real |
 
-`score` also reports the pre-reviewer's candidates, how many the reviewer confirmed, and how many were labelled real or false.
+`score` also reports the pre-reviewer's candidates, how many the reviewer confirmed, and how many were labelled real or false. Tasks reviewed by the writer's own provider are listed apart: they never count toward the green, token or real-defect thresholds, and a task lost to one counts against the green threshold.
 
 ## Verified
 

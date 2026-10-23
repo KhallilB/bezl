@@ -184,7 +184,7 @@ describe("runTask", () => {
 
   test("a failing writer hands over to the fallback binding", async () => {
     const crew = crewOf(
-      '[bindings.w]\nrunner = "claude-code"\n[bindings.f]\nrunner = "codex"\n[bindings.r]\nrunner = "codex"\n[roles]\nwriter = "w"\nreviewer = "r"\nfallback = ["f"]\n',
+      '[bindings.w]\nrunner = "claude-code"\n[bindings.f]\nrunner = "claude-code"\n[bindings.r]\nrunner = "codex"\n[roles]\nwriter = "w"\nreviewer = "r"\nfallback = ["f"]\n',
     );
     const out = await run(crew, {
       w: scripted([() => ({ ok: false, error: "usage limit reached", usage: { input: 0, output: 0, cached: 0 } })]),
@@ -193,6 +193,37 @@ describe("runTask", () => {
     });
     expect(out.status).toBe("green");
     expect(out.events.some((e) => e.kind === "fallback" && e.detail.includes("usage limit reached"))).toBe(true);
+    expect(out.events.some((e) => e.kind === "degraded")).toBe(false);
+    expect(out.sameProviderReview).toBe(false);
+  });
+
+  test("a handover to the reviewer's provider continues as self-review, flagged", async () => {
+    const crew = crewOf(
+      '[bindings.w]\nrunner = "claude-code"\n[bindings.f]\nrunner = "codex"\n[bindings.r]\nrunner = "codex"\n[roles]\nwriter = "w"\nreviewer = "r"\nfallback = ["f"]\n',
+    );
+    const out = await run(crew, {
+      w: scripted([() => ({ ok: false, error: "usage limit reached", usage: { input: 0, output: 0, cached: 0 } })]),
+      f: scripted([write("two\n")]),
+      r: scripted([approve]),
+    });
+    expect(out.status).toBe("green");
+    expect(out.events.map((e) => e.kind)).toEqual(["writer", "fallback", "degraded", "writer", "checks", "reviewer", "done"]);
+    expect(out.events.find((e) => e.kind === "degraded")?.detail).toBe(
+      'writer "f" shares provider "openai" with reviewer "r": the review is self-review',
+    );
+    expect(out.sameProviderReview).toBe(true);
+  });
+
+  test("a crew that starts with one provider is flagged as self-review", async () => {
+    const crew = crewOf('[bindings.w]\nrunner = "codex"\n[bindings.r]\nrunner = "codex"\n[roles]\nwriter = "w"\nreviewer = "r"\n');
+    const out = await run(crew, { w: scripted([write("two\n")]), r: scripted([approve]) });
+    expect(out.status).toBe("green");
+    expect(out.sameProviderReview).toBe(true);
+  });
+
+  test("a run with no review is not self-review", async () => {
+    const out = await run(crewOf(SINGLE), { w: scripted([write("two\n")]) });
+    expect(out.sameProviderReview).toBe(false);
   });
 
   test("records an event for every step", async () => {

@@ -8,6 +8,11 @@ const errorsOf = (toml: string) => {
   const r = loadCrew(toml);
   return r.ok ? [] : r.errors;
 };
+const degradationsOf = (toml: string) => {
+  const r = loadCrew(toml);
+  if (!r.ok) throw new Error(r.errors.join("; "));
+  return r.crew.degradations;
+};
 
 describe("loadCrew", () => {
   test("accepts the example crew and derives propose-confirm", () => {
@@ -18,6 +23,9 @@ describe("loadCrew", () => {
     expect(r.crew.roles.writer.name).toBe("claude");
     expect(r.crew.roles.reviewer?.provider).toBe("openai");
     expect(r.crew.limits.maxRounds).toBe(3);
+    expect(r.crew.degradations).toEqual([
+      'fallback "codex" shares provider "openai" with reviewer "codex": if it takes over, the review is self-review',
+    ]);
   });
 
   test("baseline crew is a single agent with default limits", () => {
@@ -26,6 +34,7 @@ describe("loadCrew", () => {
     if (!r.ok) return;
     expect(r.crew.pattern).toBe("single");
     expect(r.crew.limits).toEqual({ maxRounds: 3, maxSteps: 8, maxFindings: 10, maxFindingChars: 500 });
+    expect(r.crew.degradations).toEqual([]);
   });
 
   test("rejects an unknown runner", () => {
@@ -40,10 +49,10 @@ describe("loadCrew", () => {
     ).toContain('writer "l" must be an agent CLI (codex or claude-code)');
   });
 
-  test("reviewer must come from a different provider than the writer", () => {
+  test("a reviewer from the writer's provider loads as self-review", () => {
     expect(
-      errorsOf('[bindings.a]\nrunner = "codex"\n[bindings.b]\nrunner = "codex"\n[roles]\nwriter = "a"\nreviewer = "b"\n'),
-    ).toContain('reviewer "b" shares provider "openai" with the writer');
+      degradationsOf('[bindings.a]\nrunner = "codex"\n[bindings.b]\nrunner = "codex"\n[roles]\nwriter = "a"\nreviewer = "b"\n'),
+    ).toEqual(['reviewer "b" shares provider "openai" with writer "a": the review is self-review']);
   });
 
   test("pre-reviewer needs a reviewer to confirm its findings", () => {
@@ -75,6 +84,41 @@ describe("loadCrew", () => {
     expect(
       errorsOf('[bindings.a]\nrunner = "codex"\n[bindings.l]\nrunner = "ollama"\nmodel = "m"\n[roles]\nwriter = "a"\nfallback = ["l"]\n'),
     ).toContain('fallback "l" must be an agent CLI (codex or claude-code)');
+  });
+
+  test("a fallback from the reviewer's provider loads, flagged", () => {
+    expect(
+      degradationsOf(
+        '[bindings.claude]\nrunner = "claude-code"\n[bindings.codex]\nrunner = "codex"\n[roles]\nwriter = "claude"\nreviewer = "codex"\nfallback = ["codex"]\n',
+      ),
+    ).toEqual(['fallback "codex" shares provider "openai" with reviewer "codex": if it takes over, the review is self-review']);
+  });
+
+  describe("endpoints", () => {
+    const local = (endpoint: string, policy = "") =>
+      `${policy}[bindings.a]\nrunner = "codex"\n[bindings.l]\nrunner = "ollama"\nmodel = "m"\nendpoint = "${endpoint}"\n[roles]\nwriter = "a"\nreviewer = "l"\n`;
+    const endpointErrors = (toml: string) => errorsOf(toml).filter((e) => e.includes("endpoint"));
+
+    test.each(["http://127.0.0.1:11434", "http://localhost:11434", "http://[::1]:11434", "http://127.0.0.2:8080"])(
+      "accepts loopback %s",
+      (url) => expect(endpointErrors(local(url))).toEqual([]),
+    );
+
+    test("refuses an endpoint off this machine", () => {
+      expect(endpointErrors(local("https://ollama.example.com"))).toEqual([
+        'binding "l": endpoint "https://ollama.example.com" is not on this machine; set policy.allow_remote_endpoints = true to use it',
+      ]);
+    });
+
+    test("allows a remote endpoint when the policy says so", () => {
+      expect(endpointErrors(local("https://ollama.example.com", "[policy]\nallow_remote_endpoints = true\n"))).toEqual([]);
+    });
+
+    test("refuses an endpoint that is not an http URL", () => {
+      expect(endpointErrors(local("127.0.0.1:11434"))).toEqual([
+        'binding "l": endpoint "127.0.0.1:11434" must be an http or https URL',
+      ]);
+    });
   });
 
   test("limits must be positive integers", () => {

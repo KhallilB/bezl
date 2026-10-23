@@ -68,7 +68,7 @@ export async function runAll({ crew, tasks, runnerFor, outDir, log }: RunAllOpti
     } catch (e) {
       outcome = {
         taskId: task.id, pattern: crew.pattern, status: "error", reason: (e as Error).message,
-        rounds: 0, steps: 0, usage: {}, findings: [], events: [],
+        rounds: 0, steps: 0, usage: {}, findings: [], events: [], sameProviderReview: false,
       };
     }
     writeFileSync(join(outDir, `${task.id}.json`), `${JSON.stringify(outcome, null, 2)}\n`);
