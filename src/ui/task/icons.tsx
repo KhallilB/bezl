@@ -12,19 +12,19 @@ export function StateIcon({ state }: { state: WorkerState }) {
           stroke="currentColor"
           strokeWidth="1.5"
         >
-          <circle cx="8" cy="8" r="5" />
+          <path d="M5 2.75h6L13.25 5v6L11 13.25H5L2.75 11V5z" />
         </svg>
       );
     case "running":
       return (
         <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
-          <path d="M4 3l9 5-9 5z" />
+          <path d="M4.5 3l8 5-8 5z" />
         </svg>
       );
     case "blocked":
       return (
         <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
-          <path d="M5 2h6l3 3v6l-3 3H5l-3-3V5z" />
+          <path d="M5 2h6l3 3v6l-3 3H5l-3-3V5zm-.5 5.25v1.5h7v-1.5z" fillRule="evenodd" />
         </svg>
       );
     case "finished":

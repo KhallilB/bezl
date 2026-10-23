@@ -1,19 +1,33 @@
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "@kbui/css/styles.css";
 import { useState } from "react";
 import { PtySpike, useSpikeConfig } from "./spike/PtySpike";
-import { ControlRoom } from "./ui/control-room/ControlRoom";
-import { running } from "./ui/control-room/fixtures";
-import type { WorkerView } from "./ui/control-room/model";
-import { FacetedOperationsSkin } from "./ui/skin/FacetedOperationsSkin";
+import * as samples from "./ui/task/fixtures";
+import type { WorkerView } from "./ui/task/model";
+import { Task } from "./ui/task/Task";
+import { AppTheme } from "./ui/theme/AppTheme";
+
+// Sample workers until the Rust domain projects real ones over IPC; ?sample= picks a state.
+function initialWorkers(): WorkerView[] {
+  const name = new URLSearchParams(window.location.search).get("sample");
+  const pick = {
+    idle: samples.idle,
+    running: samples.running,
+    blocked: samples.blocked,
+    longContent: samples.longContent,
+  };
+  return name && name in pick ? pick[name as keyof typeof pick] : samples.running;
+}
 
 export function App() {
   const cfg = useSpikeConfig();
-  // Sample workers until the Rust domain projects real ones over IPC.
-  const [workers, setWorkers] = useState<WorkerView[]>(running);
+  const [workers, setWorkers] = useState<WorkerView[]>(initialWorkers);
   if (cfg?.enabled) return <PtySpike config={cfg} />;
   return (
-    <FacetedOperationsSkin>
-      <ControlRoom
+    <AppTheme>
+      <Task
+        task={samples.task}
         workers={workers}
         onStop={(id) =>
           setWorkers((all) =>
@@ -23,6 +37,6 @@ export function App() {
           )
         }
       />
-    </FacetedOperationsSkin>
+    </AppTheme>
   );
 }
