@@ -1,6 +1,6 @@
 # Bezl
 
-Local control plane for AI coding workers. One native window directs Codex, Claude Code and Gemini CLI as separate account-authenticated workers: one primary with write authority per task worktree, read-only reviewers, task-scoped capabilities, and an append-only local evidence trail.
+Local control plane for AI coding workers. One native window directs the official agent CLIs (Claude Code and Codex today; the third provider is open) as separate account-authenticated workers: one primary with write authority per task worktree, read-only reviewers from a different provider, task-scoped capabilities, and an append-only local evidence trail.
 
 Bezl never holds a key and never relays one provider's output into another. It reaches models in two ways: it launches the official agent CLIs in PTYs, and it may call model endpoints on localhost, such as Ollama serving local models or Ollama's cloud models after `ollama signin`. Credentials stay with those tools. Bezl records what happened.
 
@@ -12,13 +12,13 @@ Bezl never holds a key and never relays one provider's output into another. It r
 | Live terminal | `@xterm/xterm` + `portable-pty`, bytes over a raw IPC channel |
 | Evidence snapshots | `libghostty-vt` headless (spike 2), `@xterm/addon-serialize` as fallback |
 | Persistence | append-only JSONL events, TOML manifests, `.ai/` inside each target repo |
-| UI | React 19 + KBUI 0.1.0 (GitHub release tarballs) |
+| UI | React 19 + KBUI 0.4.0 (GitHub release tarballs) |
 | Model endpoints | Ollama on localhost, local or cloud, for jobs without tools (spike 4) |
 
 ## Layout
 
 ```text
-src/            React UI; src/ui/task is the Task screen, src/ui/theme the app theme (see docs/ui-styling.md, docs/product.md)
+src/            React UI; src/ui/task is the interim Task screen (the task journey replaces it in M5), src/ui/theme the app theme (see docs/ui-styling.md, docs/product.md, docs/vision.md)
 src-tauri/      Tauri shell and thin commands
 crates/         bezl-domain, bezl-app, bezl-infra (to come)
 spikes/         time-boxed proofs with thresholds; each has RESULT.md

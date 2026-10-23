@@ -14,6 +14,8 @@ Turning the theme off (`enabled={false}`) must change values, never structure or
 
 Owner decision (2026-10-22): the room is lit by the work, on rounded glass panels.
 
+This section describes the interim Task screen. The task journey in the [product vision](vision.md) replaces the worker map and the focused-worker layout in M5; the theme rules above and the light and type rules below carry over.
+
 - **Task header**: a floating glass capsule with the mark, the title ("Task" and the task's branch) and per-state summary chips.
 - **Worker map**: a map of the task worktree. The primary connects by a solid lit "writes" edge, reviewers by dashed "reads" edges, and each node shows its state. A lit comet travels the write edge, beneath the hub, only while the primary runs and reduced motion is off. The diagram's accessible name lists every worker, access and state.
 - **Geometry**: `src/ui/task/geometry.ts` is pure and deterministic: the same task and workers give the same layout whatever their order (workers are placed by id). Writers sit right of the hub and readers left, each side a column spaced so two-line labels never overlap; the drawing grows with the count. Each edge is a `d3-shape` natural curve through the hub, a lifted midpoint and its node, so even a level edge reads as an arc; the activity trace uses `d3-scale` with a monotone curve, which never overshoots its samples. D3 only computes paths; React renders them.
@@ -38,6 +40,6 @@ kbui decisions behind this split: 0009 (icons are caller-provided; see `src/ui/t
 
 `@kbui/react`, `@kbui/css` and `@kbui/tokens` are installed from kbui GitHub release tarballs. All three must name the same version; to upgrade, change the three URLs in `package.json` together.
 
-The Task screen needs kbui's rounded `Panel`, `Panel.Well` and `Status appearance="chip"`, which arrive after v0.1.0. Until a release carries them, `package.json` still names v0.1.0 and typecheck fails against it; bump the three URLs to that release.
+The Task screen needs kbui's rounded `Panel`, `Panel.Well` and `Status appearance="chip"`; `package.json` installs them from v0.4.0.
 
 To work on kbui and bezl at once, install kbui by path instead (see kbui's `docs/guides/using-kbui.md`). Then kbui's `@base-ui/react` resolves React from kbui's own `node_modules`, so `vite.config.ts` dedupes `react` and `react-dom` and the jsdom tests inline `@kbui/*` so the dedupe applies there too.
