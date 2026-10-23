@@ -1,9 +1,9 @@
 name: CI
 
+# Manual only until v1: checks run locally to keep CI spend at zero.
+# Restore pull_request and push to main when that changes.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
