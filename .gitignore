@@ -1,0 +1,23 @@
+node_modules
+dist
+target
+.infigraph
+.DS_Store
+*.log
+.vitest/
+
+# Local-only folders.
+/internal/
+/docs/
+/spikes/
+
+# Agent instructions and settings stay local.
+.claude/
+.codex/
+.agents/
+.cursor/
+.mcp.json
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+GEMINI.md

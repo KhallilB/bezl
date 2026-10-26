@@ -1,0 +1,426 @@
+/* Bezl's own elements only; kbui parts change through the app theme's token overrides. */
+.task-screen {
+  --task-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --task-glass: color-mix(in oklab, var(--kb-color-fg) 6%, transparent);
+  --task-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  display: grid;
+  /* minmax(0, 1fr): an auto track would grow to the grid's max-width and push the bar off-screen. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: var(--kb-space-4);
+  padding: var(--kb-space-4) var(--kb-space-6) var(--kb-space-8);
+  box-sizing: border-box;
+  background:
+    radial-gradient(
+      80% 50% at 50% 0%,
+      color-mix(in oklab, var(--kb-color-info) 7%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      90% 60% at 50% 100%,
+      color-mix(in oklab, var(--kb-color-surface) 90%, transparent),
+      transparent 70%
+    ),
+    var(--kb-color-bg);
+  color: var(--kb-color-fg);
+  font-family: "Geist Variable", var(--kb-font-sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Film grain: static, so depth reads without ambient motion. */
+.task-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.task-header {
+  position: sticky;
+  top: var(--kb-space-3);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--kb-space-3);
+  padding: var(--kb-space-2) var(--kb-space-2) var(--kb-space-2) var(--kb-space-4);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, var(--task-glass), transparent),
+    color-mix(in oklab, var(--kb-color-bg) 70%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--kb-color-fg) 14%, transparent),
+    inset 0 0 0 1px var(--task-ring),
+    0 20px 40px -24px color-mix(in oklab, var(--kb-color-bg) 90%, transparent);
+}
+
+.task-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
+}
+
+.task-mark {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 0.4375rem;
+  background: conic-gradient(
+    from 200deg,
+    var(--kb-color-info),
+    var(--kb-color-accent),
+    var(--kb-color-info)
+  );
+  box-shadow: 0 0 18px color-mix(in oklab, var(--kb-color-info) 45%, transparent);
+}
+
+.task-crumb {
+  color: var(--kb-color-muted);
+}
+
+.task-title {
+  margin: 0;
+  font-size: var(--kb-size-sm);
+  font-weight: 500;
+}
+
+.task-title-branch {
+  margin-inline-start: var(--kb-space-1);
+  color: var(--kb-color-muted);
+  font-family: var(--task-mono);
+  font-weight: 400;
+}
+
+.task-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-1);
+  margin: 0 0 0 auto;
+  padding: var(--kb-space-1);
+  list-style: none;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--kb-color-bg) 50%, transparent);
+  box-shadow: inset 0 0 0 1px var(--task-ring);
+}
+
+.task-map {
+  border-radius: 1.75rem;
+  overflow: hidden;
+  background: radial-gradient(
+    60% 90% at 50% 50%,
+    color-mix(in oklab, var(--kb-color-info) 9%, var(--kb-color-surface)),
+    var(--kb-color-bg) 75%
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--kb-color-fg) 9%, transparent),
+    inset 0 0 0 1px var(--task-ring);
+}
+
+.task-worker-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 15rem;
+}
+
+.task-ring {
+  fill: none;
+  stroke: color-mix(in oklab, var(--kb-color-fg) 6%, transparent);
+}
+
+.task-edge {
+  fill: none;
+  stroke-width: 1.5;
+  stroke: color-mix(in oklab, var(--kb-color-fg) 22%, transparent);
+  stroke-dasharray: 3 6;
+}
+
+/* Write edges take their gradient inline: ids are per instance, so CSS cannot name them. */
+.task-edge[data-access="write"] {
+  stroke-dasharray: none;
+}
+
+.task-edge[data-state="blocked"] {
+  stroke: var(--kb-color-danger);
+}
+
+.task-write-from {
+  stop-color: var(--kb-color-accent);
+}
+
+.task-write-to {
+  stop-color: var(--kb-color-info);
+}
+
+.task-node {
+  --task-node: var(--kb-color-muted);
+}
+
+.task-node[data-state="running"] {
+  --task-node: var(--kb-color-info);
+}
+
+.task-node[data-state="blocked"] {
+  --task-node: var(--kb-color-danger);
+}
+
+.task-node[data-state="finished"] {
+  --task-node: var(--kb-color-success);
+}
+
+/* Each pool takes its node's color; a gradient in <defs> could not inherit it. */
+.task-node-pool {
+  fill: var(--task-node);
+  opacity: 0.35;
+  filter: blur(18px);
+}
+
+.task-node:is([data-state="idle"], [data-state="finished"]) .task-node-pool {
+  display: none;
+}
+
+.task-node-ring {
+  fill: var(--kb-color-bg);
+  stroke: var(--task-node);
+  stroke-width: 1.5;
+}
+
+.task-node-core {
+  fill: var(--task-node);
+}
+
+.task-node-name,
+.task-hub-name {
+  fill: var(--kb-color-fg);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.task-node-meta,
+.task-hub-meta {
+  fill: var(--kb-color-muted);
+  font-family: var(--task-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.task-hub {
+  fill: color-mix(in oklab, var(--kb-color-bg) 80%, var(--kb-color-info));
+  stroke: color-mix(in oklab, var(--kb-color-fg) 20%, transparent);
+}
+
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  align-content: start;
+  align-items: start;
+  gap: var(--kb-space-4);
+}
+
+.task-grid[data-layout="bento"] {
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+}
+
+.task-grid[data-layout="bento"] > [data-focused] {
+  grid-row: span 2;
+}
+
+@media (max-width: 52rem) {
+  .task-grid[data-layout="bento"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.task-cell {
+  min-width: 0;
+}
+
+.task-heading {
+  display: grid;
+  gap: var(--kb-space-1);
+  min-width: 0;
+}
+
+.task-eyebrow {
+  justify-self: start;
+}
+
+.task-body {
+  display: grid;
+  gap: var(--kb-space-4);
+}
+
+.task-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--kb-space-6);
+}
+
+.task-step {
+  width: 14rem;
+}
+
+.task-trace {
+  display: block;
+  width: 100%;
+  height: 4rem;
+}
+
+.task-trace-line {
+  fill: none;
+  stroke: var(--kb-color-info);
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 6px var(--kb-color-info));
+}
+
+.task-trace-from {
+  stop-color: var(--kb-color-info);
+  stop-opacity: 0.32;
+}
+
+.task-trace-to {
+  stop-color: var(--kb-color-info);
+  stop-opacity: 0;
+}
+
+.task-line {
+  margin: 0;
+  color: var(--kb-color-fg);
+  font-size: var(--kb-size-sm);
+  line-height: 1.55;
+}
+
+.task-ask {
+  font-size: var(--kb-size-md);
+}
+
+.task-transcript {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font: 0.78rem / 1.7 var(--task-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Type comes from kbui's case-preserving mono Badge; this only lays it out and truncates. */
+.task-meta {
+  display: block;
+  min-width: 0;
+  margin-inline-end: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Motion: state-driven only, on kbui easing tokens. Entrances run once; only a running
+   writer's comet loops. Reduced motion keeps every frame still. */
+@keyframes task-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+@keyframes task-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes task-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes task-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* Clip sweep: a non-scaling stroke breaks pathLength dashes, so the trace reveals left to right. */
+@keyframes task-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes task-comet {
+  from {
+    stroke-dashoffset: 0.16;
+  }
+  to {
+    stroke-dashoffset: -1;
+  }
+}
+
+.task-edge[data-access="write"] {
+  stroke-dasharray: 1;
+}
+
+.task-comet {
+  fill: none;
+  stroke: var(--kb-color-fg);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 0.16 0.84;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 6px var(--kb-color-info));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .task-header,
+  .task-map {
+    animation: task-fade 420ms var(--kb-motion-easing-enter) backwards;
+  }
+
+  .task-cell {
+    /* backwards, not both: after the entrance, hover may still move the cell. */
+    animation: task-rise 560ms var(--kb-motion-easing-enter) backwards;
+    animation-delay: calc(120ms + var(--task-i, 0) * 70ms);
+    transition: transform var(--kb-motion-duration-slow) var(--kb-motion-easing-standard);
+  }
+
+  .task-cell:hover,
+  .task-cell:focus-within {
+    transform: translateY(-2px);
+  }
+
+  .task-edge[data-access="write"] {
+    animation: task-draw 900ms var(--kb-motion-easing-standard) 220ms backwards;
+  }
+
+  .task-edge[data-access="read"] {
+    animation: task-fade 700ms var(--kb-motion-easing-enter) 320ms backwards;
+  }
+
+  .task-trace-line,
+  .task-trace-fill {
+    animation: task-reveal 1100ms var(--kb-motion-easing-standard) 300ms backwards;
+  }
+
+  .task-node {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: task-pop 420ms var(--kb-motion-easing-enter) 360ms backwards;
+  }
+
+  .task-comet {
+    animation: task-comet 1.6s cubic-bezier(0.45, 0, 0.25, 1) 1.1s infinite;
+  }
+}

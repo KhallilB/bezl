@@ -1,0 +1,16 @@
+[workspace]
+resolver = "3"
+members = ["src-tauri"]
+# Internal experiments carry their own Cargo.toml and native deps; keep them out.
+exclude = ["internal"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true
