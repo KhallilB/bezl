@@ -59,6 +59,10 @@ bun tauri dev
 
 Checks run locally for now. The GitHub workflow in `.github/workflows/ci.yml` runs only when started by hand.
 
+## Releases
+
+Pushing a tag `vX.Y.Z` that matches the version in `src-tauri/tauri.conf.json` runs `.github/workflows/release.yml`. It builds installers for macOS (Apple silicon and Intel), Linux and Windows into a draft GitHub release, which is published by hand. Installers are not code-signed yet.
+
 ## License
 
 [MIT](LICENSE)
