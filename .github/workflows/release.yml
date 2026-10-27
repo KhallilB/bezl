@@ -1,0 +1,87 @@
+name: Release
+
+# Tag push only: builds installers into a draft release, published by hand after a look.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Draft release
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.draft.outputs.id }}
+    steps:
+      - uses: actions/checkout@v5
+      # Bundles take their version from tauri.conf.json, not the tag.
+      - name: Check tag matches app version
+        run: |
+          version=$(jq -r .version src-tauri/tauri.conf.json)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match tauri.conf.json version $version"
+            exit 1
+          fi
+      # One draft up front; parallel tauri-action jobs would each create their own.
+      - name: Create draft
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: |
+            Early development build. Installers are not code-signed yet.
+
+            macOS: if the app reports it is damaged, run `xattr -dr com.apple.quarantine /Applications/bezl.app` once.
+            Windows: SmartScreen may warn on first launch; choose "More info", then "Run anyway".
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
+            -f tag_name="$GITHUB_REF_NAME" \
+            -f name="Bezl $GITHUB_REF_NAME" \
+            -f body="$NOTES" \
+            -F draft=true \
+            -F prerelease=true \
+            --jq .id)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          # 22.04 keeps the AppImage's glibc floor low.
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tauriScript: bun tauri
+          args: --target ${{ matrix.target }}
+          releaseId: ${{ needs.release.outputs.id }}
