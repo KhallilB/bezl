@@ -13,6 +13,30 @@ Bezl will run the checks itself, show which changed code no test runs, and recor
 
 Bezl never holds a key. Agent CLIs keep their own sign-in, and model endpoints such as Ollama run on this machine by default. Between agents, Bezl passes only what it produced or checked itself: the diff from git, its own check results, and verified findings. It never passes one agent's conversation or claims to another.
 
+## Install
+
+Download Bezl from the [Releases page](https://github.com/KhallilB/bezl/releases). Each release says which file fits your computer.
+
+| Your computer | File to download |
+|---|---|
+| Mac with Apple silicon (M1 or later) | `bezl_<version>_aarch64.dmg` |
+| Mac with an Intel chip | `bezl_<version>_x64.dmg` |
+| Windows | `bezl_<version>_x64-setup.exe` |
+| Linux | `.AppImage` for most distributions, `.deb` for Debian or Ubuntu, `.rpm` for Fedora |
+
+These builds aren't code-signed yet, so your computer will warn you the first time you open Bezl.
+
+- **macOS:** open the `.dmg` and drag Bezl into Applications. If macOS won't open it or says it's damaged, run this once in Terminal, then open Bezl again:
+
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/bezl.app
+  ```
+
+- **Windows:** if SmartScreen stops the installer, click **More info**, then **Run anyway**.
+- **Linux:** make the AppImage executable with `chmod +x`, then run it.
+
+You can also build Bezl from source; see [Develop](#develop).
+
 ## Stack
 
 | Layer | Choice | Status |
@@ -61,7 +85,7 @@ Checks run locally for now. The GitHub workflow in `.github/workflows/ci.yml` ru
 
 ## Releases
 
-Pushing a tag `vX.Y.Z` that matches the version in `src-tauri/tauri.conf.json` runs `.github/workflows/release.yml`. It builds installers for macOS (Apple silicon and Intel), Linux and Windows into a draft GitHub release, which is published by hand. Installers are not code-signed yet.
+To cut a release, push a tag like `v0.2.0` that matches the version in `src-tauri/tauri.conf.json`. GitHub Actions then builds the installers for macOS, Windows and Linux and puts them in a draft release (`.github/workflows/release.yml`). Look the draft over, then publish it.
 
 ## License
 

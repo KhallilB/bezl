@@ -30,10 +30,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           NOTES: |
-            Early development build. Installers are not code-signed yet.
+            ### Which file do I need?
 
-            macOS: if the app reports it is damaged, run `xattr -dr com.apple.quarantine /Applications/bezl.app` once.
-            Windows: SmartScreen may warn on first launch; choose "More info", then "Run anyway".
+            - **Mac with Apple silicon (M1 or later):** the file ending in `aarch64.dmg`
+            - **Mac with an Intel chip:** the file ending in `x64.dmg`
+            - **Windows:** the file ending in `x64-setup.exe`. The `.msi` installs the same app, for managed machines.
+            - **Linux:** the `.AppImage` runs on most distributions. Use the `.deb` on Debian or Ubuntu, or the `.rpm` on Fedora.
+
+            ### Opening it the first time
+
+            These builds aren't code-signed yet, so your computer will warn you the first time you open Bezl.
+
+            - **macOS:** open the `.dmg` and drag Bezl into Applications. If macOS won't open it or says it's damaged, run `xattr -dr com.apple.quarantine /Applications/bezl.app` once in Terminal, then open Bezl again.
+            - **Windows:** if SmartScreen stops the installer, click **More info**, then **Run anyway**.
+            - **Linux:** make the AppImage executable with `chmod +x`, then run it.
         run: |
           id=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
             -f tag_name="$GITHUB_REF_NAME" \
@@ -85,3 +95,20 @@ jobs:
           tauriScript: bun tauri
           args: --target ${{ matrix.target }}
           releaseId: ${{ needs.release.outputs.id }}
+
+  tidy:
+    name: Drop raw app archives
+    needs: [release, build]
+    if: always() && needs.release.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      # tauri-action also uploads each .app as .app.tar.gz; only an updater reads those, and users mistake them for installers.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ needs.release.outputs.id }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$RELEASE/assets" \
+            --jq '.[] | select(.name | endswith(".app.tar.gz")) | .id' |
+            while read -r id; do
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$id"
+            done
