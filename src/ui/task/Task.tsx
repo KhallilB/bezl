@@ -1,4 +1,4 @@
-import { Badge, Button, Dialog, Panel, Progress, ScrollArea, Stat, Status } from "@kbui/react";
+import { Badge, Button, Dialog, Panel, Progress, ScrollArea, Stat, Status } from "@kb.ui/react";
 import type { CSSProperties } from "react";
 import { usePortalRoot } from "../theme/AppTheme";
 import { ActivityTrace } from "./ActivityTrace";

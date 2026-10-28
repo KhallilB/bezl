@@ -1,4 +1,4 @@
-import type { PanelRail, PanelTone, StatusTone } from "@kbui/react";
+import type { PanelRail, PanelTone, StatusTone } from "@kb.ui/react";
 
 /** UI projection of a worker; the Rust domain owns the real state machine. */
 export type WorkerState = "idle" | "running" | "blocked" | "finished";

@@ -2,7 +2,7 @@ import axe from "axe-core";
 import type { ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, test } from "vitest";
-import "@kbui/css/styles.css";
+import "@kb.ui/css/styles.css";
 import { AppTheme } from "../theme/AppTheme";
 import { blocked, idle, longContent, running, task } from "./fixtures";
 import { Task } from "./Task";

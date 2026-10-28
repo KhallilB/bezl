@@ -1,15 +1,15 @@
-import type { tokens } from "@kbui/tokens";
+import type { tokens } from "@kb.ui/tokens";
 
 type Group = "panel" | "status" | "button" | "dialog" | "progress" | "stat";
-type ComponentVar = { [G in Group]: (typeof tokens)[G][keyof (typeof tokens)[G]] }[Group];
+type ComponentVar = Extract<
+  { [G in Group]: (typeof tokens)[G][keyof (typeof tokens)[G]] }[Group],
+  string
+>;
 type SemanticRef = `var(--kb-${"color" | "space" | "radius"}-${string})`;
 type Mix = `color-mix(in oklab, var(--kb-color-${string}) ${number}%, transparent)`;
 type ThemeValue = SemanticRef | Mix | `blur(${string}` | `${number}00`;
 
-/**
- * App theme: translucent rounded planes over a grainy floor; running and blocked workers cast
- * their tone as light. Values mix kbui semantic colors so light and dark both hold.
- */
+/** Semantic colors keep translucent planes valid in both themes. */
 export const themeTokens = {
   "--kb-panel-background": "color-mix(in oklab, var(--kb-color-surface) 62%, transparent)",
   "--kb-panel-backdrop": "blur(28px) saturate(150%)",

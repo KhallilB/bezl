@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { tokens } from "@kbui/tokens";
+import { tokens } from "@kb.ui/tokens";
 import { render } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 import { AppTheme, usePortalRoot } from "./AppTheme";

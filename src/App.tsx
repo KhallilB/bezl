@@ -1,6 +1,6 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
-import "@kbui/css/styles.css";
+import "@kb.ui/css/styles.css";
 import { useState } from "react";
 import { PtySpike, useSpikeConfig } from "./spike/PtySpike";
 import * as samples from "./ui/task/fixtures";
