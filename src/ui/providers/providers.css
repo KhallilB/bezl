@@ -45,3 +45,11 @@
   display: grid;
   gap: var(--kb-space-1);
 }
+
+.providers-windows {
+  display: grid;
+  gap: var(--kb-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

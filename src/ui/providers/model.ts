@@ -34,6 +34,27 @@ export type SignInCheck =
   | { kind: "canary"; detail: ClaudeSignIn }
   | { kind: "homes"; detail: HomeSignIn[] };
 
+export type Counts = { input: number; output: number; cacheRead: number; cacheWrite: number };
+
+export type Tokens =
+  | { kind: "unknown" }
+  | { kind: "known"; detail: { total: Counts; models: { model: string; counts: Counts }[] } };
+
+export type LimitWindow = {
+  name: string;
+  minutes: number | null;
+  usedPercent: number | null;
+  /** Unix seconds. */
+  resetsAt: number | null;
+  reached: boolean | null;
+};
+
+export type Limits =
+  | { kind: "unknown" }
+  | { kind: "reported"; detail: { windows: LimitWindow[]; hit: string | null } };
+
+export type Usage = { tokens: Tokens; limits: Limits };
+
 export type ProviderCheck = {
   discovery: {
     provider: ProviderId;
@@ -41,6 +62,7 @@ export type ProviderCheck = {
     rejected: { path: string; reason: Rejection }[];
   };
   signin: SignInCheck;
+  usage: Usage;
 };
 
 export const providerName: Record<ProviderId, string> = {
@@ -111,6 +133,39 @@ export function rejectionText(reason: Rejection): string {
       return `Did not start: ${reason.detail}`;
   }
 }
+
+export const unknownText = "unknown";
+
+export function tokensText(tokens: Tokens): string {
+  if (tokens.kind === "unknown") return unknownText;
+  const n = (v: number) => v.toLocaleString("en-US");
+  const { input, output, cacheRead, cacheWrite } = tokens.detail.total;
+  return `${n(input)} in · ${n(output)} out · ${n(cacheRead)} cache read · ${n(cacheWrite)} cache write`;
+}
+
+/** Codex names windows `primary`/`secondary`, so its length names it instead. */
+function windowName({ name, minutes }: LimitWindow): string {
+  if (minutes === null) return name.replaceAll("_", " ");
+  if (minutes % 1440 === 0) return `${minutes / 1440}-day`;
+  if (minutes % 60 === 0) return `${minutes / 60}-hour`;
+  return `${minutes}-minute`;
+}
+
+export function windowText(w: LimitWindow): string {
+  const parts = [w.usedPercent === null ? "use unknown" : `${w.usedPercent}% used`];
+  if (w.reached) parts.push("reached");
+  if (w.resetsAt !== null) {
+    const at = new Date(w.resetsAt * 1000).toLocaleString("en-US", {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    parts.push(`resets ${at}`);
+  }
+  return `${windowName(w)}: ${parts.join(", ")}`;
+}
+
+export const limitHit = (says: string) => needsYou(`Limit hit: "${says}"`);
 
 export const found = good("Found");
 export const notFound = failed("Not found");

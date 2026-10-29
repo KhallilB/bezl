@@ -1,5 +1,5 @@
 //! Claude Code has no status command, so a one-line Haiku call proves sign-in.
-use super::exec::{self, RunError};
+use super::exec::{self, Ran, RunError};
 use serde::Serialize;
 use serde_json::Value;
 use std::path::Path;
@@ -41,7 +41,16 @@ pub const CANARY_ARGS: &[&str] = &[
 ];
 
 pub fn claude_signin(claude: &Path, timeout: Duration) -> ClaudeSignIn {
-    let ran = match exec::run(claude, CANARY_ARGS, &[], timeout) {
+    signin_from(run_canary(claude, timeout))
+}
+
+pub(crate) fn run_canary(claude: &Path, timeout: Duration) -> Result<Ran, RunError> {
+    exec::run(claude, CANARY_ARGS, &[], timeout)
+}
+
+/// Split from the run so preflight reads usage from the same paid call.
+pub(crate) fn signin_from(ran: Result<Ran, RunError>) -> ClaudeSignIn {
+    let ran = match ran {
         Ok(ran) => ran,
         Err(e) => return ClaudeSignIn::Failed(e),
     };

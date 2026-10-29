@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
-import { claudeFound, codexFound, thisMachine } from "./fixtures";
+import { claudeFound, claudeLimited, codexFound, thisMachine } from "./fixtures";
 import type { ClaudeSignIn, ProviderCheck } from "./model";
 import { Providers } from "./Providers";
 
@@ -82,6 +82,71 @@ describe("Providers", () => {
       expect.stringContaining('Says "0.2.3"'),
       expect.stringContaining('Exited with code 2: "boom"'),
     ]);
+  });
+
+  test("shows the canary's tokens, and limits as unknown when Claude reports none", () => {
+    render(<Providers checks={[claudeFound]} />);
+    const usage = screen.getByRole("list", { name: "Usage" });
+    const [tokens, limits] = within(usage).getAllByRole("listitem") as [HTMLElement, HTMLElement];
+    expect(tokens).toHaveTextContent("Canary tokens");
+    expect(tokens).toHaveTextContent("2 in · 4 out · 0 cache read · 29,763 cache write");
+    expect(limits).toHaveTextContent(/^Limits\s*unknown$/);
+  });
+
+  test("says unknown for usage a CLI does not report", () => {
+    render(<Providers checks={[codexFound]} />);
+    const items = within(screen.getByRole("list", { name: "Usage" })).getAllByRole("listitem");
+    expect(items.map((i) => i.textContent)).toEqual(["Tokensunknown", "Limitsunknown"]);
+  });
+
+  test("shows each limit window and a limit hit in the CLI's own words", () => {
+    render(<Providers checks={[claudeLimited]} />);
+    const resets = (s: number) =>
+      new Date(s * 1000).toLocaleString("en-US", {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    const windows = within(screen.getByRole("list", { name: "Limit windows" })).getAllByRole(
+      "listitem",
+    );
+    expect(windows.map((w) => w.textContent)).toEqual([
+      `five hour: 43% used, resets ${resets(1793299200)}`,
+      `seven day: 100% used, reached, resets ${resets(1793343600)}`,
+    ]);
+    const hit = screen.getByText('Limit hit: "You\'ve hit your limit · resets 5pm"');
+    expect(hit.closest(".kb-status")).toHaveAttribute("data-tone", "warning");
+  });
+
+  test("names a Codex window by its length", () => {
+    const window = { name: "primary", usedPercent: 65, resetsAt: null, reached: null };
+    const codexLimits: ProviderCheck = {
+      ...codexFound,
+      usage: {
+        tokens: { kind: "unknown" },
+        limits: {
+          kind: "reported",
+          detail: {
+            windows: [
+              { ...window, minutes: 10080 },
+              { ...window, minutes: 300 },
+            ],
+            hit: null,
+          },
+        },
+      },
+    };
+    render(<Providers checks={[codexLimits]} />);
+    const windows = within(screen.getByRole("list", { name: "Limit windows" })).getAllByRole(
+      "listitem",
+    );
+    expect(windows.map((w) => w.textContent)).toEqual(["7-day: 65% used", "5-hour: 65% used"]);
+  });
+
+  test("shows no usage for a CLI that was not found", () => {
+    render(<Providers checks={thisMachine} />);
+    const codex = screen.getByRole("region", { name: "Codex" });
+    expect(within(codex).queryByRole("list", { name: "Usage" })).toBeNull();
   });
 
   test("shows a failed preflight as an error, and a pending one as checking", () => {
