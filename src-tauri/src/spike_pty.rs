@@ -54,18 +54,34 @@ pub fn spike_start(
 ) -> Result<(), String> {
     let pty = native_pty_system();
     let pair = pty
-        .openpty(PtySize { rows: 40, cols: 120, pixel_width: 0, pixel_height: 0 })
+        .openpty(PtySize {
+            rows: 40,
+            cols: 120,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
         .map_err(|e| e.to_string())?;
     let (head, tail) = cmd.split_first().ok_or("empty cmd")?;
     let mut builder = CommandBuilder::new(head);
     builder.args(tail);
-    let mut child = pair.slave.spawn_command(builder).map_err(|e| e.to_string())?;
+    let mut child = pair
+        .slave
+        .spawn_command(builder)
+        .map_err(|e| e.to_string())?;
     drop(pair.slave);
     let mut reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
     let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
-    state.writers.lock().map_err(|e| e.to_string())?.insert(id, writer);
+    state
+        .writers
+        .lock()
+        .map_err(|e| e.to_string())?
+        .insert(id, writer);
     let pending: Outstanding = Arc::new((Mutex::new(0), Condvar::new()));
-    state.outstanding.lock().map_err(|e| e.to_string())?.insert(id, pending.clone());
+    state
+        .outstanding
+        .lock()
+        .map_err(|e| e.to_string())?
+        .insert(id, pending.clone());
     std::thread::spawn(move || {
         let master = pair.master;
         let mut buf = vec![0u8; 64 * 1024];
@@ -73,7 +89,10 @@ pub fn spike_start(
             match reader.read(&mut buf) {
                 Ok(0) | Err(_) => break,
                 Ok(n) => {
-                    if on_msg.send(InvokeResponseBody::Raw(buf[..n].to_vec())).is_err() {
+                    if on_msg
+                        .send(InvokeResponseBody::Raw(buf[..n].to_vec()))
+                        .is_err()
+                    {
                         break;
                     }
                     // Flow control: block the PTY read until the webview has drained below HIGH_WATER.
