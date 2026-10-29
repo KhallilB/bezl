@@ -20,11 +20,18 @@ export type CodexSignIn =
   | { kind: "unrecognized"; detail: { code: number | null; says: string } }
   | { kind: "failed"; detail: RunError };
 
+export type ClaudeSignIn =
+  | { kind: "signedIn"; detail: { model: string } }
+  | { kind: "signedOut"; detail: { says: string } }
+  | { kind: "outOfQuota"; detail: { says: string } }
+  | { kind: "unrecognized"; detail: { code: number | null; says: string } }
+  | { kind: "failed"; detail: RunError };
+
 export type HomeSignIn = { home: "operator" | "workers"; path: string; signin: CodexSignIn };
 
 export type SignInCheck =
   | { kind: "noBinary" }
-  | { kind: "notCheckedYet" }
+  | { kind: "canary"; detail: ClaudeSignIn }
   | { kind: "homes"; detail: HomeSignIn[] };
 
 export type ProviderCheck = {
@@ -75,6 +82,21 @@ export function signinShown(signin: CodexSignIn): Shown {
   }
 }
 
+export function canaryShown(signin: ClaudeSignIn): Shown {
+  switch (signin.kind) {
+    case "signedIn":
+      return good(`Signed in, ${signin.detail.model} answered`);
+    case "signedOut":
+      return needsYou(`Signed out: "${signin.detail.says}"`);
+    case "outOfQuota":
+      return needsYou(`Out of quota: "${signin.detail.says}"`);
+    case "unrecognized":
+      return needsYou(`Unrecognized: "${signin.detail.says}"`);
+    case "failed":
+      return failed(runErrorText(signin.detail));
+  }
+}
+
 export function rejectionText(reason: Rejection): string {
   switch (reason.kind) {
     case "says":
@@ -90,6 +112,5 @@ export function rejectionText(reason: Rejection): string {
   }
 }
 
-export const notCheckedYet = quiet("Not checked yet");
 export const found = good("Found");
 export const notFound = failed("Not found");

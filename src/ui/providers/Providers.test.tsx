@@ -1,16 +1,45 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
-import { codexFound, thisMachine } from "./fixtures";
+import { claudeFound, codexFound, thisMachine } from "./fixtures";
+import type { ClaudeSignIn, ProviderCheck } from "./model";
 import { Providers } from "./Providers";
 
 describe("Providers", () => {
-  test("shows a found CLI's path, version and that its sign-in is not checked yet", () => {
+  test("shows a found CLI's path, version and the model that answered its canary", () => {
     render(<Providers checks={thisMachine} />);
     const claude = screen.getByRole("region", { name: "Claude Code" });
     expect(within(claude).getByText("Found")).toBeVisible();
     expect(within(claude).getByText("/Users/me/.local/bin/claude")).toBeVisible();
     expect(within(claude).getByText("2.1.312")).toBeVisible();
-    expect(within(claude).getByText("Not checked yet")).toBeVisible();
+    const signin = within(claude).getByRole("list", { name: "Sign-in" });
+    const status = within(signin).getByText("Signed in, claude-haiku-5-5 answered");
+    expect(status.closest(".kb-status")).toHaveAttribute("data-tone", "success");
+  });
+
+  test("shows each Claude canary result with its own label and tone", () => {
+    const claudeWith = (canary: ClaudeSignIn): ProviderCheck => ({
+      ...claudeFound,
+      signin: { kind: "canary", detail: canary },
+    });
+    const cases: [ClaudeSignIn, string, string][] = [
+      [
+        { kind: "signedOut", detail: { says: "Not logged in · Please run /login" } },
+        'Signed out: "Not logged in · Please run /login"',
+        "warning",
+      ],
+      [{ kind: "outOfQuota", detail: { says: "limit" } }, 'Out of quota: "limit"', "warning"],
+      [{ kind: "unrecognized", detail: { code: 1, says: "?" } }, 'Unrecognized: "?"', "warning"],
+      [{ kind: "failed", detail: { kind: "timedOut" } }, "Timed out", "blocked"],
+    ];
+    for (const [canary, label, tone] of cases) {
+      const { unmount } = render(<Providers checks={[claudeWith(canary)]} />);
+      const signin = screen.getByRole("list", { name: "Sign-in" });
+      expect(within(signin).getByText(label).closest(".kb-status")).toHaveAttribute(
+        "data-tone",
+        tone,
+      );
+      unmount();
+    }
   });
 
   test("keeps one heading outline: screen, provider, rejected", () => {

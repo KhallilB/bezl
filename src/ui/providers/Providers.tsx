@@ -12,9 +12,9 @@ import {
 } from "@kb.ui/react";
 import { StateIcon } from "../task/icons";
 import {
+  canaryShown,
   found,
   homeName,
-  notCheckedYet,
   notFound,
   type ProviderCheck,
   providerName,
@@ -54,9 +54,9 @@ function SignIn({ check }: { check: ProviderCheck }) {
   if (signin.kind === "noBinary") return null;
   return (
     <ul className="providers-list" aria-label="Sign-in">
-      {signin.kind === "notCheckedYet" ? (
+      {signin.kind === "canary" ? (
         <li>
-          <Labelled label="Sign-in" shown={notCheckedYet} />
+          <Labelled label="Sign-in" shown={canaryShown(signin.detail)} />
         </li>
       ) : (
         signin.detail.map((h) => (

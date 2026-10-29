@@ -1,4 +1,5 @@
 //! One preflight pass over every provider, as the Providers screen shows it.
+use super::claude::{ClaudeSignIn, claude_signin};
 use super::{CodexSignIn, Discovery, Provider, codex_signin, discover, operator_codex_home};
 use serde::Serialize;
 use std::ffi::OsStr;
@@ -16,8 +17,8 @@ pub struct ProviderCheck {
 pub enum SignInCheck {
     /// Nothing found on PATH to ask.
     NoBinary,
-    /// Claude has no status command; its canary is another slice.
-    NotCheckedYet,
+    /// Claude Code's one-call canary.
+    Canary(ClaudeSignIn),
     Homes(Vec<HomeSignIn>),
 }
 
@@ -37,20 +38,29 @@ pub enum Home {
 
 /// Per CLI run; a hung CLI costs at most this.
 const TIMEOUT: Duration = Duration::from_secs(10);
+/// Live canary took 8-9s on 2026-10-29, mostly the API round trip.
+const CANARY_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub struct CodexHomes {
     pub operator: PathBuf,
     pub workers: PathBuf,
 }
 
-pub fn preflight(search_path: &OsStr, homes: &CodexHomes, timeout: Duration) -> Vec<ProviderCheck> {
+pub fn preflight(
+    search_path: &OsStr,
+    homes: &CodexHomes,
+    timeout: Duration,
+    canary_timeout: Duration,
+) -> Vec<ProviderCheck> {
     [Provider::ClaudeCode, Provider::Codex]
         .into_iter()
         .map(|provider| {
             let discovery = discover(provider, search_path, timeout);
             let signin = match (&discovery.found, provider) {
                 (None, _) => SignInCheck::NoBinary,
-                (Some(_), Provider::ClaudeCode) => SignInCheck::NotCheckedYet,
+                (Some(found), Provider::ClaudeCode) => {
+                    SignInCheck::Canary(claude_signin(&found.path, canary_timeout))
+                }
                 (Some(found), Provider::Codex) => SignInCheck::Homes(
                     [
                         (Home::Operator, &homes.operator),
@@ -95,9 +105,11 @@ pub async fn providers_preflight(app: tauri::AppHandle) -> Result<Vec<ProviderCh
         ),
     };
     let search_path = std::env::var_os("PATH").unwrap_or_default();
-    tauri::async_runtime::spawn_blocking(move || preflight(&search_path, &homes, TIMEOUT))
-        .await
-        .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        preflight(&search_path, &homes, TIMEOUT, CANARY_TIMEOUT)
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -142,7 +154,9 @@ mod tests {
                     }),
                     rejected: vec![],
                 },
-                signin: SignInCheck::NotCheckedYet,
+                signin: SignInCheck::Canary(ClaudeSignIn::SignedIn {
+                    model: "claude-haiku-5-5".into(),
+                }),
             },
             ProviderCheck {
                 discovery: Discovery {
@@ -165,7 +179,10 @@ mod tests {
                         "found": { "path": "/bin/claude", "version": "2.1.312" },
                         "rejected": []
                     },
-                    "signin": { "kind": "notCheckedYet" }
+                    "signin": {
+                        "kind": "canary",
+                        "detail": { "kind": "signedIn", "detail": { "model": "claude-haiku-5-5" } }
+                    }
                 },
                 {
                     "discovery": {
@@ -263,6 +280,38 @@ mod tests {
         }
     }
 
+    #[test]
+    fn every_claude_signin_serializes_with_a_kind() {
+        let cases = [
+            (
+                ClaudeSignIn::SignedOut {
+                    says: "Not logged in".into(),
+                },
+                json!({ "kind": "signedOut", "detail": { "says": "Not logged in" } }),
+            ),
+            (
+                ClaudeSignIn::OutOfQuota {
+                    says: "limit".into(),
+                },
+                json!({ "kind": "outOfQuota", "detail": { "says": "limit" } }),
+            ),
+            (
+                ClaudeSignIn::Unrecognized {
+                    code: Some(1),
+                    says: "?".into(),
+                },
+                json!({ "kind": "unrecognized", "detail": { "code": 1, "says": "?" } }),
+            ),
+            (
+                ClaudeSignIn::Failed(RunError::TimedOut),
+                json!({ "kind": "failed", "detail": { "kind": "timedOut" } }),
+            ),
+        ];
+        for (signin, want) in cases {
+            assert_eq!(serde_json::to_value(&signin).unwrap(), want);
+        }
+    }
+
     #[cfg(unix)]
     mod with_fake_clis {
         use super::*;
@@ -276,6 +325,12 @@ mod tests {
 [ "$*" = "login status" ] || exit 64
 cat "$CODEX_HOME/said" >&2
 exit "$(cat "$CODEX_HOME/code")""#;
+
+        /// Real-looking claude: version, then the canary's JSON from `said` beside it.
+        const CLAUDE: &str = r#"[ "$1" = "--version" ] && { echo "2.1.312 (Claude Code)"; exit 0; }
+[ "$1" = "-p" ] || exit 64
+cat "$(dirname "$0")/said""#;
+        const SIGNED_IN: &str = include_str!("fixtures/claude-2.1.312/signed-in.json");
 
         /// Script at `<dir>/<sub>/<name>`; returns its folder for PATH.
         fn bin(dir: &Dir, sub: &str, name: &str, body: &str) -> PathBuf {
@@ -296,7 +351,8 @@ exit "$(cat "$CODEX_HOME/code")""#;
             let dir = Dir::new();
             let bun = bin(&dir, "bun", "codex", "echo 0.2.3");
             let real = bin(&dir, "real", "codex", CODEX);
-            let claude = bin(&dir, "claude", "claude", "echo '2.1.312 (Claude Code)'");
+            let claude = bin(&dir, "claude", "claude", CLAUDE);
+            fs::write(claude.join("said"), SIGNED_IN).unwrap();
             let homes = CodexHomes {
                 operator: signed_in_home(&dir),
                 workers: dir.0.join("workers-missing"),
@@ -304,7 +360,7 @@ exit "$(cat "$CODEX_HOME/code")""#;
             let path = std::env::join_paths([&claude, &bun, &real]).unwrap();
 
             assert_eq!(
-                preflight(&path, &homes, TIMEOUT),
+                preflight(&path, &homes, TIMEOUT, TIMEOUT),
                 vec![
                     ProviderCheck {
                         discovery: Discovery {
@@ -315,7 +371,9 @@ exit "$(cat "$CODEX_HOME/code")""#;
                             }),
                             rejected: vec![],
                         },
-                        signin: SignInCheck::NotCheckedYet,
+                        signin: SignInCheck::Canary(ClaudeSignIn::SignedIn {
+                            model: "claude-haiku-5-5".into(),
+                        }),
                     },
                     ProviderCheck {
                         discovery: Discovery {
@@ -347,18 +405,48 @@ exit "$(cat "$CODEX_HOME/code")""#;
         }
 
         #[test]
-        fn nothing_found_means_no_signin_check() {
+        fn the_canary_gets_its_own_longer_timeout() {
             let dir = Dir::new();
-            let bun = bin(&dir, "bun", "codex", "echo 0.2.3");
+            let slow = CLAUDE.replace("cat ", "sleep 2; cat ");
+            let claude = bin(&dir, "claude", "claude", &slow);
+            fs::write(claude.join("said"), SIGNED_IN).unwrap();
             let homes = CodexHomes {
                 operator: signed_in_home(&dir),
                 workers: dir.0.join("workers"),
             };
-            let checks = preflight(bun.as_os_str(), &homes, TIMEOUT);
+            let checks = preflight(claude.as_os_str(), &homes, Duration::from_secs(1), TIMEOUT);
+
+            assert_eq!(
+                checks[0].signin,
+                SignInCheck::Canary(ClaudeSignIn::SignedIn {
+                    model: "claude-haiku-5-5".into(),
+                })
+            );
+        }
+
+        #[test]
+        fn nothing_found_means_no_signin_check() {
+            let dir = Dir::new();
+            let bun = bin(&dir, "bun", "codex", "echo 0.2.3");
+            // Not Claude Code by its version; any canary run would leave `ran`.
+            let old = bin(
+                &dir,
+                "old",
+                "claude",
+                r#"[ "$1" = "-p" ] && touch "$(dirname "$0")/ran"; echo 0.9"#,
+            );
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: dir.0.join("workers"),
+            };
+            let path = std::env::join_paths([&bun, &old]).unwrap();
+            let checks = preflight(&path, &homes, TIMEOUT, TIMEOUT);
 
             let signins: Vec<_> = checks.iter().map(|c| &c.signin).collect();
             assert_eq!(signins, [&SignInCheck::NoBinary, &SignInCheck::NoBinary]);
+            assert_eq!(checks[0].discovery.rejected.len(), 1);
             assert_eq!(checks[1].discovery.rejected.len(), 1);
+            assert!(!old.join("ran").exists(), "canary ran on a rejected claude");
         }
     }
 }
