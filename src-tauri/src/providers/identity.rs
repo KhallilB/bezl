@@ -1,10 +1,12 @@
 use super::Provider;
 use super::exec::{self, RunError, first_line};
+use serde::Serialize;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Identity {
     Known { provider: Provider, version: String },
     Unknown { says: String },
@@ -29,7 +31,7 @@ pub fn identify(version_output: &str) -> Identity {
         .unwrap_or_else(|| Identity::Unknown { says: says.into() })
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Discovery {
     pub provider: Provider,
     pub found: Option<Found>,
@@ -37,19 +39,20 @@ pub struct Discovery {
     pub rejected: Vec<Rejected>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Found {
     pub path: PathBuf,
     pub version: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Rejected {
     pub path: PathBuf,
     pub reason: Rejection,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
 pub enum Rejection {
     /// First line of its version output, which named no provider or another one.
     Says(String),
@@ -190,6 +193,18 @@ mod tests {
         assert_eq!(identify("codex-cli\n"), unknown("codex-cli"));
         assert_eq!(identify("codex-cli banana"), unknown("codex-cli banana"));
         assert_eq!(identify("(Claude Code)"), unknown("(Claude Code)"));
+    }
+
+    #[test]
+    fn identity_serializes_with_a_kind() {
+        assert_eq!(
+            serde_json::to_value(known(Provider::Codex, "0.163.0")).unwrap(),
+            serde_json::json!({ "kind": "known", "provider": "codex", "version": "0.163.0" })
+        );
+        assert_eq!(
+            serde_json::to_value(unknown("0.2.3")).unwrap(),
+            serde_json::json!({ "kind": "unknown", "says": "0.2.3" })
+        );
     }
 
     #[test]

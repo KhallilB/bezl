@@ -3,6 +3,7 @@ import "@fontsource-variable/geist-mono";
 import "@kb.ui/css/styles.css";
 import { useState } from "react";
 import { PtySpike, useSpikeConfig } from "./spike/PtySpike";
+import { ProvidersScreen } from "./ui/providers/ProvidersScreen";
 import * as samples from "./ui/task/fixtures";
 import type { WorkerView } from "./ui/task/model";
 import { Task } from "./ui/task/Task";
@@ -24,6 +25,14 @@ export function App() {
   const cfg = useSpikeConfig();
   const [workers, setWorkers] = useState<WorkerView[]>(initialWorkers);
   if (cfg?.enabled) return <PtySpike config={cfg} />;
+  // No navigation yet; ?screen=providers opens the Providers screen.
+  if (new URLSearchParams(window.location.search).get("screen") === "providers") {
+    return (
+      <AppTheme>
+        <ProvidersScreen />
+      </AppTheme>
+    );
+  }
   return (
     <AppTheme>
       <Task

@@ -1,4 +1,5 @@
 //! Bounded runs of an agent CLI: preflight never waits past its deadline.
+use serde::Serialize;
 use std::ffi::OsStr;
 use std::io::Read;
 use std::path::Path;
@@ -28,7 +29,8 @@ impl Ran {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
 pub enum RunError {
     TimedOut,
     DidNotStart(String),

@@ -2,6 +2,7 @@
 mod codex;
 mod exec;
 mod identity;
+pub mod preflight;
 #[cfg(all(test, unix))]
 mod testing;
 
@@ -9,9 +10,11 @@ pub use codex::{CodexSignIn, SignInMethod, codex_signin, operator_codex_home};
 pub use exec::RunError;
 pub use identity::{Discovery, Found, Identity, Rejected, Rejection, discover, identify};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
 pub enum Provider {
+    #[serde(rename = "claude")]
     ClaudeCode,
+    #[serde(rename = "codex")]
     Codex,
 }
 

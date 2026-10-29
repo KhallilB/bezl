@@ -6,6 +6,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(spike_pty::Spike::default())
         .invoke_handler(tauri::generate_handler![
+            providers::preflight::providers_preflight,
             spike_pty::spike_config,
             spike_pty::spike_start,
             spike_pty::spike_write,

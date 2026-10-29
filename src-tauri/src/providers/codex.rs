@@ -1,9 +1,11 @@
 use super::exec::{self, RunError};
+use serde::Serialize;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
 pub enum CodexSignIn {
     SignedIn(SignInMethod),
     SignedOut,
@@ -16,7 +18,8 @@ pub enum CodexSignIn {
     Failed(RunError),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum SignInMethod {
     ChatGpt,
     ApiKey,
