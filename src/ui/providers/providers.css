@@ -2,11 +2,7 @@
 .providers-screen {
   min-height: 100vh;
   box-sizing: border-box;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  gap: var(--kb-space-6);
-  padding: var(--kb-space-6) var(--kb-space-6) var(--kb-space-8);
+  padding-block: var(--kb-space-6) var(--kb-space-8);
   background:
     radial-gradient(
       80% 50% at 50% 0%,
@@ -18,62 +14,13 @@
   font-family: "Geist Variable", var(--kb-font-sans);
 }
 
-.providers-header h1 {
-  margin: 0;
-  font-size: var(--kb-text-h2-size);
-}
-
-.providers-line {
-  margin: var(--kb-space-1) 0 0;
-  color: var(--kb-color-muted);
+.providers-content {
+  display: grid;
+  gap: var(--kb-space-6);
 }
 
 .providers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
-  gap: var(--kb-space-4);
   align-items: start;
-}
-
-.providers-grid h2,
-.providers-rejected h3 {
-  margin: 0;
-}
-
-.providers-grid h2 {
-  font-size: var(--kb-text-h3-size);
-}
-
-.providers-rejected h3 {
-  font-size: var(--kb-text-small-size);
-  color: var(--kb-color-muted);
-}
-
-.providers-body {
-  display: grid;
-  gap: var(--kb-space-4);
-}
-
-.providers-rows {
-  display: grid;
-  gap: var(--kb-space-3);
-  margin: var(--kb-space-2) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.providers-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--kb-space-2);
-  min-width: 0;
-}
-
-.providers-path {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
 }
 
 /* Grid items default to min-content width; a long path would push the panel off-screen. */
@@ -81,24 +28,20 @@
   min-width: 0;
 }
 
+.providers-body {
+  display: grid;
+  gap: var(--kb-space-4);
+}
+
+.providers-list {
+  display: grid;
+  gap: var(--kb-space-3);
+  margin: var(--kb-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 .providers-home {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--kb-space-1) var(--kb-space-2);
-}
-
-.providers-home .providers-path {
-  grid-column: 1 / -1;
-  justify-self: start;
-}
-
-.providers-label {
-  font-size: var(--kb-text-small-size);
-  color: var(--kb-color-muted);
-}
-
-.providers-says {
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
-  font-size: var(--kb-text-small-size);
+  gap: var(--kb-space-1);
 }

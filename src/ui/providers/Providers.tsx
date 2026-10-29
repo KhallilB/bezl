@@ -1,4 +1,15 @@
-import { Badge, Callout, Code, Panel, Status } from "@kb.ui/react";
+import {
+  Badge,
+  Callout,
+  Code,
+  Container,
+  Grid,
+  Heading,
+  Inline,
+  Panel,
+  Status,
+  Text,
+} from "@kb.ui/react";
 import { StateIcon } from "../task/icons";
 import {
   found,
@@ -27,22 +38,33 @@ function Shows({ shown }: { shown: Shown }) {
   );
 }
 
+function Labelled({ label, shown }: { label: string; shown: Shown }) {
+  return (
+    <Inline gap="sm" justify="between">
+      <Text as="span" size="sm" tone="muted">
+        {label}
+      </Text>
+      <Shows shown={shown} />
+    </Inline>
+  );
+}
+
 function SignIn({ check }: { check: ProviderCheck }) {
   const { signin } = check;
   if (signin.kind === "noBinary") return null;
   return (
-    <ul className="providers-rows" aria-label="Sign-in">
+    <ul className="providers-list" aria-label="Sign-in">
       {signin.kind === "notCheckedYet" ? (
-        <li className="providers-home">
-          <span className="providers-label">Sign-in</span>
-          <Shows shown={notCheckedYet} />
+        <li>
+          <Labelled label="Sign-in" shown={notCheckedYet} />
         </li>
       ) : (
         signin.detail.map((h) => (
           <li key={h.home} className="providers-home">
-            <span className="providers-label">{homeName[h.home]}</span>
-            <Shows shown={signinShown(h.signin)} />
-            <Code className="providers-path">{h.path}</Code>
+            <Labelled label={homeName[h.home]} shown={signinShown(h.signin)} />
+            <div>
+              <Code>{h.path}</Code>
+            </div>
           </li>
         ))
       )}
@@ -56,29 +78,37 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
   return (
     <Panel className="providers-panel" aria-labelledby={headingId}>
       <Panel.Header>
-        <h2 id={headingId}>{providerName[provider]}</h2>
+        <Heading level={2} size="md" id={headingId}>
+          {providerName[provider]}
+        </Heading>
         <Shows shown={bin ? found : notFound} />
       </Panel.Header>
       <Panel.Body className="providers-body">
         {bin ? (
-          <div className="providers-row">
-            <Code className="providers-path">{bin.path}</Code>
+          <Inline gap="sm">
+            <Code>{bin.path}</Code>
             <Badge mono preserveCase>
               {bin.version}
             </Badge>
-          </div>
+          </Inline>
         ) : (
-          <p className="providers-line">{`No ${providerName[provider]} on PATH.`}</p>
+          <Text tone="muted">{`No ${providerName[provider]} on PATH.`}</Text>
         )}
         <SignIn check={check} />
         {rejected.length > 0 ? (
-          <section className="providers-rejected">
-            <h3>Rejected</h3>
-            <ul className="providers-rows" aria-label="Rejected binaries">
+          <section>
+            <Heading level={3} size="sm">
+              Rejected
+            </Heading>
+            <ul className="providers-list" aria-label="Rejected binaries">
               {rejected.map((r) => (
-                <li key={r.path} className="providers-row">
-                  <Code className="providers-path">{r.path}</Code>
-                  <span className="providers-says">{rejectionText(r.reason)}</span>
+                <li key={r.path}>
+                  <Inline gap="sm">
+                    <Code>{r.path}</Code>
+                    <Text as="span" size="sm">
+                      {rejectionText(r.reason)}
+                    </Text>
+                  </Inline>
                 </li>
               ))}
             </ul>
@@ -92,23 +122,29 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
 export function Providers({ checks, error }: ProvidersProps) {
   return (
     <div className="providers-screen">
-      <header className="providers-header">
-        <h1>Providers</h1>
-        <p className="providers-line">Agent CLIs on PATH, identified by their version output.</p>
-      </header>
-      {error ? (
-        <Callout tone="danger" role="alert" title="Preflight failed">
-          {error}
-        </Callout>
-      ) : checks === null ? (
-        <p className="providers-line">Checking agent CLIs…</p>
-      ) : (
-        <main className="providers-grid">
-          {checks.map((c) => (
-            <ProviderPanel key={c.discovery.provider} check={c} />
-          ))}
-        </main>
-      )}
+      <Container className="providers-content">
+        <header>
+          <Heading level={1} size="xl">
+            Providers
+          </Heading>
+          <Text tone="muted">Agent CLIs on PATH, identified by their version output.</Text>
+        </header>
+        {error ? (
+          <Callout tone="danger" role="alert" title="Preflight failed">
+            {error}
+          </Callout>
+        ) : checks === null ? (
+          <Status tone="running" live icon={<StateIcon state="running" />}>
+            Checking agent CLIs…
+          </Status>
+        ) : (
+          <Grid className="providers-grid">
+            {checks.map((c) => (
+              <ProviderPanel key={c.discovery.provider} check={c} />
+            ))}
+          </Grid>
+        )}
+      </Container>
     </div>
   );
 }

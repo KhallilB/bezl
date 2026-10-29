@@ -13,6 +13,13 @@ describe("Providers", () => {
     expect(within(claude).getByText("Not checked yet")).toBeVisible();
   });
 
+  test("keeps one heading outline: screen, provider, rejected", () => {
+    render(<Providers checks={[codexFound]} />);
+    expect(screen.getByRole("heading", { level: 1, name: "Providers" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 2, name: "Codex" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 3, name: "Rejected" })).toBeVisible();
+  });
+
   test("shows a rejected binary with what its version output says", () => {
     render(<Providers checks={thisMachine} />);
     const codex = screen.getByRole("region", { name: "Codex" });
@@ -50,7 +57,7 @@ describe("Providers", () => {
 
   test("shows a failed preflight as an error, and a pending one as checking", () => {
     const { rerender } = render(<Providers checks={null} />);
-    expect(screen.getByText("Checking agent CLIs…")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("Checking agent CLIs…");
     rerender(<Providers checks={null} error="spawn failed" />);
     expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
   });
