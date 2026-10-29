@@ -1,4 +1,5 @@
 //! Agent CLIs Bezl can drive, found and identified by preflight.
+pub mod capabilities;
 pub mod claude;
 mod codex;
 mod exec;
