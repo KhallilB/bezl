@@ -2,6 +2,7 @@ import type { ProviderCheck, Usage } from "./model";
 
 const unknown: Usage = { tokens: { kind: "unknown" }, limits: { kind: "unknown" } };
 const canaryCounts = { input: 2, output: 4, cacheRead: 0, cacheWrite: 29763 };
+const probeCounts = { input: 4, output: 459, cacheRead: 12798, cacheWrite: 6718 };
 
 export const claudeFound: ProviderCheck = {
   discovery: {
@@ -19,6 +20,32 @@ export const claudeFound: ProviderCheck = {
       },
     },
     limits: { kind: "unknown" },
+  },
+  // The live probe of 2026-10-29.
+  readOnly: {
+    kind: "probed",
+    detail: {
+      provider: "claude",
+      version: "2.1.312",
+      probedAt: 1793312545,
+      capabilities: {
+        fileWrites: { kind: "passed" },
+        shell: { kind: "passed" },
+        mcpTools: { kind: "passed" },
+        hooks: { kind: "passed" },
+        network: { kind: "passed" },
+      },
+      cost: {
+        usd: 0.00170148,
+        tokens: {
+          kind: "known",
+          detail: {
+            total: probeCounts,
+            models: [{ model: "claude-haiku-5-5", counts: probeCounts }],
+          },
+        },
+      },
+    },
   },
 };
 
@@ -63,6 +90,7 @@ export const thisMachine: ProviderCheck[] = [
     },
     signin: { kind: "noBinary" },
     usage: unknown,
+    readOnly: { kind: "noBinary" },
   },
 ];
 
@@ -94,4 +122,6 @@ export const codexFound: ProviderCheck = {
     ],
   },
   usage: unknown,
+  // Reviewers run in the workers' home, signed out here.
+  readOnly: { kind: "needsSignIn" },
 };

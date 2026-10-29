@@ -49,7 +49,22 @@ pub fn run(
     envs: &[(&str, &OsStr)],
     timeout: Duration,
 ) -> Result<Ran, RunError> {
-    let mut child = Command::new(path)
+    run_in(path, args, envs, None, timeout)
+}
+
+/// `cwd` `None` keeps Bezl's own.
+pub fn run_in(
+    path: &Path,
+    args: &[&str],
+    envs: &[(&str, &OsStr)],
+    cwd: Option<&Path>,
+    timeout: Duration,
+) -> Result<Ran, RunError> {
+    let mut command = Command::new(path);
+    if let Some(cwd) = cwd {
+        command.current_dir(cwd);
+    }
+    let mut child = command
         .args(args)
         .envs(envs.iter().copied())
         .stdin(Stdio::null())
