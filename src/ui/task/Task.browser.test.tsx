@@ -33,15 +33,43 @@ function unmount() {
 
 afterEach(unmount);
 
-/** Markup minus the theme's inline style: what the theme must never change. */
+/** Compare semantic markup without theme values or measured geometry. */
 function structure(el: HTMLElement) {
   const clone = el.cloneNode(true) as HTMLElement;
   for (const node of clone.querySelectorAll("[style]")) node.removeAttribute("style");
   for (const node of clone.querySelectorAll("[data-app-theme]"))
     node.removeAttribute("data-app-theme");
-  // React useId values (Base UI's and bezl's SVG ids) are per-mount counters, not structure.
+  for (const node of clone.querySelectorAll(".kb-scrollarea, .kb-scrollarea *")) {
+    for (const axis of ["x", "y"]) {
+      node.removeAttribute(`data-has-overflow-${axis}`);
+      node.removeAttribute(`data-overflow-${axis}-start`);
+      node.removeAttribute(`data-overflow-${axis}-end`);
+    }
+  }
+  // React useId values vary per mount.
   return clone.innerHTML.replaceAll(/_r_[0-9a-z]+_/g, "_r_id_");
 }
+
+test("structure ignores measured overflow but preserves semantics and children", () => {
+  const plain = document.createElement("div");
+  plain.innerHTML =
+    '<div class="kb-scrollarea" role="presentation"><div role="region" aria-label="Output"><pre>Output</pre></div></div>';
+  const measured = plain.cloneNode(true) as HTMLElement;
+  const region = measured.querySelector('[role="region"]') as HTMLElement;
+  for (const node of measured.querySelectorAll(".kb-scrollarea, .kb-scrollarea *")) {
+    for (const axis of ["x", "y"]) {
+      node.setAttribute(`data-has-overflow-${axis}`, "");
+      node.setAttribute(`data-overflow-${axis}-start`, "");
+      node.setAttribute(`data-overflow-${axis}-end`, "");
+    }
+  }
+  expect(structure(measured)).toBe(structure(plain));
+  region.setAttribute("aria-label", "Other output");
+  expect(structure(measured)).not.toBe(structure(plain));
+  region.setAttribute("aria-label", "Output");
+  region.append(document.createElement("p"));
+  expect(structure(measured)).not.toBe(structure(plain));
+});
 
 for (const theme of themes) {
   for (const [name, workers] of Object.entries(scenarios)) {
