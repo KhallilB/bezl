@@ -1,10 +1,12 @@
 //! Claude Code has no status command, so a one-line Haiku call proves sign-in.
 use super::exec::{self, RunError};
+use serde::Serialize;
 use serde_json::Value;
 use std::path::Path;
 use std::time::Duration;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
 pub enum ClaudeSignIn {
     /// Answered; `model` is the one that served it.
     SignedIn {

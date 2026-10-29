@@ -1,15 +1,17 @@
 import type { ProviderCheck } from "./model";
 
+export const claudeFound: ProviderCheck = {
+  discovery: {
+    provider: "claude",
+    found: { path: "/Users/me/.local/bin/claude", version: "2.1.312" },
+    rejected: [],
+  },
+  signin: { kind: "canary", detail: { kind: "signedIn", detail: { model: "claude-haiku-5-5" } } },
+};
+
 /** This machine on 2026-10-29: real claude, bun's unrelated `codex` first on PATH. */
 export const thisMachine: ProviderCheck[] = [
-  {
-    discovery: {
-      provider: "claude",
-      found: { path: "/Users/me/.local/bin/claude", version: "2.1.312" },
-      rejected: [],
-    },
-    signin: { kind: "notCheckedYet" },
-  },
+  claudeFound,
   {
     discovery: {
       provider: "codex",
