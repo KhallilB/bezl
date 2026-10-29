@@ -55,6 +55,29 @@ export type Limits =
 
 export type Usage = { tokens: Tokens; limits: Limits };
 
+export type Capability = "fileWrites" | "shell" | "mcpTools" | "hooks" | "network";
+
+export type ProbeOutcome =
+  | { kind: "passed" }
+  | { kind: "failed"; detail: { evidence: string } }
+  | { kind: "notProbed"; detail: { why: string } };
+
+export type ProbeRecord = {
+  provider: ProviderId;
+  version: string;
+  /** Unix seconds. */
+  probedAt: number;
+  capabilities: Record<Capability, ProbeOutcome>;
+  /** `usd` only where the CLI reports dollars; Codex on a ChatGPT plan does not. */
+  cost: { usd: number | null; tokens: Tokens };
+};
+
+export type ReadOnlyCheck =
+  | { kind: "noBinary" }
+  | { kind: "needsSignIn" }
+  | { kind: "probed"; detail: ProbeRecord }
+  | { kind: "couldNotRun"; detail: { says: string } };
+
 export type ProviderCheck = {
   discovery: {
     provider: ProviderId;
@@ -63,6 +86,7 @@ export type ProviderCheck = {
   };
   signin: SignInCheck;
   usage: Usage;
+  readOnly: ReadOnlyCheck;
 };
 
 export const providerName: Record<ProviderId, string> = {

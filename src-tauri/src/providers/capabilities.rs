@@ -1,9 +1,9 @@
 //! How each provider's reviewer is kept read-only: by flag or sandbox, or only by asking.
 use super::Provider;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// A way a reviewer could change state.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Capability {
     FileWrites,
@@ -50,8 +50,8 @@ const CLAUDE_NO_MCP: &[&str] = &[
 const CLAUDE_NO_HOOKS: &[&str] = &["--settings", r#"{"disableAllHooks":true}"#];
 const CODEX_READ_ONLY: &[&str] = &["--sandbox", "read-only"];
 
-// Spike 3 (bezl-internal) probed these versions.
-const CLAUDE_PROBED: Option<&str> = Some("2.1.39");
+// The read-only probe (`probe.rs`) ran on these, 2026-10-29.
+const CLAUDE_PROBED: Option<&str> = Some("2.1.312");
 const CODEX_PROBED: Option<&str> = Some("0.163.0");
 
 const fn blocked(
@@ -68,13 +68,17 @@ const fn blocked(
     }
 }
 
-/// Unprobed is not proven blocked, so it counts as told only.
-const fn unprobed(provider: Provider, capability: Capability) -> Entry {
+/// `established_on` `None`: unprobed is not proven blocked, so it counts as told only.
+const fn instruction_only(
+    provider: Provider,
+    capability: Capability,
+    established_on: Option<&'static str>,
+) -> Entry {
     Entry {
         provider,
         capability,
         enforcement: Enforcement::InstructionOnly,
-        established_on: None,
+        established_on,
     }
 }
 
@@ -90,9 +94,10 @@ pub const RECORD: &[Entry] = {
         blocked(ClaudeCode, Network, CLAUDE_TOOLS, CLAUDE_PROBED),
         blocked(Codex, FileWrites, CODEX_READ_ONLY, CODEX_PROBED),
         blocked(Codex, Shell, CODEX_READ_ONLY, CODEX_PROBED),
-        unprobed(Codex, McpTools),
-        unprobed(Codex, Hooks),
-        unprobed(Codex, Network),
+        // A configured MCP server starts outside the sandbox.
+        instruction_only(Codex, McpTools, CODEX_PROBED),
+        instruction_only(Codex, Hooks, None),
+        blocked(Codex, Network, CODEX_READ_ONLY, CODEX_PROBED),
     ]
 };
 
@@ -119,8 +124,8 @@ mod tests {
     use Enforcement::*;
     use Provider::*;
 
-    // Spike 3 (bezl-internal) ran on these.
-    const CLAUDE_PROBED: Option<&str> = Some("2.1.39");
+    // The read-only probe (`probe.rs`) passed on these.
+    const CLAUDE_PROBED: Option<&str> = Some("2.1.312");
     const CODEX_PROBED: Option<&str> = Some("0.163.0");
 
     fn entry(provider: Provider, capability: Capability) -> Entry {
@@ -234,18 +239,25 @@ mod tests {
     }
 
     #[test]
-    fn codex_mcp_is_instruction_only_until_probed() {
-        check(Codex, McpTools, (InstructionOnly, None));
+    fn codex_mcp_is_instruction_only_as_probed() {
+        // A configured MCP server started outside the sandbox and wrote its marker.
+        check(Codex, McpTools, (InstructionOnly, CODEX_PROBED));
     }
 
     #[test]
     fn codex_hooks_are_instruction_only_until_probed() {
+        // Codex runs only trusted hooks; the probe does not reach that.
         check(Codex, Hooks, (InstructionOnly, None));
     }
 
     #[test]
-    fn codex_network_is_instruction_only_until_probed() {
-        check(Codex, Network, (InstructionOnly, None));
+    fn codex_network_blocked_by_read_only_sandbox() {
+        // Probe's curl to a 127.0.0.1 listener exited 7; the listener saw nothing.
+        check(
+            Codex,
+            Network,
+            blocked(&["--sandbox", "read-only"], CODEX_PROBED),
+        );
     }
 
     #[test]
@@ -311,7 +323,7 @@ mod tests {
                 "provider": "codex",
                 "capability": "mcpTools",
                 "enforcement": {"kind": "instructionOnly"},
-                "establishedOn": null,
+                "establishedOn": "0.163.0",
             })
         );
     }

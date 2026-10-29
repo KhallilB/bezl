@@ -1,5 +1,5 @@
 //! What each agent CLI reports about tokens spent and usage limits; never guessed.
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -15,7 +15,7 @@ impl Usage {
     };
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
 pub enum Tokens {
     Unknown,
@@ -26,7 +26,7 @@ pub enum Tokens {
 }
 
 /// Raw counts as reported: Codex counts cached input inside `input`, Claude Code does not.
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Counts {
     pub input: u64,
@@ -35,7 +35,7 @@ pub struct Counts {
     pub cache_write: u64,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModelCounts {
     pub model: String,
     pub counts: Counts,
@@ -152,7 +152,7 @@ impl Limits {
 }
 
 /// JSON values until the first that does not parse: one document or JSON lines.
-fn events(stdout: &str) -> impl Iterator<Item = Value> + '_ {
+pub(crate) fn events(stdout: &str) -> impl Iterator<Item = Value> + '_ {
     serde_json::Deserializer::from_str(stdout)
         .into_iter::<Value>()
         .map_while(Result::ok)

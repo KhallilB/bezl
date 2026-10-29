@@ -1,17 +1,34 @@
 //! One preflight pass over every provider, as the Providers screen shows it.
 use super::claude::{ClaudeSignIn, run_canary, signin_from};
+use super::probe::{self, ProbeRecord};
 use super::usage::{Usage, claude_usage};
-use super::{CodexSignIn, Discovery, Provider, codex_signin, discover, operator_codex_home};
+use super::{CodexSignIn, Discovery, Found, Provider, codex_signin, discover, operator_codex_home};
 use serde::Serialize;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderCheck {
     pub discovery: Discovery,
     pub signin: SignInCheck,
     pub usage: Usage,
+    pub read_only: ReadOnlyCheck,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
+pub enum ReadOnlyCheck {
+    NoBinary,
+    /// No record for this version, and the reviewer cannot run signed out.
+    NeedsSignIn,
+    /// From this version's record, or probed now and recorded.
+    Probed(ProbeRecord),
+    /// Not recorded, so the next preflight probes again.
+    CouldNotRun {
+        says: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -42,6 +59,14 @@ pub enum Home {
 const TIMEOUT: Duration = Duration::from_secs(10);
 /// Live canary took 8-9s on 2026-10-29, mostly the API round trip.
 const CANARY_TIMEOUT: Duration = Duration::from_secs(30);
+/// Live probes took 10-12s on 2026-10-29; the reviewer may try several tools.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(180);
+
+/// Probe records live in `cache`, one per provider and CLI version.
+pub struct Probes {
+    pub cache: PathBuf,
+    pub timeout: Duration,
+}
 
 pub struct CodexHomes {
     pub operator: PathBuf,
@@ -51,6 +76,7 @@ pub struct CodexHomes {
 pub fn preflight(
     search_path: &OsStr,
     homes: &CodexHomes,
+    probes: &Probes,
     timeout: Duration,
     canary_timeout: Duration,
 ) -> Vec<ProviderCheck> {
@@ -85,13 +111,57 @@ pub fn preflight(
                     Usage::UNKNOWN,
                 ),
             };
+            let read_only = match &discovery.found {
+                None => ReadOnlyCheck::NoBinary,
+                Some(found) => read_only(provider, found, reviewer_env(&signin, homes), probes),
+            };
             ProviderCheck {
                 discovery,
                 signin,
                 usage,
+                read_only,
             }
         })
         .collect()
+}
+
+/// Env a signed-in reviewer runs with; `None` when it is not signed in.
+fn reviewer_env<'a>(
+    signin: &SignInCheck,
+    homes: &'a CodexHomes,
+) -> Option<Vec<(&'static str, &'a OsStr)>> {
+    match signin {
+        SignInCheck::Canary(ClaudeSignIn::SignedIn { .. }) => Some(vec![]),
+        SignInCheck::Homes(signins) => signins
+            .iter()
+            .any(|h| h.home == Home::Workers && matches!(h.signin, CodexSignIn::SignedIn(_)))
+            .then(|| vec![("CODEX_HOME", homes.workers.as_os_str())]),
+        _ => None,
+    }
+}
+
+/// A recorded version is never probed again: each probe is a paid call.
+fn read_only(
+    provider: Provider,
+    found: &Found,
+    env: Option<Vec<(&str, &OsStr)>>,
+    probes: &Probes,
+) -> ReadOnlyCheck {
+    if let Some(record) = probe::load(&probes.cache, provider, &found.version) {
+        return ReadOnlyCheck::Probed(record);
+    }
+    let Some(env) = env else {
+        return ReadOnlyCheck::NeedsSignIn;
+    };
+    match probe::probe(provider, found, &env, probes.timeout) {
+        Ok(record) => {
+            if let Err(e) = probe::store(&probes.cache, &record) {
+                log::warn!("read-only probe record not stored: {e}");
+            }
+            ReadOnlyCheck::Probed(record)
+        }
+        Err(says) => ReadOnlyCheck::CouldNotRun { says },
+    }
 }
 
 /// macOS: Tauri's app data dir. Linux: `$XDG_DATA_HOME/bezl`, not Tauri's `dev.bezl.app`.
@@ -107,6 +177,11 @@ pub fn workers_codex_home(os: &str, app_data_dir: &Path, data_dir: &Path) -> Pat
 pub async fn providers_preflight(app: tauri::AppHandle) -> Result<Vec<ProviderCheck>, String> {
     use tauri::Manager;
     let paths = app.path();
+    let app_data = paths.app_data_dir().map_err(|e| e.to_string())?;
+    let probes = Probes {
+        cache: app_data.join("probes"),
+        timeout: PROBE_TIMEOUT,
+    };
     let homes = CodexHomes {
         operator: operator_codex_home(
             std::env::var_os("CODEX_HOME").as_deref(),
@@ -114,13 +189,13 @@ pub async fn providers_preflight(app: tauri::AppHandle) -> Result<Vec<ProviderCh
         ),
         workers: workers_codex_home(
             std::env::consts::OS,
-            &paths.app_data_dir().map_err(|e| e.to_string())?,
+            &app_data,
             &paths.data_dir().map_err(|e| e.to_string())?,
         ),
     };
     let search_path = std::env::var_os("PATH").unwrap_or_default();
     tauri::async_runtime::spawn_blocking(move || {
-        preflight(&search_path, &homes, TIMEOUT, CANARY_TIMEOUT)
+        preflight(&search_path, &homes, &probes, TIMEOUT, CANARY_TIMEOUT)
     })
     .await
     .map_err(|e| e.to_string())
@@ -129,6 +204,9 @@ pub async fn providers_preflight(app: tauri::AppHandle) -> Result<Vec<ProviderCh
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::providers::capabilities::Capability;
+    use crate::providers::probe::{Cost, Outcome};
+    use crate::providers::usage::Tokens;
     use crate::providers::{Found, Rejected, Rejection, RunError, SignInMethod};
     use serde_json::json;
 
@@ -172,6 +250,9 @@ mod tests {
                     model: "claude-haiku-5-5".into(),
                 }),
                 usage: Usage::UNKNOWN,
+                read_only: ReadOnlyCheck::CouldNotRun {
+                    says: "timed out".into(),
+                },
             },
             ProviderCheck {
                 discovery: Discovery {
@@ -184,6 +265,7 @@ mod tests {
                 },
                 signin: SignInCheck::NoBinary,
                 usage: Usage::UNKNOWN,
+                read_only: ReadOnlyCheck::NoBinary,
             },
         ];
         assert_eq!(
@@ -199,7 +281,8 @@ mod tests {
                         "kind": "canary",
                         "detail": { "kind": "signedIn", "detail": { "model": "claude-haiku-5-5" } }
                     },
-                    "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } }
+                    "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } },
+                    "readOnly": { "kind": "couldNotRun", "detail": { "says": "timed out" } }
                 },
                 {
                     "discovery": {
@@ -210,7 +293,8 @@ mod tests {
                         ]
                     },
                     "signin": { "kind": "noBinary" },
-                    "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } }
+                    "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } },
+                    "readOnly": { "kind": "noBinary" }
                 }
             ])
         );
@@ -330,26 +414,91 @@ mod tests {
         }
     }
 
+    #[test]
+    fn every_read_only_check_serializes_with_a_kind() {
+        let record = ProbeRecord {
+            provider: Provider::Codex,
+            version: "0.163.0".into(),
+            probed_at: 1,
+            capabilities: [(Capability::Hooks, Outcome::Passed)].into(),
+            cost: Cost {
+                usd: Some(0.5),
+                tokens: Tokens::Unknown,
+            },
+        };
+        let cases = [
+            (ReadOnlyCheck::NoBinary, json!({ "kind": "noBinary" })),
+            (ReadOnlyCheck::NeedsSignIn, json!({ "kind": "needsSignIn" })),
+            (
+                ReadOnlyCheck::CouldNotRun { says: "x".into() },
+                json!({ "kind": "couldNotRun", "detail": { "says": "x" } }),
+            ),
+            (
+                ReadOnlyCheck::Probed(record.clone()),
+                json!({ "kind": "probed", "detail": serde_json::to_value(&record).unwrap() }),
+            ),
+        ];
+        for (check, want) in cases {
+            assert_eq!(serde_json::to_value(&check).unwrap(), want);
+        }
+    }
+
     #[cfg(unix)]
     mod with_fake_clis {
         use super::*;
+        use crate::providers::capabilities::CAPABILITIES;
+        use crate::providers::probe;
         use crate::providers::testing::Dir;
-        use crate::providers::usage::{Tokens, claude_usage};
+        use crate::providers::usage::claude_usage;
         use std::fs;
 
         const TIMEOUT: Duration = Duration::from_secs(5);
 
-        /// Real-looking codex: version, then `login status` from `$CODEX_HOME/said`.
+        /// Real-looking codex: version, `login status` from `$CODEX_HOME/said`, `exec` prints `probe`.
         const CODEX: &str = r#"[ "$1" = "--version" ] && { echo "codex-cli 0.163.0"; exit 0; }
+[ "$1" = "exec" ] && { echo "$CODEX_HOME" > "$(dirname "$0")/probed-home"; cat "$(dirname "$0")/probe"; exit 0; }
 [ "$*" = "login status" ] || exit 64
 cat "$CODEX_HOME/said" >&2
 exit "$(cat "$CODEX_HOME/code")""#;
 
-        /// Real-looking claude: version, then the canary's JSON from `said` beside it.
+        /// Real-looking claude: version; the probe (stream-json) prints `probe`, the canary `said`.
         const CLAUDE: &str = r#"[ "$1" = "--version" ] && { echo "2.1.312 (Claude Code)"; exit 0; }
 [ "$1" = "-p" ] || exit 64
+case "$*" in *stream-json*) cat "$(dirname "$0")/probe"; exit 0;; esac
 cat "$(dirname "$0")/said""#;
         const SIGNED_IN: &str = include_str!("fixtures/claude-2.1.312/signed-in.json");
+        const NOT_LOGGED_IN: &str = include_str!("fixtures/claude-2.1.312/not-logged-in.json");
+        const CLAUDE_PROBE: &str = include_str!("fixtures/claude-2.1.312/probe-read-only.jsonl");
+        const CODEX_PROBE: &str = include_str!("fixtures/codex-0.163.0/probe-read-only.jsonl");
+        /// Each run appends a line to `runs` beside the fake.
+        const COUNTED: &str = "echo >> \"$(dirname \"$0\")/runs\"; ";
+
+        fn probes(dir: &Dir) -> Probes {
+            Probes {
+                cache: dir.0.join("probes"),
+                timeout: TIMEOUT,
+            }
+        }
+
+        /// A record already on disk for `provider` at `version`.
+        fn recorded(dir: &Dir, provider: Provider, version: &str) -> ProbeRecord {
+            let record = ProbeRecord {
+                provider,
+                version: version.into(),
+                probed_at: 1,
+                capabilities: CAPABILITIES.map(|c| (c, Outcome::Passed)).into(),
+                cost: Cost {
+                    usd: None,
+                    tokens: Tokens::Unknown,
+                },
+            };
+            probe::store(&probes(dir).cache, &record).unwrap();
+            record
+        }
+
+        fn runs(bin: &Path) -> usize {
+            fs::read_to_string(bin.join("runs")).map_or(0, |r| r.lines().count())
+        }
 
         /// Script at `<dir>/<sub>/<name>`; returns its folder for PATH.
         fn bin(dir: &Dir, sub: &str, name: &str, body: &str) -> PathBuf {
@@ -358,7 +507,11 @@ cat "$(dirname "$0")/said""#;
         }
 
         fn signed_in_home(dir: &Dir) -> PathBuf {
-            let home = dir.0.join("operator");
+            signed_in(dir, "operator")
+        }
+
+        fn signed_in(dir: &Dir, name: &str) -> PathBuf {
+            let home = dir.0.join(name);
             fs::create_dir_all(&home).unwrap();
             fs::write(home.join("said"), "Logged in using ChatGPT\n").unwrap();
             fs::write(home.join("code"), "0").unwrap();
@@ -377,9 +530,10 @@ cat "$(dirname "$0")/said""#;
                 workers: dir.0.join("workers-missing"),
             };
             let path = std::env::join_paths([&claude, &bun, &real]).unwrap();
+            let record = recorded(&dir, Provider::ClaudeCode, "2.1.312");
 
             assert_eq!(
-                preflight(&path, &homes, TIMEOUT, TIMEOUT),
+                preflight(&path, &homes, &probes(&dir), TIMEOUT, TIMEOUT),
                 vec![
                     ProviderCheck {
                         discovery: Discovery {
@@ -394,6 +548,7 @@ cat "$(dirname "$0")/said""#;
                             model: "claude-haiku-5-5".into(),
                         }),
                         usage: claude_usage(SIGNED_IN),
+                        read_only: ReadOnlyCheck::Probed(record),
                     },
                     ProviderCheck {
                         discovery: Discovery {
@@ -421,6 +576,8 @@ cat "$(dirname "$0")/said""#;
                         ]),
                         // No preflight Codex call reports usage; a paid one is not worth it.
                         usage: Usage::UNKNOWN,
+                        // Reviewers run in the workers' home.
+                        read_only: ReadOnlyCheck::NeedsSignIn,
                     },
                 ]
             );
@@ -429,17 +586,18 @@ cat "$(dirname "$0")/said""#;
         #[test]
         fn one_canary_run_feeds_both_signin_and_usage() {
             let dir = Dir::new();
-            let counted = CLAUDE.replace("cat ", "echo >> \"$(dirname \"$0\")/runs\"; cat ");
+            let counted = CLAUDE.replace("cat ", &format!("{COUNTED}cat "));
             let claude = bin(&dir, "claude", "claude", &counted);
             fs::write(claude.join("said"), SIGNED_IN).unwrap();
             let homes = CodexHomes {
                 operator: signed_in_home(&dir),
                 workers: dir.0.join("workers"),
             };
-            let checks = preflight(claude.as_os_str(), &homes, TIMEOUT, TIMEOUT);
+            recorded(&dir, Provider::ClaudeCode, "2.1.312");
+            let checks = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
 
             assert!(matches!(checks[0].usage.tokens, Tokens::Known { .. }));
-            assert_eq!(fs::read_to_string(claude.join("runs")).unwrap(), "\n");
+            assert_eq!(runs(&claude), 1);
         }
 
         #[test]
@@ -452,7 +610,14 @@ cat "$(dirname "$0")/said""#;
                 operator: signed_in_home(&dir),
                 workers: dir.0.join("workers"),
             };
-            let checks = preflight(claude.as_os_str(), &homes, Duration::from_secs(1), TIMEOUT);
+            recorded(&dir, Provider::ClaudeCode, "2.1.312");
+            let checks = preflight(
+                claude.as_os_str(),
+                &homes,
+                &probes(&dir),
+                Duration::from_secs(1),
+                TIMEOUT,
+            );
 
             assert_eq!(
                 checks[0].signin,
@@ -478,14 +643,116 @@ cat "$(dirname "$0")/said""#;
                 workers: dir.0.join("workers"),
             };
             let path = std::env::join_paths([&bun, &old]).unwrap();
-            let checks = preflight(&path, &homes, TIMEOUT, TIMEOUT);
+            let checks = preflight(&path, &homes, &probes(&dir), TIMEOUT, TIMEOUT);
 
             let signins: Vec<_> = checks.iter().map(|c| &c.signin).collect();
             assert_eq!(signins, [&SignInCheck::NoBinary, &SignInCheck::NoBinary]);
+            assert!(
+                checks
+                    .iter()
+                    .all(|c| c.read_only == ReadOnlyCheck::NoBinary)
+            );
             assert!(checks.iter().all(|c| c.usage == Usage::UNKNOWN));
             assert_eq!(checks[0].discovery.rejected.len(), 1);
             assert_eq!(checks[1].discovery.rejected.len(), 1);
             assert!(!old.join("ran").exists(), "canary ran on a rejected claude");
+        }
+
+        #[test]
+        fn an_unrecorded_version_is_probed_once_then_read_from_its_record() {
+            let dir = Dir::new();
+            let counted = CLAUDE.replace("cat ", &format!("{COUNTED}cat "));
+            let claude = bin(&dir, "claude", "claude", &counted);
+            fs::write(claude.join("said"), SIGNED_IN).unwrap();
+            fs::write(claude.join("probe"), CLAUDE_PROBE).unwrap();
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: dir.0.join("workers"),
+            };
+            let first = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+            let ReadOnlyCheck::Probed(record) = &first[0].read_only else {
+                panic!("{:?}", first[0].read_only);
+            };
+            assert_eq!(
+                (record.provider, record.version.as_str()),
+                (Provider::ClaudeCode, "2.1.312")
+            );
+            assert!(record.capabilities.values().all(|o| *o == Outcome::Passed));
+            assert_eq!(runs(&claude), 2, "canary and probe");
+
+            let second = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+            assert_eq!(second[0].read_only, first[0].read_only);
+            assert_eq!(runs(&claude), 3, "the second preflight ran the canary only");
+        }
+
+        #[test]
+        fn a_probe_that_proves_nothing_is_reported_and_not_recorded() {
+            let dir = Dir::new();
+            let claude = bin(&dir, "claude", "claude", CLAUDE);
+            fs::write(claude.join("said"), SIGNED_IN).unwrap();
+            fs::write(claude.join("probe"), "error: unknown option\n").unwrap();
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: dir.0.join("workers"),
+            };
+            let checks = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+
+            assert_eq!(
+                checks[0].read_only,
+                ReadOnlyCheck::CouldNotRun {
+                    says: "no init event".into()
+                }
+            );
+            assert_eq!(
+                probe::load(&probes(&dir).cache, Provider::ClaudeCode, "2.1.312"),
+                None
+            );
+        }
+
+        #[test]
+        fn a_claude_that_is_not_signed_in_is_not_probed() {
+            let dir = Dir::new();
+            let counted = CLAUDE.replace("cat ", &format!("{COUNTED}cat "));
+            let claude = bin(&dir, "claude", "claude", &counted);
+            fs::write(claude.join("said"), NOT_LOGGED_IN).unwrap();
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: dir.0.join("workers"),
+            };
+            let checks = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+
+            assert_eq!(checks[0].read_only, ReadOnlyCheck::NeedsSignIn);
+            assert_eq!(runs(&claude), 1, "canary only");
+        }
+
+        #[test]
+        fn codex_is_probed_in_the_workers_home() {
+            let dir = Dir::new();
+            let codex = bin(&dir, "real", "codex", CODEX);
+            fs::write(codex.join("probe"), CODEX_PROBE).unwrap();
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: signed_in(&dir, "workers"),
+            };
+            let checks = preflight(codex.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+
+            let ReadOnlyCheck::Probed(record) = &checks[1].read_only else {
+                panic!("{:?}", checks[1].read_only);
+            };
+            assert_eq!(
+                (record.provider, record.version.as_str()),
+                (Provider::Codex, "0.163.0")
+            );
+            assert_eq!(
+                record.capabilities[&Capability::FileWrites],
+                Outcome::Passed
+            );
+            assert_eq!(
+                fs::read_to_string(codex.join("probed-home"))
+                    .unwrap()
+                    .trim(),
+                homes.workers.to_str().unwrap()
+            );
         }
     }
 }
