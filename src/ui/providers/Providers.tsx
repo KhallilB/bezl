@@ -15,12 +15,16 @@ import {
   canaryShown,
   found,
   homeName,
+  limitHit,
   notFound,
   type ProviderCheck,
   providerName,
   rejectionText,
   type Shown,
   signinShown,
+  tokensText,
+  unknownText,
+  windowText,
 } from "./model";
 import "./providers.css";
 
@@ -72,6 +76,62 @@ function SignIn({ check }: { check: ProviderCheck }) {
   );
 }
 
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <Inline gap="sm" justify="between">
+      <Text as="span" size="sm" tone="muted">
+        {label}
+      </Text>
+      <Text as="span" size="sm" {...(value === unknownText ? { tone: "muted" } : {})}>
+        {value}
+      </Text>
+    </Inline>
+  );
+}
+
+function UsageList({ check }: { check: ProviderCheck }) {
+  const { signin, usage } = check;
+  if (signin.kind === "noBinary") return null;
+  const { limits } = usage;
+  return (
+    <ul className="providers-list" aria-label="Usage">
+      <li>
+        <Row
+          label={signin.kind === "canary" ? "Canary tokens" : "Tokens"}
+          value={tokensText(usage.tokens)}
+        />
+      </li>
+      <li className="providers-home">
+        {limits.kind === "unknown" ? (
+          <Row label="Limits" value={unknownText} />
+        ) : (
+          <>
+            <Text as="span" size="sm" tone="muted">
+              Limits
+            </Text>
+            {limits.detail.windows.length > 0 ? (
+              <ul className="providers-windows" aria-label="Limit windows">
+                {limits.detail.windows.map((w) => (
+                  <li key={w.name}>
+                    <Text as="span" size="sm">
+                      {windowText(w)}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {limits.detail.hit !== null ? (
+              <div>
+                <Shows shown={limitHit(limits.detail.hit)} />
+              </div>
+            ) : null}
+          </>
+        )}
+      </li>
+    </ul>
+  );
+}
+
 function ProviderPanel({ check }: { check: ProviderCheck }) {
   const { provider, found: bin, rejected } = check.discovery;
   const headingId = `provider-${provider}-title`;
@@ -95,6 +155,7 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
           <Text tone="muted">{`No ${providerName[provider]} on PATH.`}</Text>
         )}
         <SignIn check={check} />
+        <UsageList check={check} />
         {rejected.length > 0 ? (
           <section>
             <Heading level={3} size="sm">

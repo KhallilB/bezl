@@ -1,5 +1,6 @@
 //! One preflight pass over every provider, as the Providers screen shows it.
-use super::claude::{ClaudeSignIn, claude_signin};
+use super::claude::{ClaudeSignIn, run_canary, signin_from};
+use super::usage::{Usage, claude_usage};
 use super::{CodexSignIn, Discovery, Provider, codex_signin, discover, operator_codex_home};
 use serde::Serialize;
 use std::ffi::OsStr;
@@ -10,6 +11,7 @@ use std::time::Duration;
 pub struct ProviderCheck {
     pub discovery: Discovery,
     pub signin: SignInCheck,
+    pub usage: Usage,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -56,26 +58,38 @@ pub fn preflight(
         .into_iter()
         .map(|provider| {
             let discovery = discover(provider, search_path, timeout);
-            let signin = match (&discovery.found, provider) {
-                (None, _) => SignInCheck::NoBinary,
+            let (signin, usage) = match (&discovery.found, provider) {
+                (None, _) => (SignInCheck::NoBinary, Usage::UNKNOWN),
                 (Some(found), Provider::ClaudeCode) => {
-                    SignInCheck::Canary(claude_signin(&found.path, canary_timeout))
+                    let ran = run_canary(&found.path, canary_timeout);
+                    let usage = ran
+                        .as_ref()
+                        .map_or(Usage::UNKNOWN, |ran| claude_usage(&ran.stdout));
+                    (SignInCheck::Canary(signin_from(ran)), usage)
                 }
-                (Some(found), Provider::Codex) => SignInCheck::Homes(
-                    [
-                        (Home::Operator, &homes.operator),
-                        (Home::Workers, &homes.workers),
-                    ]
-                    .into_iter()
-                    .map(|(home, path)| HomeSignIn {
-                        home,
-                        path: path.clone(),
-                        signin: codex_signin(&found.path, path, timeout),
-                    })
-                    .collect(),
+                // No preflight Codex call reports usage; a paid one is not worth it.
+                (Some(found), Provider::Codex) => (
+                    SignInCheck::Homes(
+                        [
+                            (Home::Operator, &homes.operator),
+                            (Home::Workers, &homes.workers),
+                        ]
+                        .into_iter()
+                        .map(|(home, path)| HomeSignIn {
+                            home,
+                            path: path.clone(),
+                            signin: codex_signin(&found.path, path, timeout),
+                        })
+                        .collect(),
+                    ),
+                    Usage::UNKNOWN,
                 ),
             };
-            ProviderCheck { discovery, signin }
+            ProviderCheck {
+                discovery,
+                signin,
+                usage,
+            }
         })
         .collect()
 }
@@ -157,6 +171,7 @@ mod tests {
                 signin: SignInCheck::Canary(ClaudeSignIn::SignedIn {
                     model: "claude-haiku-5-5".into(),
                 }),
+                usage: Usage::UNKNOWN,
             },
             ProviderCheck {
                 discovery: Discovery {
@@ -168,6 +183,7 @@ mod tests {
                     }],
                 },
                 signin: SignInCheck::NoBinary,
+                usage: Usage::UNKNOWN,
             },
         ];
         assert_eq!(
@@ -182,7 +198,8 @@ mod tests {
                     "signin": {
                         "kind": "canary",
                         "detail": { "kind": "signedIn", "detail": { "model": "claude-haiku-5-5" } }
-                    }
+                    },
+                    "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } }
                 },
                 {
                     "discovery": {
@@ -192,7 +209,8 @@ mod tests {
                             { "path": "/bun/codex", "reason": { "kind": "says", "detail": "0.2.3" } }
                         ]
                     },
-                    "signin": { "kind": "noBinary" }
+                    "signin": { "kind": "noBinary" },
+                    "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } }
                 }
             ])
         );
@@ -316,6 +334,7 @@ mod tests {
     mod with_fake_clis {
         use super::*;
         use crate::providers::testing::Dir;
+        use crate::providers::usage::{Tokens, claude_usage};
         use std::fs;
 
         const TIMEOUT: Duration = Duration::from_secs(5);
@@ -374,6 +393,7 @@ cat "$(dirname "$0")/said""#;
                         signin: SignInCheck::Canary(ClaudeSignIn::SignedIn {
                             model: "claude-haiku-5-5".into(),
                         }),
+                        usage: claude_usage(SIGNED_IN),
                     },
                     ProviderCheck {
                         discovery: Discovery {
@@ -399,9 +419,27 @@ cat "$(dirname "$0")/said""#;
                                 signin: CodexSignIn::HomeMissing,
                             },
                         ]),
+                        // No preflight Codex call reports usage; a paid one is not worth it.
+                        usage: Usage::UNKNOWN,
                     },
                 ]
             );
+        }
+
+        #[test]
+        fn one_canary_run_feeds_both_signin_and_usage() {
+            let dir = Dir::new();
+            let counted = CLAUDE.replace("cat ", "echo >> \"$(dirname \"$0\")/runs\"; cat ");
+            let claude = bin(&dir, "claude", "claude", &counted);
+            fs::write(claude.join("said"), SIGNED_IN).unwrap();
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: dir.0.join("workers"),
+            };
+            let checks = preflight(claude.as_os_str(), &homes, TIMEOUT, TIMEOUT);
+
+            assert!(matches!(checks[0].usage.tokens, Tokens::Known { .. }));
+            assert_eq!(fs::read_to_string(claude.join("runs")).unwrap(), "\n");
         }
 
         #[test]
@@ -444,6 +482,7 @@ cat "$(dirname "$0")/said""#;
 
             let signins: Vec<_> = checks.iter().map(|c| &c.signin).collect();
             assert_eq!(signins, [&SignInCheck::NoBinary, &SignInCheck::NoBinary]);
+            assert!(checks.iter().all(|c| c.usage == Usage::UNKNOWN));
             assert_eq!(checks[0].discovery.rejected.len(), 1);
             assert_eq!(checks[1].discovery.rejected.len(), 1);
             assert!(!old.join("ran").exists(), "canary ran on a rejected claude");
