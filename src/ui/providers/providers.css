@@ -1,0 +1,47 @@
+/* Bezl's own elements only; kbui parts change through the app theme's token overrides. */
+.providers-screen {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding-block: var(--kb-space-6) var(--kb-space-8);
+  background:
+    radial-gradient(
+      80% 50% at 50% 0%,
+      color-mix(in oklab, var(--kb-color-info) 7%, transparent),
+      transparent 70%
+    ),
+    var(--kb-color-bg);
+  color: var(--kb-color-fg);
+  font-family: "Geist Variable", var(--kb-font-sans);
+}
+
+.providers-content {
+  display: grid;
+  gap: var(--kb-space-6);
+}
+
+.providers-grid {
+  align-items: start;
+}
+
+/* Grid items default to min-content width; a long path would push the panel off-screen. */
+.providers-panel {
+  min-width: 0;
+}
+
+.providers-body {
+  display: grid;
+  gap: var(--kb-space-4);
+}
+
+.providers-list {
+  display: grid;
+  gap: var(--kb-space-3);
+  margin: var(--kb-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.providers-home {
+  display: grid;
+  gap: var(--kb-space-1);
+}

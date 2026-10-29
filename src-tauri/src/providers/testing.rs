@@ -16,8 +16,10 @@ impl Dir {
         Dir(dir)
     }
 
+    /// `name` may hold a subfolder, made if missing.
     pub fn script(&self, name: &str, body: &str) -> PathBuf {
         let path = self.0.join(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
         fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
         path
