@@ -1,3 +1,4 @@
+pub mod providers;
 mod spike_pty;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
