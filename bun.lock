@@ -7,9 +7,9 @@
       "dependencies": {
         "@fontsource-variable/geist": "5.3.0",
         "@fontsource-variable/geist-mono": "5.3.0",
-        "@kbui/css": "https://github.com/KhallilB/kbui/releases/download/v0.4.0/kbui-css-0.4.0.tgz",
-        "@kbui/react": "https://github.com/KhallilB/kbui/releases/download/v0.4.0/kbui-react-0.4.0.tgz",
-        "@kbui/tokens": "https://github.com/KhallilB/kbui/releases/download/v0.4.0/kbui-tokens-0.4.0.tgz",
+        "@kb.ui/css": "0.10.2",
+        "@kb.ui/react": "0.10.2",
+        "@kb.ui/tokens": "0.10.2",
         "@tauri-apps/api": "2.12.4",
         "@xterm/addon-fit": "0.11.0",
         "@xterm/addon-serialize": "0.14.0",
@@ -165,11 +165,11 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@kbui/css": ["@kbui/css@https://github.com/KhallilB/kbui/releases/download/v0.4.0/kbui-css-0.4.0.tgz", {}, "sha512-SL08v6VzL9vIz4JGGabNtwDEEvlqZ0lpARsjnLYOlE2U+s0d2ViC+jbqRADLYNcRpNE8LYdvH7cfM4n4c9vsIg=="],
+    "@kb.ui/css": ["@kb.ui/css@0.10.2", "", {}, "sha512-yTdH9fEsfoopjHzE78Nl5pGSh0soid0JTDnxoCpSPLgDzMNyBLvT8oL/kiNdy/P6BK+gYzSvcvYuE4smV7x5mA=="],
 
-    "@kbui/react": ["@kbui/react@https://github.com/KhallilB/kbui/releases/download/v0.4.0/kbui-react-0.4.0.tgz", { "dependencies": { "@base-ui/react": "1.9.0", "clsx": "^2.1.1" }, "peerDependencies": { "react": ">=19", "react-dom": ">=19" } }, "sha512-7mR24Ho5uRDs+vxy86/3yOc+jPrXibzHSwNAXsG1RldOEXxiIkhfS0elgV6c7SsgKCzC3whUcN9826HRgBFl0Q=="],
+    "@kb.ui/react": ["@kb.ui/react@0.10.2", "", { "dependencies": { "@base-ui/react": "1.9.0", "clsx": "^2.1.1" }, "peerDependencies": { "react": ">=19", "react-dom": ">=19" } }, "sha512-rhqG6uyofnQrOIdtinA6nrmhSYc1cxmdJfPTV180ab93qLfVb556TdZNhPCuVU41GTLQHmW+pTIMtDc3oIlFGg=="],
 
-    "@kbui/tokens": ["@kbui/tokens@https://github.com/KhallilB/kbui/releases/download/v0.4.0/kbui-tokens-0.4.0.tgz", {}, "sha512-NZetmsHPRgjUV8vEZITaiRe7cOVo7gPE0+wIgsIxyEMZX8B7cN+jdlcbzsGmWPoPmslmPMr+CcRpMLyVWGbo7Q=="],
+    "@kb.ui/tokens": ["@kb.ui/tokens@0.10.2", "", {}, "sha512-lohTtqrAKKNQpM07G+pMIUl/hKh9x6o73GINVqXQdOed6Qp4j+/4h9sRok64zx9IW5mx4nya3yj8Y/zrnDCrFw=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.155.0", "", {}, "sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q=="],
 

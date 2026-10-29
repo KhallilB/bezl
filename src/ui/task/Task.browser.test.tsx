@@ -2,7 +2,7 @@ import axe from "axe-core";
 import type { ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, test } from "vitest";
-import "@kbui/css/styles.css";
+import "@kb.ui/css/styles.css";
 import { AppTheme } from "../theme/AppTheme";
 import { blocked, idle, longContent, running, task } from "./fixtures";
 import { Task } from "./Task";
@@ -33,15 +33,53 @@ function unmount() {
 
 afterEach(unmount);
 
-/** Markup minus the theme's inline style: what the theme must never change. */
+/** Compare semantic markup without theme values or measured geometry. */
 function structure(el: HTMLElement) {
   const clone = el.cloneNode(true) as HTMLElement;
   for (const node of clone.querySelectorAll("[style]")) node.removeAttribute("style");
   for (const node of clone.querySelectorAll("[data-app-theme]"))
     node.removeAttribute("data-app-theme");
-  // React useId values (Base UI's and bezl's SVG ids) are per-mount counters, not structure.
+  for (const node of clone.querySelectorAll(".kb-scrollarea, .kb-scrollarea *")) {
+    for (const axis of ["x", "y"]) {
+      node.removeAttribute(`data-has-overflow-${axis}`);
+      node.removeAttribute(`data-overflow-${axis}-start`);
+      node.removeAttribute(`data-overflow-${axis}-end`);
+    }
+  }
+  // Hidden scrollbar decorations mount after overflow measurement.
+  for (const node of clone.querySelectorAll('.kb-scrollarea-scrollbar[aria-hidden="true"]'))
+    node.remove();
+  // React useId values vary per mount.
   return clone.innerHTML.replaceAll(/_r_[0-9a-z]+_/g, "_r_id_");
 }
+
+test("structure ignores measured overflow but preserves semantics and children", () => {
+  const plain = document.createElement("div");
+  plain.innerHTML =
+    '<div class="kb-scrollarea" role="presentation"><div role="region" aria-label="Output"><pre>Output</pre></div></div>';
+  const measured = plain.cloneNode(true) as HTMLElement;
+  const region = measured.querySelector('[role="region"]') as HTMLElement;
+  for (const node of measured.querySelectorAll(".kb-scrollarea, .kb-scrollarea *")) {
+    for (const axis of ["x", "y"]) {
+      node.setAttribute(`data-has-overflow-${axis}`, "");
+      node.setAttribute(`data-overflow-${axis}-start`, "");
+      node.setAttribute(`data-overflow-${axis}-end`, "");
+    }
+  }
+  const scrollbar = document.createElement("div");
+  scrollbar.className = "kb-scrollarea-scrollbar";
+  scrollbar.setAttribute("aria-hidden", "true");
+  measured.querySelector(".kb-scrollarea")?.append(scrollbar);
+  expect(structure(measured)).toBe(structure(plain));
+  scrollbar.removeAttribute("aria-hidden");
+  expect(structure(measured)).not.toBe(structure(plain));
+  scrollbar.setAttribute("aria-hidden", "true");
+  region.setAttribute("aria-label", "Other output");
+  expect(structure(measured)).not.toBe(structure(plain));
+  region.setAttribute("aria-label", "Output");
+  region.append(document.createElement("p"));
+  expect(structure(measured)).not.toBe(structure(plain));
+});
 
 for (const theme of themes) {
   for (const [name, workers] of Object.entries(scenarios)) {
@@ -83,6 +121,29 @@ for (const theme of themes) {
     });
   }
 }
+
+test.each(themes)("long output stays focusable and scrollable in %s", async (theme) => {
+  for (const enabled of [false, true]) {
+    const el = await mount(
+      <div style={{ width: 800 }}>
+        <AppTheme enabled={enabled}>
+          <Task task={task} workers={longContent} onStop={() => {}} />
+        </AppTheme>
+      </div>,
+      theme,
+    );
+    const viewport = el.querySelector(
+      '[role="region"][aria-label="Worker B output"]',
+    ) as HTMLElement;
+    expect(viewport.clientHeight).toBeGreaterThan(0);
+    expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+    viewport.focus();
+    expect(document.activeElement).toBe(viewport);
+    viewport.scrollTop = viewport.scrollHeight;
+    await expect.poll(() => viewport.scrollTop).toBeGreaterThan(0);
+    unmount();
+  }
+});
 
 test.each([800, 1200])(
   "task header and grid fit a %ipx window without horizontal overflow",
