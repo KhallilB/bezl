@@ -46,6 +46,9 @@ function structure(el: HTMLElement) {
       node.removeAttribute(`data-overflow-${axis}-end`);
     }
   }
+  // Hidden scrollbar decorations mount after overflow measurement.
+  for (const node of clone.querySelectorAll('.kb-scrollarea-scrollbar[aria-hidden="true"]'))
+    node.remove();
   // React useId values vary per mount.
   return clone.innerHTML.replaceAll(/_r_[0-9a-z]+_/g, "_r_id_");
 }
@@ -63,7 +66,14 @@ test("structure ignores measured overflow but preserves semantics and children",
       node.setAttribute(`data-overflow-${axis}-end`, "");
     }
   }
+  const scrollbar = document.createElement("div");
+  scrollbar.className = "kb-scrollarea-scrollbar";
+  scrollbar.setAttribute("aria-hidden", "true");
+  measured.querySelector(".kb-scrollarea")?.append(scrollbar);
   expect(structure(measured)).toBe(structure(plain));
+  scrollbar.removeAttribute("aria-hidden");
+  expect(structure(measured)).not.toBe(structure(plain));
+  scrollbar.setAttribute("aria-hidden", "true");
   region.setAttribute("aria-label", "Other output");
   expect(structure(measured)).not.toBe(structure(plain));
   region.setAttribute("aria-label", "Output");
@@ -111,6 +121,29 @@ for (const theme of themes) {
     });
   }
 }
+
+test.each(themes)("long output stays focusable and scrollable in %s", async (theme) => {
+  for (const enabled of [false, true]) {
+    const el = await mount(
+      <div style={{ width: 800 }}>
+        <AppTheme enabled={enabled}>
+          <Task task={task} workers={longContent} onStop={() => {}} />
+        </AppTheme>
+      </div>,
+      theme,
+    );
+    const viewport = el.querySelector(
+      '[role="region"][aria-label="Worker B output"]',
+    ) as HTMLElement;
+    expect(viewport.clientHeight).toBeGreaterThan(0);
+    expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+    viewport.focus();
+    expect(document.activeElement).toBe(viewport);
+    viewport.scrollTop = viewport.scrollHeight;
+    await expect.poll(() => viewport.scrollTop).toBeGreaterThan(0);
+    unmount();
+  }
+});
 
 test.each([800, 1200])(
   "task header and grid fit a %ipx window without horizontal overflow",
