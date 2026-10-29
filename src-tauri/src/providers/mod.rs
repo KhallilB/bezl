@@ -1,5 +1,8 @@
 //! Agent CLIs Bezl can drive, found and identified by preflight.
+mod exec;
 mod identity;
+#[cfg(all(test, unix))]
+mod testing;
 
 pub use identity::{Discovery, Found, Identity, Rejected, Rejection, discover, identify};
 

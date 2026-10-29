@@ -1,11 +1,8 @@
 use super::Provider;
+use super::exec::{self, RunError, first_line};
 use std::ffi::OsStr;
-use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::mpsc;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Identity {
@@ -30,13 +27,6 @@ pub fn identify(version_output: &str) -> Identity {
                 .and_then(|v| known(Provider::Codex, v))
         })
         .unwrap_or_else(|| Identity::Unknown { says: says.into() })
-}
-
-fn first_line(text: &str) -> &str {
-    text.lines()
-        .map(str::trim)
-        .find(|l| !l.is_empty())
-        .unwrap_or("")
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -132,44 +122,22 @@ fn is_executable(path: &Path) -> bool {
     path.is_file()
 }
 
+impl From<RunError> for Rejection {
+    fn from(e: RunError) -> Self {
+        match e {
+            RunError::TimedOut => Rejection::TimedOut,
+            RunError::DidNotStart(why) => Rejection::DidNotStart(why),
+        }
+    }
+}
+
 /// Runs `<path> --version`; returns its identity and first line.
 fn check(path: &Path, timeout: Duration) -> Result<(Identity, String), Rejection> {
-    let mut child = Command::new(path)
-        .arg("--version")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| Rejection::DidNotStart(e.to_string()))?;
-    let stdout = drain(child.stdout.take());
-    let stderr = drain(child.stderr.take());
-    let deadline = Instant::now() + timeout;
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break status,
-            Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(10)),
-            Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(Rejection::TimedOut);
-            }
-            Err(e) => return Err(Rejection::DidNotStart(e.to_string())),
-        }
-    };
-    // A child it left behind can hold the pipes open after it exits.
-    let read = |pipe: mpsc::Receiver<String>| {
-        pipe.recv_timeout(deadline.saturating_duration_since(Instant::now()))
-            .map_err(|_| Rejection::TimedOut)
-    };
-    let stdout = read(stdout)?;
-    let stderr = read(stderr)?;
-    let says = match first_line(&stdout) {
-        "" => first_line(&stderr),
-        line => line,
-    };
-    if !status.success() {
+    let ran = exec::run(path, &["--version"], &[], timeout)?;
+    let says = ran.says();
+    if !ran.success() {
         return Err(Rejection::Exited {
-            code: status.code(),
+            code: ran.code,
             says: says.into(),
         });
     }
@@ -177,20 +145,7 @@ fn check(path: &Path, timeout: Duration) -> Result<(Identity, String), Rejection
         return Err(Rejection::NoOutput);
     }
     // Stderr only names what a fake says; identity comes from stdout.
-    Ok((identify(&stdout), says.into()))
-}
-
-/// Reader thread is left detached if the pipe outlives the deadline.
-fn drain(pipe: Option<impl Read + Send + 'static>) -> mpsc::Receiver<String> {
-    let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
-        let mut buf = Vec::new();
-        if let Some(mut pipe) = pipe {
-            let _ = pipe.read_to_end(&mut buf);
-        }
-        let _ = tx.send(String::from_utf8_lossy(&buf).into_owned());
-    });
-    rx
+    Ok((identify(&ran.stdout), says.into()))
 }
 
 #[cfg(test)]
@@ -246,39 +201,11 @@ mod tests {
     #[cfg(unix)]
     mod on_path {
         use super::super::*;
+        use crate::providers::testing::Dir;
         use std::fs;
-        use std::os::unix::fs::PermissionsExt;
-        use std::path::Path;
-        use std::sync::atomic::{AtomicU32, Ordering};
+        use std::time::Instant;
 
         const TIMEOUT: Duration = Duration::from_secs(5);
-
-        struct Dir(PathBuf);
-
-        impl Dir {
-            fn new() -> Self {
-                static N: AtomicU32 = AtomicU32::new(0);
-                let n = N.fetch_add(1, Ordering::Relaxed);
-                let dir =
-                    std::env::temp_dir().join(format!("bezl-providers-{}-{n}", std::process::id()));
-                let _ = fs::remove_dir_all(&dir);
-                fs::create_dir_all(&dir).unwrap();
-                Dir(dir)
-            }
-
-            fn script(&self, name: &str, body: &str) -> PathBuf {
-                let path = self.0.join(name);
-                fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
-                fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
-                path
-            }
-        }
-
-        impl Drop for Dir {
-            fn drop(&mut self) {
-                let _ = fs::remove_dir_all(&self.0);
-            }
-        }
 
         fn search(dirs: &[&Path]) -> std::ffi::OsString {
             std::env::join_paths(dirs).unwrap()
