@@ -1,19 +1,20 @@
 pub mod domain;
 pub mod providers;
-mod spike_pty;
+pub mod terminal;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(spike_pty::Spike::default())
+        .manage(terminal::TerminalPort::default())
         .invoke_handler(tauri::generate_handler![
             providers::preflight::providers_preflight,
-            spike_pty::spike_config,
-            spike_pty::spike_start,
-            spike_pty::spike_write,
-            spike_pty::spike_finish,
-            spike_pty::spike_log,
-            spike_pty::spike_ack
+            terminal::port::terminal_open,
+            terminal::port::terminal_write,
+            terminal::port::terminal_drawn,
+            terminal::port::terminal_resize,
+            terminal::port::terminal_close,
+            terminal::bench::terminal_bench,
+            terminal::bench::terminal_bench_done
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

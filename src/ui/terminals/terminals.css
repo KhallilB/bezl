@@ -1,0 +1,49 @@
+/* Bezl's own elements only; kbui parts change through the app theme's token overrides. */
+.terminals-screen {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: var(--kb-space-6);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--kb-space-4);
+  background: var(--kb-color-bg);
+  color: var(--kb-color-fg);
+  font-family: "Geist Variable", var(--kb-font-sans);
+}
+
+.terminals-heading {
+  margin: 0;
+  font-size: var(--kb-size-lg);
+  font-weight: var(--kb-font-weight-strong);
+}
+
+.terminals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--kb-space-4);
+  align-items: start;
+}
+
+/* Grid items default to min-content width; xterm's canvas would push the pane off-screen. */
+.terminal-pane {
+  min-width: 0;
+}
+
+.terminal-title {
+  margin: 0;
+  font-size: var(--kb-size-md);
+  font-weight: var(--kb-font-weight-strong);
+}
+
+.terminal-says {
+  margin: 0 0 var(--kb-space-2);
+  color: var(--kb-color-danger);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-sm);
+}
+
+/* xterm fills a fixed box; the fit addon turns its size into rows and columns. */
+.terminal-screen {
+  height: clamp(16rem, calc(100vh - 12rem), 60rem);
+  overflow: hidden;
+}
