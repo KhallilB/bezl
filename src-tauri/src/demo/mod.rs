@@ -51,6 +51,16 @@ fn demo() -> Result<Demo, String> {
     from_env()?.ok_or_else(|| "no demo".into())
 }
 
+/// Runs at app setup; a no-op without a demo.
+pub fn setup(app: &tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+    if from_env()?.is_none() {
+        return Ok(());
+    }
+    let window = app.get_webview_window("main").ok_or("no main window")?;
+    snapshot::keep_rendering(&window)
+}
+
 #[tauri::command]
 pub fn demo_plan() -> Result<Option<Demo>, String> {
     from_env()

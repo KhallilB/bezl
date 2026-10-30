@@ -75,6 +75,16 @@ function setup() {
         if (i === 0) await snap(a, "echo typed", echoPane);
         await sleep(SAMPLE_GAP_MS);
       }
+      const painted = await until(
+        "the echo pane to paint what was typed",
+        () => echoPane.querySelector(".xterm-rows")?.textContent?.includes(token),
+        10_000,
+      ).catch(() => false);
+      a.check(
+        "echo pane paints what was typed",
+        painted,
+        painted ? `shows ${token}` : `${token} drawn but never painted`,
+      );
       await snap(a, "echo done", echoPane);
       a.check(
         `echo under ${ECHO_LIMIT_MS} ms`,

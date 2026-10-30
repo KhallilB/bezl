@@ -37,6 +37,8 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            demo::setup(app.handle())?;
             Ok(())
         })
         .run(tauri::generate_context!())

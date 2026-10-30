@@ -1,6 +1,7 @@
 //! WKWebView renders its own pixels: no Screen Recording permission needed.
 use block2::RcBlock;
-use objc2::MainThreadMarker;
+use objc2::runtime::NSObjectProtocol;
+use objc2::{MainThreadMarker, msg_send, sel};
 use objc2_app_kit::{NSBitmapImageFileType, NSBitmapImageRep, NSImage};
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_foundation::{NSDictionary, NSError};
@@ -48,6 +49,23 @@ pub fn png<R: tauri::Runtime>(
         .map_err(|e| e.to_string())?;
     rx.recv_timeout(Duration::from_secs(10))
         .map_err(|_| "snapshot timed out".to_string())?
+}
+
+/// A covered window stops WebKit painting and `requestAnimationFrame`, so xterm never draws.
+/// WebKit SPI, debug-only: absent, frames of a covered window come out stale.
+pub fn keep_rendering<R: tauri::Runtime>(webview: &tauri::WebviewWindow<R>) -> Result<(), String> {
+    webview
+        .with_webview(|platform| {
+            // SAFETY: as in `png`.
+            let wk = unsafe { &*platform.inner().cast::<WKWebView>() };
+            if wk.respondsToSelector(sel!(_setWindowOcclusionDetectionEnabled:)) {
+                // SAFETY: the selector exists and takes a BOOL.
+                let _: () = unsafe { msg_send![wk, _setWindowOcclusionDetectionEnabled: false] };
+            } else {
+                eprintln!("demo: WebKit lacks occlusion SPI; keep the window uncovered");
+            }
+        })
+        .map_err(|e| e.to_string())
 }
 
 fn encode(image: &NSImage) -> Result<Vec<u8>, String> {
