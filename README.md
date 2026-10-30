@@ -45,7 +45,7 @@ You can also build Bezl from source; see [Develop](#develop).
 | Live terminal | `@xterm/xterm` and `portable-pty`, bytes over a raw IPC channel with backpressure | Built |
 | Terminal snapshots | `libghostty-vt` headless, saved in `.git/bezl/terminals/` | Built |
 | Records | Append-only JSONL events and TOML manifests in `.git/bezl/`, per clone and never tracked | Planned |
-| UI | React 19 and kbui 0.4.0, from GitHub release tarballs | Built |
+| UI | React 19 and kbui 0.10.2 (`@kb.ui/*`), from npm | Built |
 | Model endpoints | Ollama on this machine, local or cloud models, for jobs without tools | Planned |
 
 ## Layout
@@ -81,7 +81,7 @@ cargo check -p bezl
 bun tauri dev
 ```
 
-`bun run check` runs the typecheck, Biome, the jsdom unit tests and the Chromium tests. The Chromium tests run an axe scan of the Task screen in light and dark, with and without the app theme. kbui installs from its GitHub release tarballs, so no local kbui checkout is needed.
+`bun run check` runs the typecheck, Biome, the jsdom unit tests and the Chromium tests. The Chromium tests run an axe scan of the Task screen in light and dark, with and without the app theme. kbui installs from npm as `@kb.ui/*`, so no local kbui checkout is needed.
 
 Checks run locally for now. The GitHub workflow in `.github/workflows/ci.yml` runs only when started by hand.
 
