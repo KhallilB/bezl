@@ -16,7 +16,8 @@ export type TourView =
   | { kind: "newTask"; draft: Draft; focus?: "crew" }
   | { kind: "setup" }
   | { kind: "started" }
-  | { kind: "task"; taskId: string; stage: StageId }
+  /** `kept`: the list after take A was kept on Review. */
+  | { kind: "task"; taskId: string; stage: StageId; kept?: boolean }
   | { kind: "state"; scene: Scene }
   | { kind: "overview" };
 
@@ -132,7 +133,7 @@ export const steps: Step[] = [
     id: "working",
     chapter: "Your tasks",
     title: "Work in progress",
-    note: "A writer works in its own worktree; the plan lights up step by step.",
+    note: "Each take works in its own worktree, one line says what it is doing, and a message steers it.",
     view: { kind: "task", taskId: "debounce", stage: "build" },
   },
   {
@@ -146,8 +147,22 @@ export const steps: Step[] = [
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Check runs in the worktree and lists failures and code no test runs.",
+    note: "Failures and code no test runs come first, each with what Bezl saw. Passed checks stay folded.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
+  },
+  {
+    id: "review-takes",
+    chapter: "Your tasks",
+    title: "Two takes, two verdicts",
+    note: "Each take is reviewed by the other provider. Keep the one that should ship.",
+    view: { kind: "task", taskId: "empty-state", stage: "review" },
+  },
+  {
+    id: "ship",
+    chapter: "Your tasks",
+    title: "Ready to ship",
+    note: "The pull request beside how it got here. That history goes into its description.",
+    view: { kind: "task", taskId: "empty-state", stage: "ship", kept: true },
   },
   {
     id: "state-idle",

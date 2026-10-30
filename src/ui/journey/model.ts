@@ -52,6 +52,49 @@ export type Row = {
 
 export type Section = { title: string; rows: Row[] };
 
+export type FileChange = { path: string; added: number; removed: number };
+
+export function diffLabel({ added, removed }: FileChange): string {
+  return removed > 0 ? `+${added} −${removed}` : `+${added}`;
+}
+
+export type Finding = { text: string; where?: string; light: Light };
+
+export type Take = {
+  /** A, B: the take's letter in its task. */
+  id: string;
+  model: string;
+  state: string;
+  light: Light;
+  /** One line under the header: what the take is doing now. */
+  activity?: string;
+  files?: FileChange[];
+  /** Set on Review: the other provider's one-line verdict. */
+  verdict?: { by: string; text: string };
+  findings?: Finding[];
+};
+
+export type Problem = {
+  title: string;
+  kind: "failing" | "untested";
+  where: string;
+  /** Plain sentence of what is wrong. */
+  detail: string;
+  /** Output or facts, one per line, as Bezl saw them. */
+  evidence: string[];
+  /** Who the problem goes to: the writer of its take. */
+  writer: string;
+};
+
+export type ShipSummary = {
+  title: string;
+  summary: string;
+  facts: string[];
+  files: FileChange[];
+  /** Each stage in a sentence; this goes into the pull request's description. */
+  history: { stage: StageId; text: string }[];
+};
+
 export type StageView = {
   /** The status sentence: a bold lead, then the rest. */
   lead: string;
@@ -59,6 +102,11 @@ export type StageView = {
   /** The operator's own words, shown as a quote. */
   quote?: string;
   sections: Section[];
+  takes?: Take[];
+  problems?: Problem[];
+  /** Checks that passed; folded away, since Check shows problems first. */
+  passed?: Row[];
+  ship?: ShipSummary;
 };
 
 export type JourneyTask = {
