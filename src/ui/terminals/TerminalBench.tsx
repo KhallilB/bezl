@@ -9,6 +9,9 @@ import { replayRows, screenRows } from "./xterm";
 type Bench = { payload: string; result: string };
 
 const STREAMS = 3;
+// Idle is measured before any pane opens, after the page has loaded.
+const IDLE_SETTLE_MS = 3000;
+const IDLE_MS = 10_000;
 const SETTLE_MS = 15_000;
 const REST_MS = 10_000;
 const SAMPLES = 20;
@@ -27,12 +30,28 @@ export function TerminalBench() {
 }
 
 function BenchRun({ bench }: { bench: Bench }) {
+  const [idle, setIdle] = useState<Idle | null>(null);
+  useEffect(() => {
+    let gone = false;
+    void (async () => {
+      await sleep(IDLE_SETTLE_MS);
+      const idleStart = Date.now();
+      await sleep(IDLE_MS);
+      if (!gone) setIdle({ idleStart, idleEnd: Date.now() });
+    })();
+    return () => {
+      gone = true;
+    };
+  }, []);
   const run = useRef<ReturnType<typeof startRun> | null>(null);
-  run.current ??= startRun(bench);
+  if (!idle) return null;
+  run.current ??= startRun(bench, idle);
   return <Terminals port={tauriPort} panes={run.current.panes} />;
 }
 
-function startRun(bench: Bench) {
+type Idle = { idleStart: number; idleEnd: number };
+
+function startRun(bench: Bench, idle: Idle) {
   const start = Date.now();
   const checks = Array.from({ length: STREAMS }, () => new StreamCheck());
   const exits: { code: number | null; ms: number }[] = [];
@@ -117,7 +136,7 @@ function startRun(bench: Bench) {
       echoMs: { burst, rest },
       snapshots,
       canvases: document.querySelectorAll(".xterm-screen canvas").length,
-      t: { start, streamsDone: streamsAt, restStart, restEnd: restStart + REST_MS },
+      t: { ...idle, start, streamsDone: streamsAt, restStart, restEnd: restStart + REST_MS },
     };
     await invoke("terminal_bench_done", { report: JSON.stringify(report, null, 2) });
   })();

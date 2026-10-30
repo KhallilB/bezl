@@ -65,6 +65,8 @@ export type ProbeOutcome =
 export type ProbeRecord = {
   provider: ProviderId;
   version: string;
+  /** Launch flags probed; Rust re-probes when they change. */
+  reviewerArgs: string[];
   /** Unix seconds. */
   probedAt: number;
   capabilities: Record<Capability, ProbeOutcome>;

@@ -168,7 +168,7 @@ fn reviewer_env<'a>(
     }
 }
 
-/// A recorded version is never probed again: each probe is a paid call.
+/// A record `load` accepts is never probed again: each probe is a paid call.
 fn recorded<R>(
     record: Option<R>,
     env: Option<&[(&str, &OsStr)]>,
@@ -455,6 +455,7 @@ mod tests {
         let record = ProbeRecord {
             provider: Provider::Codex,
             version: "0.163.0".into(),
+            reviewer_args: vec!["--sandbox".into()],
             probed_at: 1,
             capabilities: [(Capability::Hooks, Outcome::Passed)].into(),
             cost: Cost {
@@ -482,7 +483,7 @@ mod tests {
     #[cfg(unix)]
     mod with_fake_clis {
         use super::*;
-        use crate::providers::capabilities::CAPABILITIES;
+        use crate::providers::capabilities::{CAPABILITIES, reviewer_args};
         use crate::providers::probe;
         use crate::providers::testing::Dir;
         use crate::providers::tiers::{self, TierRecord, Tiers};
@@ -526,6 +527,10 @@ cat "$(dirname "$0")/said""#;
             let record = ProbeRecord {
                 provider,
                 version: version.into(),
+                reviewer_args: reviewer_args(provider)
+                    .iter()
+                    .map(|a| a.to_string())
+                    .collect(),
                 probed_at: 1,
                 capabilities: CAPABILITIES.map(|c| (c, Outcome::Passed)).into(),
                 cost: Cost {
@@ -756,6 +761,36 @@ cat "$(dirname "$0")/said""#;
             assert_eq!(second[0].read_only, first[0].read_only);
             assert_eq!(second[0].tiers, first[0].tiers);
             assert_eq!(runs(&claude), 4, "the second preflight ran the canary only");
+        }
+
+        #[test]
+        fn a_record_probed_with_other_reviewer_args_is_probed_again() {
+            let dir = Dir::new();
+            let counted = CLAUDE.replace("cat ", &format!("{COUNTED}cat "));
+            let claude = bin(&dir, "claude", "claude", &counted);
+            fs::write(claude.join("said"), SIGNED_IN).unwrap();
+            fs::write(claude.join("probe"), CLAUDE_PROBE).unwrap();
+            let stale = ProbeRecord {
+                reviewer_args: vec!["--tools".into(), "Read".into()],
+                ..recorded(&dir, Provider::ClaudeCode, "2.1.312")
+            };
+            probe::store(&probes(&dir).cache, &stale).unwrap();
+            tiered(&dir, Provider::ClaudeCode, "2.1.312");
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: dir.0.join("workers"),
+            };
+            let checks = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+
+            let ReadOnlyCheck::Probed(record) = &checks[0].read_only else {
+                panic!("{:?}", checks[0].read_only);
+            };
+            assert_eq!(record.reviewer_args, reviewer_args(Provider::ClaudeCode));
+            assert_eq!(runs(&claude), 2, "canary and probe");
+            assert_eq!(
+                probe::load(&probes(&dir).cache, Provider::ClaudeCode, "2.1.312").as_ref(),
+                Some(record)
+            );
         }
 
         #[test]
