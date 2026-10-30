@@ -1,11 +1,11 @@
-import { Panel, Status } from "@kb.ui/react";
+import { Button, Panel, Status } from "@kb.ui/react";
 import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
-import "@xterm/xterm/css/xterm.css";
+import type { Terminal } from "@xterm/xterm";
 import { useEffect, useId, useRef, useState } from "react";
 import { StateIcon } from "../task/icons";
 import { type PaneState, paneStatus } from "./model";
-import type { PaneHandle, TerminalPort } from "./port";
+import type { PaneHandle, SavedRef, TerminalPort } from "./port";
+import { themedTerminal } from "./xterm";
 import "./terminals.css";
 
 const SCROLLBACK = 1000;
@@ -20,12 +20,18 @@ export type TerminalPaneProps = {
   /** Each chunk, once xterm has drawn it. */
   onDrawn?: (chunk: Uint8Array) => void;
   onExit?: (code: number | null) => void;
+  /** A snapshot of this pane was saved. */
+  onSnapshot?: (ref: SavedRef) => void;
+  /** The handle once the agent runs, e.g. to snapshot it. */
+  onHandle?: (handle: PaneHandle) => void;
 };
 
 /** One agent's terminal. The port holds the agent while `PANE_LIMIT` bytes sit undrawn here. */
 export function TerminalPane({ port, label, argv, cwd, ...hooks }: TerminalPaneProps) {
   const screen = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<PaneState>({ kind: "starting" });
+  const [pane, setPane] = useState<PaneHandle | null>(null);
+  const [snapError, setSnapError] = useState<string>();
   const headingId = useId();
   // Latest callbacks, so a new closure never restarts the agent.
   const latest = useRef(hooks);
@@ -35,15 +41,8 @@ export function TerminalPane({ port, label, argv, cwd, ...hooks }: TerminalPaneP
   useEffect(() => {
     const el = screen.current;
     if (!el) return;
-    const color = getComputedStyle(el).color;
     // DOM renderer: WebGL cost ~18 MB more per pane idle and more in bursts (scripts/terminal-bench).
-    const term = new Terminal({
-      scrollback: SCROLLBACK,
-      allowTransparency: true,
-      fontFamily: '"Geist Mono Variable", ui-monospace, monospace',
-      fontSize: 13,
-      theme: { background: "rgba(0, 0, 0, 0)", foreground: color, cursor: color },
-    });
+    const term = themedTerminal(el, { scrollback: SCROLLBACK });
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(el);
@@ -70,7 +69,7 @@ export function TerminalPane({ port, label, argv, cwd, ...hooks }: TerminalPaneP
     const size = { cols: term.cols, rows: term.rows };
     port
       .open(
-        { ...(parsed ? { argv: parsed } : {}), ...(cwd ? { cwd } : {}), ...size },
+        { ...(parsed ? { argv: parsed } : {}), ...(cwd ? { cwd } : {}), name: label, ...size },
         {
           bytes(chunk) {
             if (gone) return;
@@ -91,6 +90,8 @@ export function TerminalPane({ port, label, argv, cwd, ...hooks }: TerminalPaneP
         (h) => {
           if (gone) return h.close();
           handle = h;
+          setPane(h);
+          latest.current.onHandle?.(h);
           if (early) h.drawn(early);
           // A fit while opening had no handle to resize.
           if (term.cols !== size.cols || term.rows !== size.rows) h.resize(term.cols, term.rows);
@@ -105,9 +106,19 @@ export function TerminalPane({ port, label, argv, cwd, ...hooks }: TerminalPaneP
       observer.disconnect();
       for (const s of subs) s.dispose();
       handle?.close();
+      setPane(null);
       term.dispose();
     };
-  }, [port, command, cwd]);
+  }, [port, command, cwd, label]);
+
+  const snapshot = () => {
+    if (!pane) return;
+    setSnapError(undefined);
+    pane.snapshot().then(
+      (ref) => latest.current.onSnapshot?.(ref),
+      (e: unknown) => setSnapError(String(e)),
+    );
+  };
 
   const status = paneStatus(state);
   return (
@@ -132,6 +143,12 @@ export function TerminalPane({ port, label, argv, cwd, ...hooks }: TerminalPaneP
             <div ref={screen} className="terminal-screen" />
           </Panel.Well>
         </Panel.Body>
+        <Panel.Footer>
+          {snapError ? <p className="terminal-says">{snapError}</p> : null}
+          <Button variant="secondary" size="sm" disabled={!pane} onClick={snapshot}>
+            Snapshot
+          </Button>
+        </Panel.Footer>
       </Panel>
     </div>
   );

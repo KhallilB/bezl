@@ -33,3 +33,14 @@ test("?screen=terminals opens three login shells side by side", () => {
   ]);
   expect(invoke).not.toHaveBeenCalledWith("providers_preflight");
 });
+
+test("?screen=snapshots lists the clone's record", async () => {
+  vi.mocked(invoke).mockImplementation(async (cmd) =>
+    cmd === "terminal_snapshots" ? [{ pane: "shell-1", takenAt: 1_700_000_000_000 }] : null,
+  );
+  window.history.replaceState(null, "", "/?screen=snapshots");
+  render(<App />);
+  expect(screen.getByRole("heading", { level: 1, name: "Snapshots" })).toBeVisible();
+  expect(await screen.findByRole("button", { name: /shell-1/ })).toBeVisible();
+  expect(invoke).toHaveBeenCalledWith("terminal_snapshots");
+});

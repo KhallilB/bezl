@@ -20,6 +20,7 @@ type Pane = { bytes: number; retriedCr: number; hash: number; code: number | nul
 const report = JSON.parse(readFileSync(join(out, "result.json"), "utf8")) as {
   panes: Pane[];
   echoMs: { burst: number[]; rest: number[] };
+  snapshots: { pane: string; rows: number; matched: boolean }[];
   canvases: number;
   t: { start: number; streamsDone: number; restStart: number; restEnd: number };
 };
@@ -40,6 +41,7 @@ const lines = {
   restUnder150Mb: restMb < 150,
   burstUnder600Mb: burstMb < 600,
   echoUnder100Ms: echo.length > 0 && Math.max(...echo) < 100,
+  snapshotsMatch: report.snapshots.length === report.panes.length && report.snapshots.every((s) => s.matched),
 };
 const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b);
 const median = (xs: number[]) => sorted(xs)[Math.floor(xs.length / 2)];
@@ -55,6 +57,7 @@ console.log(
         burst: { n: report.echoMs.burst.length, median: median(report.echoMs.burst), max: Math.max(...report.echoMs.burst) },
         rest: { n: report.echoMs.rest.length, median: median(report.echoMs.rest), max: Math.max(...report.echoMs.rest) },
       },
+      snapshots: report.snapshots,
       webglCanvases: report.canvases,
       lines,
     },

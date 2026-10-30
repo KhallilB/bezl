@@ -12,11 +12,16 @@ vi.mock("@tauri-apps/api/core", () => ({
   },
   invoke: vi.fn(async (cmd: string, args: Record<string, unknown>) => {
     calls.push({ cmd, args });
-    return cmd === "terminal_open" ? 7 : undefined;
+    if (cmd === "terminal_open") return 7;
+    if (cmd === "terminal_snapshot") return { pane: "writer", takenAt: 5 };
+    if (cmd === "terminal_snapshots") return [{ pane: "writer", takenAt: 5 }];
+    if (cmd === "terminal_snapshot_open")
+      return { pane: "writer", takenAt: 5, cols: 2, rows: 1, plain: "hi", vt: "hi" };
+    return undefined;
   }),
 }));
 
-const { tauriPort } = await import("./port");
+const { tauriPort, tauriRecord } = await import("./port");
 
 function output() {
   return { bytes: vi.fn(), exit: vi.fn() };
@@ -33,7 +38,7 @@ describe("tauriPort", () => {
     expect(pane.id).toBe(7);
     expect(calls[0]).toEqual({
       cmd: "terminal_open",
-      args: { argv: ["cat"], cwd: null, cols: 80, rows: 24, onOutput: lastChannel },
+      args: { argv: ["cat"], cwd: null, name: null, cols: 80, rows: 24, onOutput: lastChannel },
     });
   });
 
@@ -69,6 +74,25 @@ describe("tauriPort", () => {
       { cmd: "terminal_drawn", args: { id: 7, n: 4096 } },
       { cmd: "terminal_resize", args: { id: 7, cols: 100, rows: 30 } },
       { cmd: "terminal_close", args: { id: 7 } },
+    ]);
+  });
+});
+
+describe("snapshots", () => {
+  test("a pane is snapshotted by id, with its name as the record key", async () => {
+    const pane = await tauriPort.open({ name: "Writer", cols: 80, rows: 24 }, output());
+    expect(calls[0]?.args.name).toBe("Writer");
+    expect(await pane.snapshot()).toEqual({ pane: "writer", takenAt: 5 });
+    expect(calls[1]).toEqual({ cmd: "terminal_snapshot", args: { id: 7 } });
+  });
+
+  test("the record lists snapshots and opens one by pane and time", async () => {
+    expect(await tauriRecord.list()).toEqual([{ pane: "writer", takenAt: 5 }]);
+    const saved = await tauriRecord.open({ pane: "writer", takenAt: 5 });
+    expect(saved.plain).toBe("hi");
+    expect(calls).toEqual([
+      { cmd: "terminal_snapshots", args: undefined },
+      { cmd: "terminal_snapshot_open", args: { pane: "writer", takenAt: 5 } },
     ]);
   });
 });

@@ -1,5 +1,6 @@
 //! One agent session in a PTY. Its reader holds back once the screen falls `limit` bytes behind.
 use super::credit::Credit;
+use super::screen::{Screen, Snapshot};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, PtySize, native_pty_system};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
@@ -28,6 +29,7 @@ pub struct Pane {
     master: Mutex<Box<dyn MasterPty + Send>>,
     killer: Mutex<Box<dyn ChildKiller + Send + Sync>>,
     credit: Arc<Credit>,
+    screen: Arc<Screen>,
 }
 
 impl Pane {
@@ -46,6 +48,7 @@ impl Pane {
         if let Some(cwd) = &spec.cwd {
             cmd.cwd(cwd);
         }
+        let screen = Arc::new(Screen::new(spec.cols, spec.rows)?);
         let mut child = pair.slave.spawn_command(cmd).map_err(io::Error::other)?;
         // Our copy of the slave would keep the master from ever reading EOF.
         drop(pair.slave);
@@ -54,6 +57,7 @@ impl Pane {
         let killer = child.clone_killer();
         let credit = Arc::new(Credit::new(limit));
         let held = credit.clone();
+        let mirror = screen.clone();
         std::thread::spawn(move || {
             let mut buf = vec![0u8; CHUNK];
             while let Some(n) = held.reserve(CHUNK) {
@@ -62,7 +66,11 @@ impl Pane {
                     Ok(got) => got,
                 };
                 held.release(n - got);
-                if got == 0 || !out.bytes(buf[..got].to_vec()) {
+                if got == 0 {
+                    break;
+                }
+                mirror.feed(buf[..got].to_vec());
+                if !out.bytes(buf[..got].to_vec()) {
                     break;
                 }
             }
@@ -75,6 +83,7 @@ impl Pane {
             master: Mutex::new(pair.master),
             killer: Mutex::new(killer),
             credit,
+            screen,
         })
     }
 
@@ -95,7 +104,14 @@ impl Pane {
             .lock()
             .unwrap()
             .resize(size(cols, rows))
-            .map_err(io::Error::other)
+            .map_err(io::Error::other)?;
+        self.screen.resize(cols, rows);
+        Ok(())
+    }
+
+    /// The screen as Ghostty parsed it, possibly ahead of the drawn screen by undrawn bytes.
+    pub fn snapshot(&self) -> io::Result<Snapshot> {
+        self.screen.snapshot()
     }
 
     /// Kills the agent and frees a reader held at the limit. Its exit still reaches `Output`.
@@ -320,6 +336,29 @@ mod tests {
         pane.resize(100, 30).unwrap();
         let (got, _) = drain(&pane, &rx);
         assert!(String::from_utf8_lossy(&got).contains("30 100"));
+    }
+
+    #[test]
+    fn snapshots_what_the_agent_printed() {
+        let (pane, rx) = open(&["printf", "\\033[32mready\\033[0m\\nsecond line"], 1 << 20);
+        drain(&pane, &rx);
+        let snap = pane.snapshot().unwrap();
+        assert_eq!((snap.cols, snap.rows), (80, 24));
+        assert_eq!(
+            snap.plain.lines().collect::<Vec<_>>(),
+            ["ready", "second line"]
+        );
+        assert!(snap.vt.contains("ready"));
+    }
+
+    #[test]
+    fn the_snapshot_follows_a_resize() {
+        let (pane, rx) = open(&["cat"], 1 << 20);
+        pane.resize(100, 30).unwrap();
+        let snap = pane.snapshot().unwrap();
+        assert_eq!((snap.cols, snap.rows), (100, 30));
+        pane.close();
+        drain(&pane, &rx);
     }
 
     #[test]

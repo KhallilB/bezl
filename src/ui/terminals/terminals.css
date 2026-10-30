@@ -42,8 +42,73 @@
   font-size: var(--kb-size-sm);
 }
 
+/* xterm paints this box's colours; its DOM renderer needs them opaque. */
+.terminal-screen,
+.snapshot-screen {
+  background: var(--kb-color-bg);
+  color: var(--kb-color-fg);
+}
+
 /* xterm fills a fixed box; the fit addon turns its size into rows and columns. */
 .terminal-screen {
   height: clamp(16rem, calc(100vh - 12rem), 60rem);
   overflow: hidden;
+}
+
+.snapshot-meta {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-sm);
+}
+
+/* The viewer keeps the snapshot's size; a wide one scrolls inside the well. */
+.snapshot-screen {
+  overflow: auto;
+}
+
+.snapshot-viewer {
+  min-width: 0;
+}
+
+.snapshot-dialog {
+  max-width: min(64rem, calc(100vw - 2 * var(--kb-space-6)));
+}
+
+.snapshots-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  gap: var(--kb-space-4);
+  align-items: start;
+}
+
+.snapshots-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--kb-space-1);
+}
+
+.snapshots-item {
+  inline-size: 100%;
+  display: grid;
+  gap: var(--kb-space-1);
+  padding: var(--kb-space-2) var(--kb-space-3);
+  border: 1px solid var(--kb-color-border);
+  border-radius: var(--kb-radius-md);
+  background: var(--kb-color-surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.snapshots-item[aria-current="true"] {
+  border-color: var(--kb-color-info);
+}
+
+.snapshots-item time {
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
 }
