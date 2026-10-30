@@ -2,8 +2,9 @@
 use super::capabilities::{self, Capability, Enforcement};
 use super::claude::{ClaudeSignIn, run_canary, signin_from};
 use super::probe::{self, ProbeRecord};
+use super::tiers::{self, TierRecord};
 use super::usage::{Usage, claude_usage};
-use super::{CodexSignIn, Discovery, Found, Provider, codex_signin, discover, operator_codex_home};
+use super::{CodexSignIn, Discovery, Provider, codex_signin, discover, operator_codex_home};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
@@ -17,23 +18,29 @@ pub struct ProviderCheck {
     pub signin: SignInCheck,
     pub usage: Usage,
     pub read_only: ReadOnlyCheck,
+    /// Coordination tiers for batches; nothing reads them before M9.
+    pub tiers: TiersCheck,
     /// How Bezl's reviewer args hold each capability, found or not.
     pub enforcement: BTreeMap<Capability, Enforcement>,
 }
 
+/// A paid probe's result, kept once per CLI version.
 #[derive(Debug, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
-pub enum ReadOnlyCheck {
+pub enum Recorded<R> {
     NoBinary,
-    /// No record for this version, and the reviewer cannot run signed out.
+    /// No record for this version, and the CLI cannot run signed out.
     NeedsSignIn,
     /// From this version's record, or probed now and recorded.
-    Probed(ProbeRecord),
+    Probed(R),
     /// Not recorded, so the next preflight probes again.
     CouldNotRun {
         says: String,
     },
 }
+
+pub type ReadOnlyCheck = Recorded<ProbeRecord>;
+pub type TiersCheck = Recorded<TierRecord>;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", content = "detail", rename_all = "camelCase")]
@@ -115,22 +122,38 @@ pub fn preflight(
                     Usage::UNKNOWN,
                 ),
             };
-            let read_only = match &discovery.found {
-                None => ReadOnlyCheck::NoBinary,
-                Some(found) => read_only(provider, found, reviewer_env(&signin, homes), probes),
+            let env = reviewer_env(&signin, homes);
+            let (cache, timeout) = (&probes.cache, probes.timeout);
+            let (read_only, tiers) = match &discovery.found {
+                None => (Recorded::NoBinary, Recorded::NoBinary),
+                Some(found) => (
+                    recorded(
+                        probe::load(cache, provider, &found.version),
+                        env.as_deref(),
+                        |env| probe::probe(provider, found, env, timeout),
+                        |record| probe::store(cache, record),
+                    ),
+                    recorded(
+                        tiers::load(cache, provider, &found.version),
+                        env.as_deref(),
+                        |env| tiers::probe(provider, found, env, timeout),
+                        |record| tiers::store(cache, record),
+                    ),
+                ),
             };
             ProviderCheck {
                 discovery,
                 signin,
                 usage,
                 read_only,
+                tiers,
                 enforcement: capabilities::enforcement(provider),
             }
         })
         .collect()
 }
 
-/// Env a signed-in reviewer runs with; `None` when it is not signed in.
+/// Env a signed-in reviewer or worker runs with; `None` when it is not signed in.
 fn reviewer_env<'a>(
     signin: &SignInCheck,
     homes: &'a CodexHomes,
@@ -145,27 +168,27 @@ fn reviewer_env<'a>(
     }
 }
 
-/// A recorded version is never probed again: each probe is a paid call.
-fn read_only(
-    provider: Provider,
-    found: &Found,
-    env: Option<Vec<(&str, &OsStr)>>,
-    probes: &Probes,
-) -> ReadOnlyCheck {
-    if let Some(record) = probe::load(&probes.cache, provider, &found.version) {
-        return ReadOnlyCheck::Probed(record);
+/// A record `load` accepts is never probed again: each probe is a paid call.
+fn recorded<R>(
+    record: Option<R>,
+    env: Option<&[(&str, &OsStr)]>,
+    run: impl FnOnce(&[(&str, &OsStr)]) -> Result<R, String>,
+    store: impl FnOnce(&R) -> std::io::Result<()>,
+) -> Recorded<R> {
+    if let Some(record) = record {
+        return Recorded::Probed(record);
     }
     let Some(env) = env else {
-        return ReadOnlyCheck::NeedsSignIn;
+        return Recorded::NeedsSignIn;
     };
-    match probe::probe(provider, found, &env, probes.timeout) {
+    match run(env) {
         Ok(record) => {
-            if let Err(e) = probe::store(&probes.cache, &record) {
-                log::warn!("read-only probe record not stored: {e}");
+            if let Err(e) = store(&record) {
+                log::warn!("probe record not stored: {e}");
             }
-            ReadOnlyCheck::Probed(record)
+            Recorded::Probed(record)
         }
-        Err(says) => ReadOnlyCheck::CouldNotRun { says },
+        Err(says) => Recorded::CouldNotRun { says },
     }
 }
 
@@ -258,6 +281,7 @@ mod tests {
                 read_only: ReadOnlyCheck::CouldNotRun {
                     says: "timed out".into(),
                 },
+                tiers: TiersCheck::NeedsSignIn,
                 enforcement: enforcement(Provider::ClaudeCode),
             },
             ProviderCheck {
@@ -272,6 +296,7 @@ mod tests {
                 signin: SignInCheck::NoBinary,
                 usage: Usage::UNKNOWN,
                 read_only: ReadOnlyCheck::NoBinary,
+                tiers: TiersCheck::NoBinary,
                 enforcement: enforcement(Provider::Codex),
             },
         ];
@@ -290,6 +315,7 @@ mod tests {
                     },
                     "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } },
                     "readOnly": { "kind": "couldNotRun", "detail": { "says": "timed out" } },
+                    "tiers": { "kind": "needsSignIn" },
                     "enforcement": serde_json::to_value(enforcement(Provider::ClaudeCode)).unwrap()
                 },
                 {
@@ -303,6 +329,7 @@ mod tests {
                     "signin": { "kind": "noBinary" },
                     "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } },
                     "readOnly": { "kind": "noBinary" },
+                    "tiers": { "kind": "noBinary" },
                     "enforcement": serde_json::to_value(enforcement(Provider::Codex)).unwrap()
                 }
             ])
@@ -428,6 +455,7 @@ mod tests {
         let record = ProbeRecord {
             provider: Provider::Codex,
             version: "0.163.0".into(),
+            reviewer_args: vec!["--sandbox".into()],
             probed_at: 1,
             capabilities: [(Capability::Hooks, Outcome::Passed)].into(),
             cost: Cost {
@@ -455,30 +483,35 @@ mod tests {
     #[cfg(unix)]
     mod with_fake_clis {
         use super::*;
-        use crate::providers::capabilities::CAPABILITIES;
+        use crate::providers::capabilities::{CAPABILITIES, reviewer_args};
         use crate::providers::probe;
         use crate::providers::testing::Dir;
+        use crate::providers::tiers::{self, TierRecord, Tiers};
         use crate::providers::usage::claude_usage;
         use std::fs;
 
         const TIMEOUT: Duration = Duration::from_secs(5);
 
-        /// Real-looking codex: version, `login status` from `$CODEX_HOME/said`, `exec` prints `probe`.
+        /// Real-looking codex: version, `login status` from `$CODEX_HOME/said`, `exec` prints `probe`, or `tiers` with a bezl server.
         const CODEX: &str = r#"[ "$1" = "--version" ] && { echo "codex-cli 0.163.0"; exit 0; }
+case "$*" in *bezl.url*) echo "$CODEX_HOME" > "$(dirname "$0")/tiered-home"; cat "$(dirname "$0")/tiers"; exit 0;; esac
 [ "$1" = "exec" ] && { echo "$CODEX_HOME" > "$(dirname "$0")/probed-home"; cat "$(dirname "$0")/probe"; exit 0; }
 [ "$*" = "login status" ] || exit 64
 cat "$CODEX_HOME/said" >&2
 exit "$(cat "$CODEX_HOME/code")""#;
 
-        /// Real-looking claude: version; the probe (stream-json) prints `probe`, the canary `said`.
+        /// Real-looking claude: version; the tier probe (stdin input) prints `tiers`, the read-only probe `probe`, the canary `said`.
         const CLAUDE: &str = r#"[ "$1" = "--version" ] && { echo "2.1.312 (Claude Code)"; exit 0; }
 [ "$1" = "-p" ] || exit 64
+case "$*" in *input-format*) cat "$(dirname "$0")/tiers" || exit 1; while read -r l; do :; done; exit 0;; esac
 case "$*" in *stream-json*) cat "$(dirname "$0")/probe"; exit 0;; esac
 cat "$(dirname "$0")/said""#;
         const SIGNED_IN: &str = include_str!("fixtures/claude-2.1.312/signed-in.json");
         const NOT_LOGGED_IN: &str = include_str!("fixtures/claude-2.1.312/not-logged-in.json");
         const CLAUDE_PROBE: &str = include_str!("fixtures/claude-2.1.312/probe-read-only.jsonl");
         const CODEX_PROBE: &str = include_str!("fixtures/codex-0.163.0/probe-read-only.jsonl");
+        const CLAUDE_TIERS: &str = include_str!("fixtures/claude-2.1.312/tiers.jsonl");
+        const CODEX_TIERS: &str = include_str!("fixtures/codex-0.163.0/tiers.jsonl");
         /// Each run appends a line to `runs` beside the fake.
         const COUNTED: &str = "echo >> \"$(dirname \"$0\")/runs\"; ";
 
@@ -494,6 +527,10 @@ cat "$(dirname "$0")/said""#;
             let record = ProbeRecord {
                 provider,
                 version: version.into(),
+                reviewer_args: reviewer_args(provider)
+                    .iter()
+                    .map(|a| a.to_string())
+                    .collect(),
                 probed_at: 1,
                 capabilities: CAPABILITIES.map(|c| (c, Outcome::Passed)).into(),
                 cost: Cost {
@@ -502,6 +539,22 @@ cat "$(dirname "$0")/said""#;
                 },
             };
             probe::store(&probes(dir).cache, &record).unwrap();
+            record
+        }
+
+        /// A tier record already on disk for `provider` at `version`.
+        fn tiered(dir: &Dir, provider: Provider, version: &str) -> TierRecord {
+            let record = TierRecord {
+                provider,
+                version: version.into(),
+                probed_at: 1,
+                tiers: Tiers::new(),
+                cost: Cost {
+                    usd: None,
+                    tokens: Tokens::Unknown,
+                },
+            };
+            tiers::store(&probes(dir).cache, &record).unwrap();
             record
         }
 
@@ -540,6 +593,7 @@ cat "$(dirname "$0")/said""#;
             };
             let path = std::env::join_paths([&claude, &bun, &real]).unwrap();
             let record = recorded(&dir, Provider::ClaudeCode, "2.1.312");
+            let tier_record = tiered(&dir, Provider::ClaudeCode, "2.1.312");
 
             assert_eq!(
                 preflight(&path, &homes, &probes(&dir), TIMEOUT, TIMEOUT),
@@ -558,6 +612,7 @@ cat "$(dirname "$0")/said""#;
                         }),
                         usage: claude_usage(SIGNED_IN),
                         read_only: ReadOnlyCheck::Probed(record),
+                        tiers: TiersCheck::Probed(tier_record),
                         enforcement: enforcement(Provider::ClaudeCode),
                     },
                     ProviderCheck {
@@ -588,6 +643,7 @@ cat "$(dirname "$0")/said""#;
                         usage: Usage::UNKNOWN,
                         // Reviewers run in the workers' home.
                         read_only: ReadOnlyCheck::NeedsSignIn,
+                        tiers: TiersCheck::NeedsSignIn,
                         enforcement: enforcement(Provider::Codex),
                     },
                 ]
@@ -605,6 +661,7 @@ cat "$(dirname "$0")/said""#;
                 workers: dir.0.join("workers"),
             };
             recorded(&dir, Provider::ClaudeCode, "2.1.312");
+            tiered(&dir, Provider::ClaudeCode, "2.1.312");
             let checks = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
 
             assert!(matches!(checks[0].usage.tokens, Tokens::Known { .. }));
@@ -676,6 +733,7 @@ cat "$(dirname "$0")/said""#;
             let claude = bin(&dir, "claude", "claude", &counted);
             fs::write(claude.join("said"), SIGNED_IN).unwrap();
             fs::write(claude.join("probe"), CLAUDE_PROBE).unwrap();
+            fs::write(claude.join("tiers"), CLAUDE_TIERS).unwrap();
             let homes = CodexHomes {
                 operator: signed_in_home(&dir),
                 workers: dir.0.join("workers"),
@@ -689,11 +747,50 @@ cat "$(dirname "$0")/said""#;
                 (Provider::ClaudeCode, "2.1.312")
             );
             assert!(record.capabilities.values().all(|o| *o == Outcome::Passed));
-            assert_eq!(runs(&claude), 2, "canary and probe");
+            let TiersCheck::Probed(tiered) = &first[0].tiers else {
+                panic!("{:?}", first[0].tiers);
+            };
+            assert_eq!(
+                (tiered.provider, tiered.version.as_str()),
+                (Provider::ClaudeCode, "2.1.312")
+            );
+            assert_eq!(tiered.tiers.len(), 3);
+            assert_eq!(runs(&claude), 3, "canary, read-only probe and tier probe");
 
             let second = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
             assert_eq!(second[0].read_only, first[0].read_only);
-            assert_eq!(runs(&claude), 3, "the second preflight ran the canary only");
+            assert_eq!(second[0].tiers, first[0].tiers);
+            assert_eq!(runs(&claude), 4, "the second preflight ran the canary only");
+        }
+
+        #[test]
+        fn a_record_probed_with_other_reviewer_args_is_probed_again() {
+            let dir = Dir::new();
+            let counted = CLAUDE.replace("cat ", &format!("{COUNTED}cat "));
+            let claude = bin(&dir, "claude", "claude", &counted);
+            fs::write(claude.join("said"), SIGNED_IN).unwrap();
+            fs::write(claude.join("probe"), CLAUDE_PROBE).unwrap();
+            let stale = ProbeRecord {
+                reviewer_args: vec!["--tools".into(), "Read".into()],
+                ..recorded(&dir, Provider::ClaudeCode, "2.1.312")
+            };
+            probe::store(&probes(&dir).cache, &stale).unwrap();
+            tiered(&dir, Provider::ClaudeCode, "2.1.312");
+            let homes = CodexHomes {
+                operator: signed_in_home(&dir),
+                workers: dir.0.join("workers"),
+            };
+            let checks = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+
+            let ReadOnlyCheck::Probed(record) = &checks[0].read_only else {
+                panic!("{:?}", checks[0].read_only);
+            };
+            assert_eq!(record.reviewer_args, reviewer_args(Provider::ClaudeCode));
+            assert_eq!(runs(&claude), 2, "canary and probe");
+            assert_eq!(
+                probe::load(&probes(&dir).cache, Provider::ClaudeCode, "2.1.312").as_ref(),
+                Some(record)
+            );
         }
 
         #[test]
@@ -718,6 +815,17 @@ cat "$(dirname "$0")/said""#;
                 probe::load(&probes(&dir).cache, Provider::ClaudeCode, "2.1.312"),
                 None
             );
+            // No `tiers` output: the tier probe proves nothing either.
+            assert_eq!(
+                checks[0].tiers,
+                TiersCheck::CouldNotRun {
+                    says: "no init event".into()
+                }
+            );
+            assert_eq!(
+                tiers::load(&probes(&dir).cache, Provider::ClaudeCode, "2.1.312"),
+                None
+            );
         }
 
         #[test]
@@ -733,6 +841,7 @@ cat "$(dirname "$0")/said""#;
             let checks = preflight(claude.as_os_str(), &homes, &probes(&dir), TIMEOUT, TIMEOUT);
 
             assert_eq!(checks[0].read_only, ReadOnlyCheck::NeedsSignIn);
+            assert_eq!(checks[0].tiers, TiersCheck::NeedsSignIn);
             assert_eq!(runs(&claude), 1, "canary only");
         }
 
@@ -741,6 +850,7 @@ cat "$(dirname "$0")/said""#;
             let dir = Dir::new();
             let codex = bin(&dir, "real", "codex", CODEX);
             fs::write(codex.join("probe"), CODEX_PROBE).unwrap();
+            fs::write(codex.join("tiers"), CODEX_TIERS).unwrap();
             let homes = CodexHomes {
                 operator: signed_in_home(&dir),
                 workers: signed_in(&dir, "workers"),
@@ -760,6 +870,16 @@ cat "$(dirname "$0")/said""#;
             );
             assert_eq!(
                 fs::read_to_string(codex.join("probed-home"))
+                    .unwrap()
+                    .trim(),
+                homes.workers.to_str().unwrap()
+            );
+            let TiersCheck::Probed(tiered) = &checks[1].tiers else {
+                panic!("{:?}", checks[1].tiers);
+            };
+            assert_eq!(tiered.provider, Provider::Codex);
+            assert_eq!(
+                fs::read_to_string(codex.join("tiered-home"))
                     .unwrap()
                     .trim(),
                 homes.workers.to_str().unwrap()

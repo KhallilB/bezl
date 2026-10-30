@@ -1,7 +1,7 @@
 import { Button, Panel, Status } from "@kb.ui/react";
 import { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
-import { useEffect, useId, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { StateIcon } from "../task/icons";
 import { type PaneState, paneStatus } from "./model";
 import type { PaneHandle, SavedRef, TerminalPort } from "./port";
@@ -9,6 +9,10 @@ import { themedTerminal } from "./xterm";
 import "./terminals.css";
 
 const SCROLLBACK = 1000;
+
+// Live blur under redrawing text cost ~60 MB at rest, ~300 MB as panes open (terminal-bench).
+// Stopgap: on the kbui upgrade that ships Panel `opaque` (KhallilB/kbui#130), use it instead.
+const NO_BLUR = { "--kb-panel-backdrop": "none" } as CSSProperties;
 
 export type TerminalPaneProps = {
   port: TerminalPort;
@@ -123,7 +127,11 @@ export function TerminalPane({ port, label, argv, cwd, ...hooks }: TerminalPaneP
   const status = paneStatus(state);
   return (
     <div className="terminal-pane" data-pane>
-      <Panel tone={state.kind === "running" ? "active" : "default"} aria-labelledby={headingId}>
+      <Panel
+        tone={state.kind === "running" ? "active" : "default"}
+        aria-labelledby={headingId}
+        style={NO_BLUR}
+      >
         <Panel.Header>
           <h2 id={headingId} className="terminal-title">
             {label}

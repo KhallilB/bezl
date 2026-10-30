@@ -1,4 +1,11 @@
-import type { Capability, Enforcement, ProviderCheck, Usage } from "./model";
+import type {
+  Capability,
+  Enforcement,
+  ProviderCheck,
+  TierOutcome,
+  TiersCheck,
+  Usage,
+} from "./model";
 
 const unknown: Usage = { tokens: { kind: "unknown" }, limits: { kind: "unknown" } };
 
@@ -22,6 +29,54 @@ export const codexEnforcement: Record<Capability, Enforcement> = {
   hooks: told,
   network: codexSandbox,
 };
+const holds = (evidence: string): TierOutcome => ({ kind: "holds", detail: { evidence } });
+const tierCounts = { input: 6, output: 164, cacheRead: 15523, cacheWrite: 6439 };
+const codexTierCounts = { input: 88049, output: 100, cacheRead: 77824, cacheWrite: 0 };
+
+// The live tier probes of 2026-10-30.
+const claudeTiers: TiersCheck = {
+  kind: "probed",
+  detail: {
+    provider: "claude",
+    version: "2.1.312",
+    probedAt: 1793344492,
+    tiers: {
+      stepBoundary: holds("one -p call ran one step and ended with its result event"),
+      mcpTool: holds("init lists mcp__bezl__batch_state"),
+      liveInput: holds("input written mid-step reached it: the step's result names the code word"),
+    },
+    cost: {
+      usd: 0.00152563,
+      tokens: {
+        kind: "known",
+        detail: {
+          total: tierCounts,
+          models: [{ model: "claude-haiku-5-5", counts: tierCounts }],
+        },
+      },
+    },
+  },
+};
+const codexTiers: TiersCheck = {
+  kind: "probed",
+  detail: {
+    provider: "codex",
+    version: "0.163.0",
+    probedAt: 1793344492,
+    tiers: {
+      stepBoundary: holds("one exec call ran one turn and ended with turn.completed"),
+      mcpTool: holds("exec --json has no init tool list; the agent called bezl's batch_state"),
+      liveInput: {
+        kind: "missing",
+        detail: {
+          evidence: "codex queue took the input mid-step, but the step ended without it",
+        },
+      },
+    },
+    cost: { usd: null, tokens: { kind: "known", detail: { total: codexTierCounts, models: [] } } },
+  },
+};
+
 const canaryCounts = { input: 2, output: 4, cacheRead: 0, cacheWrite: 29763 };
 const probeCounts = { input: 4, output: 459, cacheRead: 12798, cacheWrite: 6718 };
 
@@ -48,6 +103,15 @@ export const claudeFound: ProviderCheck = {
     detail: {
       provider: "claude",
       version: "2.1.312",
+      reviewerArgs: [
+        "--tools",
+        "Read,Glob,Grep",
+        "--strict-mcp-config",
+        "--mcp-config",
+        '{"mcpServers":{}}',
+        "--settings",
+        '{"disableAllHooks":true}',
+      ],
       probedAt: 1793312545,
       capabilities: {
         fileWrites: { kind: "passed" },
@@ -68,6 +132,7 @@ export const claudeFound: ProviderCheck = {
       },
     },
   },
+  tiers: claudeTiers,
   enforcement: claudeEnforcement,
 };
 
@@ -113,6 +178,7 @@ export const thisMachine: ProviderCheck[] = [
     signin: { kind: "noBinary" },
     usage: unknown,
     readOnly: { kind: "noBinary" },
+    tiers: { kind: "noBinary" },
     enforcement: codexEnforcement,
   },
 ];
@@ -147,6 +213,7 @@ export const codexFound: ProviderCheck = {
   usage: unknown,
   // Reviewers run in the workers' home, signed out here.
   readOnly: { kind: "needsSignIn" },
+  tiers: { kind: "needsSignIn" },
   enforcement: codexEnforcement,
 };
 
@@ -174,6 +241,7 @@ export const codexProbed: ProviderCheck = {
     detail: {
       provider: "codex",
       version: "0.163.0",
+      reviewerArgs: ["--sandbox", "read-only"],
       probedAt: 1793313000,
       capabilities: {
         fileWrites: { kind: "passed" },
@@ -191,6 +259,7 @@ export const codexProbed: ProviderCheck = {
       cost: { usd: null, tokens: { kind: "unknown" } },
     },
   },
+  tiers: codexTiers,
 };
 
 export const claudeSignedOut: ProviderCheck = {
@@ -201,6 +270,7 @@ export const claudeSignedOut: ProviderCheck = {
   },
   usage: unknown,
   readOnly: { kind: "needsSignIn" },
+  tiers: { kind: "needsSignIn" },
 };
 
 /** Claude signed out, only an impostor `codex`: nothing can write. */

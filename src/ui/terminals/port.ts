@@ -24,7 +24,7 @@ export type PaneHandle = {
   id: number;
   /** Typed input, as the agent reads it from its terminal. M5's message box writes here too. */
   write(text: string): Promise<void>;
-  /** The screen drew `n` more bytes; the agent is held once `PANE_LIMIT` (128 KiB) is undrawn. */
+  /** The screen drew `n` more bytes; the agent is held once `PANE_LIMIT` (512 KiB) is undrawn. */
   drawn(n: number): void;
   resize(cols: number, rows: number): void;
   /** Saves what the screen shows into the record of the pane's checkout. */

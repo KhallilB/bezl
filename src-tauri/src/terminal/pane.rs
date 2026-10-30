@@ -4,10 +4,16 @@ use super::screen::{Screen, Snapshot};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, PtySize, native_pty_system};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
+use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
-/// Largest single read; one screen message each.
-const CHUNK: usize = 64 * 1024;
+/// Largest single read. `Credit::reserve` waits until it all fits, so it stays well under the limit.
+const READ: usize = 64 * 1024;
+/// Largest screen message.
+const CHUNK: usize = 256 * 1024;
+/// macOS PTY reads are ~1 KiB. Sent one per message, echo lagged 134 ms behind three floods.
+const GATHER: Duration = Duration::from_millis(4);
 
 /// Where a pane's output goes. `bytes` returns false once nobody is drawing it.
 pub trait Output: Send + 'static {
@@ -57,25 +63,32 @@ impl Pane {
         let killer = child.clone_killer();
         let credit = Arc::new(Credit::new(limit));
         let held = credit.clone();
-        let mirror = screen.clone();
+        let (reads, gathered) = mpsc::channel();
         std::thread::spawn(move || {
-            let mut buf = vec![0u8; CHUNK];
-            while let Some(n) = held.reserve(CHUNK) {
+            let mut buf = vec![0u8; READ];
+            while let Some(n) = held.reserve(READ) {
                 let got = match reader.read(&mut buf[..n]) {
                     Ok(0) | Err(_) => 0,
                     Ok(got) => got,
                 };
                 held.release(n - got);
-                if got == 0 {
-                    break;
-                }
-                mirror.feed(buf[..got].to_vec());
-                if !out.bytes(buf[..got].to_vec()) {
+                if got == 0 || reads.send(buf[..got].to_vec()).is_err() {
                     break;
                 }
             }
-            // Reader gone: the agent must not block forever on a full PTY.
+        });
+        let mirror = screen.clone();
+        let unheld = credit.clone();
+        std::thread::spawn(move || {
+            while let Some(chunk) = gather(&gathered, CHUNK, GATHER) {
+                mirror.feed(chunk.clone());
+                if !out.bytes(chunk) {
+                    break;
+                }
+            }
+            // Nobody draws: the agent must not block forever on a full PTY, nor the reader on credit.
             let _ = child.kill();
+            unheld.close();
             out.exit(child.wait().ok().map(|s| s.exit_code()));
         });
         Ok(Pane {
@@ -119,6 +132,20 @@ impl Pane {
         let _ = self.killer.lock().unwrap().kill();
         self.credit.close();
     }
+}
+
+/// Waits for one read, then joins what follows within `window` until it holds `max` bytes.
+/// `None` once the reader is gone and nothing is left.
+fn gather(reads: &Receiver<Vec<u8>>, max: usize, window: Duration) -> Option<Vec<u8>> {
+    let mut chunk = reads.recv().ok()?;
+    let until = Instant::now() + window;
+    while chunk.len() < max {
+        match reads.recv_timeout(until.saturating_duration_since(Instant::now())) {
+            Ok(more) => chunk.extend(more),
+            Err(_) => break,
+        }
+    }
+    Some(chunk)
 }
 
 fn size(cols: u16, rows: u16) -> PtySize {
@@ -256,6 +283,67 @@ mod tests {
             without_retried_cr(&got) == expected,
             "bytes lost or changed"
         );
+    }
+
+    #[test]
+    fn gathers_small_pty_reads_into_few_messages() {
+        let (file, _) = payload(60_000);
+        let (pane, rx) = open(&["cat", file.arg()], 1 << 20);
+        let mut messages = 0;
+        let mut bytes = 0;
+        while let Event::Bytes(b) = rx
+            .recv_timeout(Duration::from_secs(20))
+            .expect("pane stalled")
+        {
+            messages += 1;
+            bytes += b.len();
+            pane.drawn(b.len());
+        }
+        let mean = bytes / messages;
+        assert!(mean >= 8 * 1024, "{messages} messages of {mean} bytes");
+    }
+
+    #[test]
+    fn gather_joins_reads_that_arrive_within_the_window() {
+        let (tx, rx) = mpsc::channel();
+        for read in [b"ab".to_vec(), b"cd".to_vec(), b"ef".to_vec()] {
+            tx.send(read).unwrap();
+        }
+        assert_eq!(
+            gather(&rx, 64, Duration::from_millis(50)).unwrap(),
+            b"abcdef"
+        );
+    }
+
+    #[test]
+    fn gather_stops_once_it_holds_max_bytes() {
+        let (tx, rx) = mpsc::channel();
+        for read in [b"abcd".to_vec(), b"efgh".to_vec(), b"ijkl".to_vec()] {
+            tx.send(read).unwrap();
+        }
+        let window = Duration::from_millis(50);
+        assert_eq!(gather(&rx, 6, window).unwrap(), b"abcdefgh");
+        assert_eq!(gather(&rx, 6, window).unwrap(), b"ijkl");
+    }
+
+    #[test]
+    fn gather_sends_what_it_has_once_the_window_passes() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(b"echo".to_vec()).unwrap();
+        let start = Instant::now();
+        assert_eq!(gather(&rx, 64, Duration::from_millis(20)).unwrap(), b"echo");
+        assert!(start.elapsed() < Duration::from_millis(500));
+        drop(tx);
+    }
+
+    #[test]
+    fn gather_ends_once_the_reader_is_gone_and_drained() {
+        let (tx, rx) = mpsc::channel();
+        tx.send(b"last".to_vec()).unwrap();
+        drop(tx);
+        let window = Duration::from_millis(50);
+        assert_eq!(gather(&rx, 64, window).unwrap(), b"last");
+        assert_eq!(gather(&rx, 64, window), None);
     }
 
     #[test]
