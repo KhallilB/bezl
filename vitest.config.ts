@@ -7,6 +7,8 @@ export default mergeConfig(
   viteConfig,
   defineConfig({
     test: {
+      // Survives bun install (keyed on bun.lock): parent-resolved imports load a second React.
+      fsModuleCache: false,
       projects: [
         {
           extends: true,
