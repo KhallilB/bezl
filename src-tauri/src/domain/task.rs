@@ -23,12 +23,24 @@ pub struct Take {
     /// Holds the lease while set.
     pub writer: Option<Agent>,
     pub reviewers: Vec<Reviewer>,
-    /// Commits the writer finished steps at, oldest first.
-    pub commits: Vec<String>,
-    pub operator_edits: Vec<OperatorEdit>,
+    /// Steps the writer finished, oldest first.
+    pub steps: Vec<Step>,
+    /// Operator changes made at step boundaries, each a change of its own.
+    pub operator_changes: Vec<OperatorChange>,
     pub evidence: Vec<VerifyResult>,
-    /// `operator_edits` before this index reached a writer's brief.
+    /// `operator_changes` before this index reached a writer's brief.
     briefed: usize,
+    /// The running step ends in Paused instead of Ready.
+    pause_requested: bool,
+    /// The operator edited during the running step.
+    step_mixed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Step {
+    pub commit: String,
+    /// The operator edited during the step, so its change is not the writer's alone.
+    pub mixed: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,11 +70,11 @@ impl TakeState {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PauseReason {
-    OperatorEdit,
+    ToEdit,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OperatorEdit {
+pub struct OperatorChange {
     pub seq: u64,
     pub paths: Vec<PathBuf>,
     pub uncommitted: Option<String>,
@@ -259,10 +271,12 @@ impl Take {
             state: TakeState::Open,
             writer: None,
             reviewers: Vec::new(),
-            commits: Vec::new(),
-            operator_edits: Vec::new(),
+            steps: Vec::new(),
+            operator_changes: Vec::new(),
             evidence: Vec::new(),
             briefed: 0,
+            pause_requested: false,
+            step_mixed: false,
         }
     }
 
@@ -320,7 +334,8 @@ impl Take {
                     return Err(invalid);
                 }
                 self.state = TakeState::Running;
-                self.briefed = self.operator_edits.len();
+                self.briefed = self.operator_changes.len();
+                self.step_mixed = false;
             }
             Change::StepFinished { commit, .. } => {
                 if self.state != TakeState::Running {
@@ -336,37 +351,59 @@ impl Take {
                         expected: "the take's writer",
                     });
                 }
-                self.commits.push(commit.clone());
-                self.state = TakeState::Ready;
+                self.steps.push(Step {
+                    commit: commit.clone(),
+                    mixed: self.step_mixed,
+                });
+                self.state = if self.pause_requested {
+                    TakeState::Paused(PauseReason::ToEdit)
+                } else {
+                    TakeState::Ready
+                };
+                self.pause_requested = false;
+                self.step_mixed = false;
             }
-            Change::OperatorEdited {
+            Change::OperatorChanged {
                 paths, uncommitted, ..
             } => {
                 if event.actor != Actor::Operator {
                     return Err(operator_only(event.change.name()));
                 }
-                self.operator_edits.push(OperatorEdit {
-                    seq: event.seq,
-                    paths: paths.clone(),
-                    uncommitted: uncommitted.clone(),
-                });
                 if self.state == TakeState::Running {
-                    self.state = TakeState::Paused(PauseReason::OperatorEdit);
+                    self.step_mixed = true;
+                } else {
+                    self.operator_changes.push(OperatorChange {
+                        seq: event.seq,
+                        paths: paths.clone(),
+                        uncommitted: uncommitted.clone(),
+                    });
                 }
             }
-            Change::StepResumed { .. } => {
+            Change::PauseRequested { .. } => {
+                if !matches!(self.state, TakeState::Ready | TakeState::Running) {
+                    return Err(invalid);
+                }
+                if event.actor != Actor::Operator {
+                    return Err(operator_only(event.change.name()));
+                }
+                if self.state == TakeState::Ready {
+                    self.state = TakeState::Paused(PauseReason::ToEdit);
+                } else {
+                    self.pause_requested = true;
+                }
+            }
+            Change::TakeResumed { .. } => {
                 if !matches!(self.state, TakeState::Paused(_)) {
                     return Err(invalid);
                 }
                 if event.actor != Actor::Operator {
                     return Err(operator_only(event.change.name()));
                 }
-                self.state = TakeState::Running;
-                self.briefed = self.operator_edits.len();
+                self.state = TakeState::Ready;
             }
             Change::EvidenceRecorded { result, .. } => {
                 let commit = &result.snapshot.commit;
-                if !self.commits.contains(commit) {
+                if !self.steps.iter().any(|s| s.commit == *commit) {
                     return Err(Refusal::UnknownCommit(commit.clone()));
                 }
                 self.evidence.push(result.clone());
@@ -382,9 +419,9 @@ impl Take {
         Ok(())
     }
 
-    /// Edits the writer has not been briefed on: they go in its next brief as the operator's.
-    pub fn pending_operator_edits(&self) -> &[OperatorEdit] {
-        &self.operator_edits[self.briefed..]
+    /// Changes the writer has not been briefed on: its next brief says the operator made them.
+    pub fn pending_operator_changes(&self) -> &[OperatorChange] {
+        &self.operator_changes[self.briefed..]
     }
 
     /// The latest result that answers about `now`; older ones are history.
@@ -461,6 +498,7 @@ mod tests {
                 task: task_id(),
                 batch: None,
                 actor,
+                redactions: vec![],
                 change,
             }
         }
@@ -538,21 +576,26 @@ mod tests {
     }
 
     fn edit() -> Change {
-        Change::OperatorEdited {
+        Change::OperatorChanged {
             take: k1(),
             paths: vec!["src/a.ts".into()],
             uncommitted: Some("h1".into()),
         }
     }
 
+    fn pause() -> Change {
+        Change::PauseRequested { take: k1() }
+    }
+
     fn resume() -> Change {
-        Change::StepResumed { take: k1() }
+        Change::TakeResumed { take: k1() }
     }
 
     fn stop() -> Change {
         Change::TakeStopped {
             take: k1(),
             reason: "operator stopped it".into(),
+            detail: None,
         }
     }
 
@@ -598,6 +641,13 @@ mod tests {
         }
     }
 
+    fn step(commit: &str, mixed: bool) -> Step {
+        Step {
+            commit: commit.into(),
+            mixed,
+        }
+    }
+
     // Replay
 
     #[test]
@@ -611,7 +661,7 @@ mod tests {
         let take = task.take(&k1()).unwrap();
         assert_eq!(take.state, TakeState::Ready);
         assert_eq!(take.writer, Some(agent("w1")));
-        assert_eq!(take.commits, vec!["c1".to_string()]);
+        assert_eq!(take.steps, vec![step("c1", false)]);
         assert_eq!(take.base, "b0");
     }
 
@@ -748,7 +798,8 @@ mod tests {
         assert_eq!(log.refused(Actor::Bezl, lease("w2")), held, "ready");
         log.start();
         assert_eq!(log.refused(Actor::Bezl, lease("w2")), held, "running");
-        log.edit();
+        log.push(Actor::Operator, pause()).finish("w1", "c1");
+        assert_eq!(log.state(), TakeState::Paused(PauseReason::ToEdit));
         assert_eq!(log.refused(Actor::Bezl, lease("w2")), held, "paused");
     }
 
@@ -781,7 +832,7 @@ mod tests {
     }
 
     #[test]
-    fn lease_cannot_be_released_mid_step_or_without_a_writer() {
+    fn lease_cannot_be_released_mid_step_paused_or_without_a_writer() {
         let mut log = Log::new();
         log.open();
         let release = || Change::LeaseReleased { take: k1() };
@@ -794,7 +845,7 @@ mod tests {
             log.refused(Actor::Bezl, release()),
             invalid("running", "lease_released")
         );
-        log.edit();
+        log.finish("w1", "c1").push(Actor::Operator, pause());
         assert_eq!(
             log.refused(Actor::Bezl, release()),
             invalid("paused", "lease_released")
@@ -811,11 +862,14 @@ mod tests {
         log.finish("w1", "c1");
         assert_eq!(log.state(), TakeState::Ready);
         log.start().finish("w1", "c2");
-        assert_eq!(log.task().take(&k1()).unwrap().commits, ["c1", "c2"]);
+        assert_eq!(
+            log.task().take(&k1()).unwrap().steps,
+            [step("c1", false), step("c2", false)]
+        );
     }
 
     #[test]
-    fn step_needs_a_writer_and_no_step_running() {
+    fn step_needs_a_writer_and_no_step_running_or_pause() {
         let mut log = Log::new();
         log.open();
         let start = || Change::StepStarted { take: k1() };
@@ -828,7 +882,7 @@ mod tests {
             log.refused(Actor::Bezl, start()),
             invalid("running", "step_started")
         );
-        log.edit();
+        log.finish("w1", "c1").push(Actor::Operator, pause());
         assert_eq!(
             log.refused(Actor::Bezl, start()),
             invalid("paused", "step_started")
@@ -848,7 +902,7 @@ mod tests {
             log.refused(as_agent("w1"), finish("c1")),
             invalid("ready", "step_finished")
         );
-        log.start().edit();
+        log.push(Actor::Operator, pause());
         assert_eq!(
             log.refused(as_agent("w1"), finish("c1")),
             invalid("paused", "step_finished")
@@ -867,43 +921,61 @@ mod tests {
         assert_eq!(log.refused(Actor::Operator, finish("c1")), wrong);
     }
 
-    // Operator edits
+    // Operator changes
 
     #[test]
-    fn operator_edit_pauses_a_running_take_and_writer_keeps_the_lease() {
+    fn operator_change_at_a_boundary_is_its_own_change() {
         let mut log = Log::new();
-        log.open().lease("w1").start().edit();
+        log.open().lease("w1").edit();
         let task = log.task();
         let take = task.take(&k1()).unwrap();
-        assert_eq!(take.state, TakeState::Paused(PauseReason::OperatorEdit));
+        assert_eq!(take.state, TakeState::Ready);
         assert_eq!(take.writer, Some(agent("w1")));
-        assert_eq!(task.held_leases().len(), 1);
         assert_eq!(
-            take.operator_edits,
-            vec![OperatorEdit {
-                seq: 4,
+            take.operator_changes,
+            vec![OperatorChange {
+                seq: 3,
                 paths: vec!["src/a.ts".into()],
                 uncommitted: Some("h1".into()),
             }]
         );
+        assert_eq!(take.pending_operator_changes().len(), 1);
     }
 
     #[test]
-    fn operator_edit_outside_a_step_is_recorded_without_a_pause() {
+    fn operator_change_is_recorded_with_or_without_a_writer() {
         let mut log = Log::new();
         log.open().edit();
         assert_eq!(log.state(), TakeState::Open);
-        log.lease("w1").edit();
-        assert_eq!(log.state(), TakeState::Ready);
-        assert_eq!(log.task().take(&k1()).unwrap().operator_edits.len(), 2);
+        log.lease("w1")
+            .start()
+            .finish("w1", "c1")
+            .push(Actor::Operator, pause())
+            .edit();
+        assert_eq!(log.state(), TakeState::Paused(PauseReason::ToEdit));
+        assert_eq!(log.task().take(&k1()).unwrap().operator_changes.len(), 2);
     }
 
     #[test]
-    fn edit_by_anyone_but_the_operator_is_refused() {
+    fn edit_during_a_step_marks_that_step_mixed_and_does_not_pause() {
         let mut log = Log::new();
-        log.open().lease("w1").start();
+        log.open().lease("w1").start().edit();
+        assert_eq!(log.state(), TakeState::Running);
+        let take = log.task().take(&k1()).cloned().unwrap();
+        assert!(take.operator_changes.is_empty());
+        log.finish("w1", "c1").start().finish("w1", "c2");
+        assert_eq!(
+            log.task().take(&k1()).unwrap().steps,
+            [step("c1", true), step("c2", false)]
+        );
+    }
+
+    #[test]
+    fn change_by_anyone_but_the_operator_is_refused() {
+        let mut log = Log::new();
+        log.open().lease("w1");
         let wrong = Refusal::WrongActor {
-            change: "operator_edited",
+            change: "operator_changed",
             expected: "the operator",
         };
         assert_eq!(log.refused(as_agent("w1"), edit()), wrong);
@@ -911,24 +983,71 @@ mod tests {
     }
 
     #[test]
-    fn edits_stay_pending_until_the_writer_resumes() {
+    fn changes_stay_pending_until_the_writers_next_step() {
         let mut log = Log::new();
-        log.open().lease("w1").start().edit().edit();
+        log.open().lease("w1").edit().edit();
         let pending = |log: &Log| {
             log.task()
                 .take(&k1())
                 .unwrap()
-                .pending_operator_edits()
+                .pending_operator_changes()
                 .len()
         };
         assert_eq!(pending(&log), 2);
-        log.push(Actor::Operator, resume());
-        assert_eq!(log.state(), TakeState::Running);
+        log.start();
         assert_eq!(pending(&log), 0);
         log.finish("w1", "c1").edit();
         assert_eq!(pending(&log), 1);
         log.start();
         assert_eq!(pending(&log), 0);
+    }
+
+    // Pause to edit
+
+    #[test]
+    fn pause_during_a_step_stops_the_take_at_the_next_boundary() {
+        let mut log = Log::new();
+        log.open()
+            .lease("w1")
+            .start()
+            .push(Actor::Operator, pause());
+        assert_eq!(log.state(), TakeState::Running);
+        log.finish("w1", "c1");
+        assert_eq!(log.state(), TakeState::Paused(PauseReason::ToEdit));
+        log.edit().push(Actor::Operator, resume());
+        assert_eq!(log.state(), TakeState::Ready);
+        log.start().finish("w1", "c2");
+        assert_eq!(log.state(), TakeState::Ready, "a pause is used once");
+    }
+
+    #[test]
+    fn pause_at_a_boundary_takes_effect_at_once() {
+        let mut log = Log::new();
+        log.open().lease("w1").push(Actor::Operator, pause());
+        assert_eq!(log.state(), TakeState::Paused(PauseReason::ToEdit));
+    }
+
+    #[test]
+    fn pause_needs_a_writer_and_comes_from_the_operator() {
+        let mut log = Log::new();
+        log.open();
+        assert_eq!(
+            log.refused(Actor::Operator, pause()),
+            invalid("open", "pause_requested")
+        );
+        log.lease("w1");
+        assert_eq!(
+            log.refused(Actor::Bezl, pause()),
+            Refusal::WrongActor {
+                change: "pause_requested",
+                expected: "the operator",
+            }
+        );
+        log.push(Actor::Operator, pause());
+        assert_eq!(
+            log.refused(Actor::Operator, pause()),
+            invalid("paused", "pause_requested")
+        );
     }
 
     #[test]
@@ -937,13 +1056,13 @@ mod tests {
         log.open().lease("w1").start();
         assert_eq!(
             log.refused(Actor::Operator, resume()),
-            invalid("running", "step_resumed")
+            invalid("running", "take_resumed")
         );
-        log.edit();
+        log.finish("w1", "c1").push(Actor::Operator, pause());
         assert_eq!(
             log.refused(as_agent("w1"), resume()),
             Refusal::WrongActor {
-                change: "step_resumed",
+                change: "take_resumed",
                 expected: "the operator",
             }
         );
@@ -1036,7 +1155,7 @@ mod tests {
                 l.open().lease("w1").start();
             },
             |l| {
-                l.open().lease("w1").start().edit();
+                l.open().lease("w1").push(Actor::Operator, pause());
             },
         ];
         for setup in setups {
@@ -1067,6 +1186,7 @@ mod tests {
             (Actor::Bezl, Change::StepStarted { take: k1() }),
             (as_agent("w1"), finish("c2")),
             (Actor::Operator, edit()),
+            (Actor::Operator, pause()),
             (Actor::Operator, resume()),
             (Actor::Operator, reviewer("r1", Guard::Blocked)),
             (Actor::Operator, stop()),

@@ -2,6 +2,7 @@
 use super::captured::Captured;
 use super::evidence::VerifyResult;
 use super::lease::LeaseScope;
+use super::redact::{Redaction, Secrets};
 use crate::providers::Provider;
 use crate::providers::capabilities::Capability;
 use serde::{Deserialize, Serialize};
@@ -123,6 +124,8 @@ pub struct Event {
     /// Always written, `null` outside a batch: batches must not migrate the schema.
     pub batch: Option<BatchId>,
     pub actor: Actor,
+    /// Secrets taken out of this event's captured text before it was written.
+    pub redactions: Vec<Redaction>,
     #[serde(flatten)]
     pub change: Change,
 }
@@ -158,22 +161,29 @@ pub enum Change {
         commit: String,
         output: Option<Captured>,
     },
-    /// Paths and worktree hash after the edit; the writer keeps the lease.
-    OperatorEdited {
+    /// Operator's uncommitted edits. At a step boundary: a change of its own.
+    /// During a step: indistinguishable from the writer's, so that step is mixed.
+    OperatorChanged {
         take: TakeId,
         paths: Vec<PathBuf>,
         uncommitted: Option<String>,
     },
-    StepResumed {
+    /// Stops the take at the next step boundary, so the operator can edit.
+    PauseRequested {
+        take: TakeId,
+    },
+    TakeResumed {
         take: TakeId,
     },
     EvidenceRecorded {
         take: TakeId,
         result: VerifyResult,
     },
+    /// `reason` is Bezl's sentence; `detail` holds what a CLI said, if any.
     TakeStopped {
         take: TakeId,
         reason: String,
+        detail: Option<Captured>,
     },
 }
 
@@ -188,8 +198,9 @@ impl Change {
             | Change::ReviewerAdded { take, .. }
             | Change::StepStarted { take }
             | Change::StepFinished { take, .. }
-            | Change::OperatorEdited { take, .. }
-            | Change::StepResumed { take }
+            | Change::OperatorChanged { take, .. }
+            | Change::PauseRequested { take }
+            | Change::TakeResumed { take }
             | Change::EvidenceRecorded { take, .. }
             | Change::TakeStopped { take, .. } => Some(take),
         }
@@ -204,11 +215,32 @@ impl Change {
             Change::ReviewerAdded { .. } => "reviewer_added",
             Change::StepStarted { .. } => "step_started",
             Change::StepFinished { .. } => "step_finished",
-            Change::OperatorEdited { .. } => "operator_edited",
-            Change::StepResumed { .. } => "step_resumed",
+            Change::OperatorChanged { .. } => "operator_changed",
+            Change::PauseRequested { .. } => "pause_requested",
+            Change::TakeResumed { .. } => "take_resumed",
             Change::EvidenceRecorded { .. } => "evidence_recorded",
             Change::TakeStopped { .. } => "take_stopped",
         }
+    }
+
+    /// Redacts every captured field in place; returns each secret found, once.
+    pub fn redact(&mut self, secrets: &Secrets) -> Vec<Redaction> {
+        let fields = match self {
+            Change::StepFinished { output, .. } => vec![output],
+            Change::TakeStopped { detail, .. } => vec![detail],
+            _ => vec![],
+        };
+        let mut found: Vec<Redaction> = Vec::new();
+        for captured in fields.into_iter().flatten() {
+            let (text, redactions) = secrets.redact(&captured.text);
+            captured.text = text;
+            for r in redactions {
+                if !found.contains(&r) {
+                    found.push(r);
+                }
+            }
+        }
+        found
     }
 }
 
@@ -235,17 +267,59 @@ mod tests {
             task: TaskId::new("t1").unwrap(),
             batch: None,
             actor: Actor::Operator,
-            change: Change::OperatorEdited {
+            redactions: vec![],
+            change: Change::OperatorChanged {
                 take: TakeId::new("k1").unwrap(),
                 paths: vec!["src/a.ts".into()],
                 uncommitted: Some("h1".into()),
             },
         };
         let raw = json!({"v": 1, "seq": 2, "at_ms": 7, "task": "t1", "batch": null,
-            "actor": {"kind": "operator"}, "type": "operator_edited",
+            "actor": {"kind": "operator"}, "redactions": [], "type": "operator_changed",
             "take": "k1", "paths": ["src/a.ts"], "uncommitted": "h1"});
         assert_eq!(serde_json::to_value(&e).unwrap(), raw);
         assert_eq!(serde_json::from_value::<Event>(raw).unwrap(), e);
+    }
+
+    #[test]
+    fn redact_cleans_step_output_and_stop_detail() {
+        let secrets = Secrets::from_env([("API_KEY".to_string(), "sk-live-123456".to_string())]);
+        let hash = super::super::redact::short_hash("sk-live-123456");
+        let token = super::super::redact::token(&hash);
+        let k1 = TakeId::new("k1").unwrap();
+
+        let mut finished = Change::StepFinished {
+            take: k1.clone(),
+            commit: "c1".into(),
+            output: Some(Captured::new("key sk-live-123456 and sk-live-123456")),
+        };
+        let found = finished.redact(&secrets);
+        let want = vec![Redaction {
+            rule: "env:API_KEY".into(),
+            hash: hash.clone(),
+        }];
+        assert_eq!(found, want);
+        let Change::StepFinished { output, .. } = &finished else {
+            unreachable!()
+        };
+        assert_eq!(
+            output.as_ref().unwrap().text,
+            format!("key {token} and {token}")
+        );
+
+        let mut stopped = Change::TakeStopped {
+            take: k1,
+            reason: "Claude Code exited".into(),
+            detail: Some(Captured::new("auth sk-live-123456 rejected")),
+        };
+        assert_eq!(stopped.redact(&secrets), want);
+        let Change::TakeStopped { detail, .. } = &stopped else {
+            unreachable!()
+        };
+        assert_eq!(
+            detail.as_ref().unwrap().text,
+            format!("auth {token} rejected")
+        );
     }
 
     #[test]

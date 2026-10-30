@@ -4,4 +4,5 @@ pub mod event;
 pub mod evidence;
 pub mod lease;
 pub mod records;
+pub mod redact;
 pub mod task;

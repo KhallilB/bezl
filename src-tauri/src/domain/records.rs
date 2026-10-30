@@ -1,6 +1,7 @@
 //! A clone's task logs: one JSONL file per task under `<git common dir>/bezl/`, never tracked.
 use super::event::{Actor, BatchId, Change, Event, SCHEMA, TaskId};
 use super::lease::{HeldLease, conflict};
+use super::redact::Secrets;
 use super::task::{Refusal, Task};
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
@@ -76,6 +77,7 @@ pub struct Loaded {
 
 pub struct Records {
     dir: PathBuf,
+    secrets: Secrets,
 }
 
 impl Records {
@@ -99,7 +101,13 @@ impl Records {
         let common = String::from_utf8_lossy(&out.stdout).trim().to_string();
         Ok(Records {
             dir: PathBuf::from(common).join("bezl"),
+            secrets: Secrets::default(),
         })
+    }
+
+    /// Values redacted from every event before it is written.
+    pub fn with_secrets(self, secrets: Secrets) -> Self {
+        Records { secrets, ..self }
     }
 
     pub fn dir(&self) -> &Path {
@@ -112,8 +120,9 @@ impl Records {
         task: &TaskId,
         actor: Actor,
         batch: Option<BatchId>,
-        change: Change,
+        mut change: Change,
     ) -> Result<Task, RecordError> {
+        let redactions = change.redact(&self.secrets);
         fs::create_dir_all(self.dir.join("tasks"))?;
         let _lock = self.lock()?;
         let path = self.log_path(task);
@@ -138,6 +147,7 @@ impl Records {
             task: task.clone(),
             batch,
             actor,
+            redactions,
             change,
         };
         let next = match current {
@@ -255,8 +265,10 @@ fn now_ms() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::captured::Captured;
     use crate::domain::event::{Agent, AgentId, TakeId};
     use crate::domain::lease::LeaseScope;
+    use crate::domain::redact::{Redaction, short_hash, token};
     use crate::domain::task::TakeState;
     use crate::providers::Provider;
     use std::sync::atomic::{AtomicU32, Ordering};
@@ -490,6 +502,7 @@ mod tests {
         let stop = Change::TakeStopped {
             take: take("k1"),
             reason: "done".into(),
+            detail: None,
         };
         r.record(&id("t1"), Actor::Operator, None, stop).unwrap();
         create(&r, "t2");
@@ -572,6 +585,55 @@ mod tests {
         create(&r, "t2");
         let ids: Vec<_> = r.tasks().unwrap().into_iter().map(|t| t.id).collect();
         assert_eq!(ids, [id("t1"), id("t2")]);
+    }
+
+    #[test]
+    fn secrets_are_redacted_before_the_event_is_written() {
+        let repo = Repo::new();
+        let secret = "sk-live-123456";
+        let r = repo
+            .records()
+            .with_secrets(Secrets::from_env([("API_KEY".into(), secret.into())]));
+        create(&r, "t1");
+        open_take(&r, "t1", "k1", &repo.0);
+        lease(&r, "t1", "k1", "w1", &repo.0).unwrap();
+        let start = Change::StepStarted { take: take("k1") };
+        r.record(&id("t1"), Actor::Bezl, None, start).unwrap();
+        let finish = Change::StepFinished {
+            take: take("k1"),
+            commit: "c1".into(),
+            output: Some(Captured::new(format!("used {secret}, then {secret}"))),
+        };
+        let as_writer = Actor::Agent {
+            id: AgentId::new("w1").unwrap(),
+        };
+        r.record(&id("t1"), as_writer, None, finish).unwrap();
+
+        let raw = fs::read_to_string(r.log_path(&id("t1"))).unwrap();
+        assert!(!raw.contains(secret), "raw secret reached the log");
+        let last: Event = serde_json::from_str(raw.lines().last().unwrap()).unwrap();
+        let hash = short_hash(secret);
+        assert_eq!(
+            last.redactions,
+            vec![Redaction {
+                rule: "env:API_KEY".into(),
+                hash: hash.clone(),
+            }]
+        );
+        let Change::StepFinished { output, .. } = last.change else {
+            panic!("expected step_finished");
+        };
+        let t = token(&hash);
+        assert_eq!(output.unwrap().text, format!("used {t}, then {t}"));
+    }
+
+    #[test]
+    fn every_event_records_its_redactions_even_when_none() {
+        let repo = Repo::new();
+        let r = repo.records();
+        create(&r, "t1");
+        let first: serde_json::Value = serde_json::from_str(&lines(&r, "t1")[0]).unwrap();
+        assert_eq!(first["redactions"], serde_json::json!([]));
     }
 
     // Pass mark: no test writes a tracked file.
