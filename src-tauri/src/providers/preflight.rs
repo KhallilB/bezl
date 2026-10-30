@@ -1,9 +1,11 @@
 //! One preflight pass over every provider, as the Providers screen shows it.
+use super::capabilities::{self, Capability, Enforcement};
 use super::claude::{ClaudeSignIn, run_canary, signin_from};
 use super::probe::{self, ProbeRecord};
 use super::usage::{Usage, claude_usage};
 use super::{CodexSignIn, Discovery, Found, Provider, codex_signin, discover, operator_codex_home};
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -15,6 +17,8 @@ pub struct ProviderCheck {
     pub signin: SignInCheck,
     pub usage: Usage,
     pub read_only: ReadOnlyCheck,
+    /// How Bezl's reviewer args hold each capability, found or not.
+    pub enforcement: BTreeMap<Capability, Enforcement>,
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -120,6 +124,7 @@ pub fn preflight(
                 signin,
                 usage,
                 read_only,
+                enforcement: capabilities::enforcement(provider),
             }
         })
         .collect()
@@ -204,7 +209,7 @@ pub async fn providers_preflight(app: tauri::AppHandle) -> Result<Vec<ProviderCh
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::providers::capabilities::Capability;
+    use crate::providers::capabilities::enforcement;
     use crate::providers::probe::{Cost, Outcome};
     use crate::providers::usage::Tokens;
     use crate::providers::{Found, Rejected, Rejection, RunError, SignInMethod};
@@ -253,6 +258,7 @@ mod tests {
                 read_only: ReadOnlyCheck::CouldNotRun {
                     says: "timed out".into(),
                 },
+                enforcement: enforcement(Provider::ClaudeCode),
             },
             ProviderCheck {
                 discovery: Discovery {
@@ -266,6 +272,7 @@ mod tests {
                 signin: SignInCheck::NoBinary,
                 usage: Usage::UNKNOWN,
                 read_only: ReadOnlyCheck::NoBinary,
+                enforcement: enforcement(Provider::Codex),
             },
         ];
         assert_eq!(
@@ -282,7 +289,8 @@ mod tests {
                         "detail": { "kind": "signedIn", "detail": { "model": "claude-haiku-5-5" } }
                     },
                     "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } },
-                    "readOnly": { "kind": "couldNotRun", "detail": { "says": "timed out" } }
+                    "readOnly": { "kind": "couldNotRun", "detail": { "says": "timed out" } },
+                    "enforcement": serde_json::to_value(enforcement(Provider::ClaudeCode)).unwrap()
                 },
                 {
                     "discovery": {
@@ -294,7 +302,8 @@ mod tests {
                     },
                     "signin": { "kind": "noBinary" },
                     "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } },
-                    "readOnly": { "kind": "noBinary" }
+                    "readOnly": { "kind": "noBinary" },
+                    "enforcement": serde_json::to_value(enforcement(Provider::Codex)).unwrap()
                 }
             ])
         );
@@ -549,6 +558,7 @@ cat "$(dirname "$0")/said""#;
                         }),
                         usage: claude_usage(SIGNED_IN),
                         read_only: ReadOnlyCheck::Probed(record),
+                        enforcement: enforcement(Provider::ClaudeCode),
                     },
                     ProviderCheck {
                         discovery: Discovery {
@@ -578,6 +588,7 @@ cat "$(dirname "$0")/said""#;
                         usage: Usage::UNKNOWN,
                         // Reviewers run in the workers' home.
                         read_only: ReadOnlyCheck::NeedsSignIn,
+                        enforcement: enforcement(Provider::Codex),
                     },
                 ]
             );

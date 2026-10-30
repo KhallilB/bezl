@@ -1,7 +1,7 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "@kb.ui/css/styles.css";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ProvidersScreen } from "./ui/providers/ProvidersScreen";
 import * as samples from "./ui/task/fixtures";
 import type { WorkerView } from "./ui/task/model";
@@ -22,20 +22,20 @@ function initialWorkers(): WorkerView[] {
   return name && name in pick ? pick[name as keyof typeof pick] : samples.running;
 }
 
+const screens: Record<string, () => ReactNode> = {
+  terminals: TerminalsScreen,
+  "terminal-bench": TerminalBench,
+};
+
 export function App() {
   const [workers, setWorkers] = useState<WorkerView[]>(initialWorkers);
-  // No navigation yet; ?screen= opens another screen, or VITE_SCREEN in a build without a query.
-  const screen = {
-    providers: ProvidersScreen,
-    terminals: TerminalsScreen,
-    "terminal-bench": TerminalBench,
-  }[
+  // No task list before M5, so first run opens on Providers; ?screen= picks another screen,
+  // or VITE_SCREEN in a build without a query.
+  const name =
     new URLSearchParams(window.location.search).get("screen") ??
-      (import.meta.env.VITE_SCREEN as string | undefined) ??
-      ""
-  ];
-  if (screen) {
-    const Screen = screen;
+    (import.meta.env.VITE_SCREEN as string | undefined);
+  if (name !== "task") {
+    const Screen = name ? (screens[name] ?? ProvidersScreen) : ProvidersScreen;
     return (
       <AppTheme>
         <Screen />

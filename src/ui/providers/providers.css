@@ -53,3 +53,25 @@
   padding: 0;
   list-style: none;
 }
+
+.providers-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-3);
+  align-items: start;
+  justify-content: space-between;
+}
+
+.providers-section {
+  display: grid;
+  gap: var(--kb-space-1);
+}
+
+.providers-problem {
+  font-weight: 600;
+}
+
+/* Fix commands and flags hold long paths and JSON; wrap them rather than widen the panel. */
+.providers-code code {
+  overflow-wrap: anywhere;
+}

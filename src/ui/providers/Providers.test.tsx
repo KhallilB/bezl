@@ -1,6 +1,15 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
-import { claudeFound, claudeLimited, codexFound, thisMachine } from "./fixtures";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, test, vi } from "vitest";
+import {
+  claudeFound,
+  claudeLimited,
+  claudeSignedOut,
+  codexFound,
+  codexProbed,
+  noWriter,
+  thisMachine,
+} from "./fixtures";
 import type { ClaudeSignIn, ProviderCheck } from "./model";
 import { Providers } from "./Providers";
 
@@ -154,5 +163,93 @@ describe("Providers", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Checking agent CLIs…");
     rerender(<Providers checks={null} error="spawn failed" />);
     expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
+  });
+
+  test("lists each capability with its enforcement and probe result, failures in the probe's words", () => {
+    render(<Providers checks={[codexProbed]} />);
+    const codex = screen.getByRole("region", { name: "Codex" });
+    expect(within(codex).getByText("Not read-only")).toBeVisible();
+    expect(codex).toHaveTextContent(/Probed 0\.163\.0 on /);
+    const rows = within(within(codex).getByRole("list", { name: "Capabilities" })).getAllByRole(
+      "listitem",
+    );
+    expect(rows).toHaveLength(5);
+    const mcp = rows[2] as HTMLElement;
+    expect(mcp).toHaveTextContent("MCP tools");
+    expect(mcp).toHaveTextContent("Instruction only");
+    expect(mcp).toHaveTextContent("an MCP server from the Codex config wrote its marker");
+    expect(within(mcp).getByText("Failed").closest(".kb-status")).toHaveAttribute(
+      "data-tone",
+      "blocked",
+    );
+    expect(rows[0]).toHaveTextContent("Blocked by --sandbox read-only");
+    expect(within(rows[0] as HTMLElement).getByText("--sandbox read-only").tagName).toBe("CODE");
+  });
+
+  test("shows enforcement before a probe, and nothing for a CLI not found", () => {
+    render(<Providers checks={[codexFound, thisMachine[1] as ProviderCheck]} />);
+    const [found, missing] = screen.getAllByRole("region") as [HTMLElement, HTMLElement];
+    expect(within(found).getByText("Not probed: needs sign-in")).toBeVisible();
+    expect(within(found).getByRole("list", { name: "Capabilities" })).toHaveTextContent(
+      "Instruction only",
+    );
+    expect(within(missing).queryByRole("list", { name: "Capabilities" })).toBeNull();
+  });
+
+  test("names the command for every failing check", () => {
+    render(<Providers checks={noWriter} />);
+    const claude = within(screen.getByRole("region", { name: "Claude Code" })).getByRole("list", {
+      name: "To fix",
+    });
+    expect(claude).toHaveTextContent("Claude Code is signed out");
+    expect(within(claude).getByText("claude").tagName).toBe("CODE");
+    expect(within(claude).getByText("/login").tagName).toBe("CODE");
+    const codex = within(screen.getByRole("region", { name: "Codex" })).getByRole("list", {
+      name: "To fix",
+    });
+    const [impostor, install] = within(codex).getAllByRole("listitem") as [
+      HTMLElement,
+      HTMLElement,
+    ];
+    expect(impostor).toHaveTextContent("This codex is not Codex CLI");
+    expect(impostor).toHaveTextContent('Its version output says "0.2.3"');
+    expect(impostor).toHaveTextContent("Remove it from your path, or point Bezl at the real one.");
+    expect(within(install).getByText("npm install -g @openai/codex").tagName).toBe("CODE");
+  });
+
+  test("a passing CLI has nothing to fix", () => {
+    render(<Providers checks={[claudeFound]} />);
+    expect(screen.queryByRole("list", { name: "To fix" })).toBeNull();
+  });
+
+  test("says No writer available when no CLI can write, and offers no New task", () => {
+    render(<Providers checks={noWriter} />);
+    expect(screen.getByText("No writer available")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /new task/i })).toBeNull();
+  });
+
+  test("says which CLIs can write when one can", () => {
+    const { rerender } = render(<Providers checks={[claudeSignedOut, codexProbed]} />);
+    expect(screen.getByText("Ready: Codex can write.")).toBeVisible();
+    expect(screen.queryByText("No writer available")).toBeNull();
+    rerender(<Providers checks={[claudeFound, codexProbed]} />);
+    expect(screen.getByText("Ready: Claude Code and Codex can write.")).toBeVisible();
+  });
+
+  test("Check again keeps the old results on screen while it runs", async () => {
+    const onCheckAgain = vi.fn();
+    const { rerender } = render(<Providers checks={noWriter} onCheckAgain={onCheckAgain} />);
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+    expect(onCheckAgain).toHaveBeenCalledOnce();
+    rerender(<Providers checks={noWriter} checking onCheckAgain={onCheckAgain} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Checking agent CLIs…");
+    expect(screen.getByRole("region", { name: "Codex" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Check again" })).toBeDisabled();
+  });
+
+  test("a failed rerun shows its error above the last results", () => {
+    render(<Providers checks={noWriter} error="spawn failed" />);
+    expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
+    expect(screen.getByRole("region", { name: "Codex" })).toBeVisible();
   });
 });

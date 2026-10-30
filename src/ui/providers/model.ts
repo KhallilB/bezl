@@ -72,6 +72,11 @@ export type ProbeRecord = {
   cost: { usd: number | null; tokens: Tokens };
 };
 
+/** `capabilities.rs`: `flag` is the reviewer-arg run that blocks it. */
+export type Enforcement =
+  | { kind: "blocked"; detail: { flag: string[] } }
+  | { kind: "instructionOnly" };
+
 export type ReadOnlyCheck =
   | { kind: "noBinary" }
   | { kind: "needsSignIn" }
@@ -87,6 +92,7 @@ export type ProviderCheck = {
   signin: SignInCheck;
   usage: Usage;
   readOnly: ReadOnlyCheck;
+  enforcement: Record<Capability, Enforcement>;
 };
 
 export const providerName: Record<ProviderId, string> = {
@@ -193,3 +199,209 @@ export const limitHit = (says: string) => needsYou(`Limit hit: "${says}"`);
 
 export const found = good("Found");
 export const notFound = failed("Not found");
+
+/** A writer runs where its sign-in was checked: Claude's canary, Codex's workers' home. */
+export function canWrite({ discovery, signin }: ProviderCheck): boolean {
+  if (discovery.found === null) return false;
+  if (signin.kind === "canary") return signin.detail.kind === "signedIn";
+  if (signin.kind === "homes")
+    return signin.detail.some((h) => h.home === "workers" && h.signin.kind === "signedIn");
+  return false;
+}
+
+/** `null` when nothing can write: the screen says "No writer available". */
+export function readyShown(checks: ProviderCheck[]): Shown | null {
+  const names = checks.filter(canWrite).map((c) => providerName[c.discovery.provider]);
+  return names.length === 0 ? null : good(`Ready: ${names.join(" and ")} can write.`);
+}
+
+/** What failed and what the operator runs; backticks mark code. Bezl never runs a sign-in. */
+export type Fix = { problem: string; says?: string; action: string };
+
+const binName: Record<ProviderId, string> = { claude: "claude", codex: "codex" };
+const cliName: Record<ProviderId, string> = { claude: "Claude Code", codex: "Codex CLI" };
+const install: Record<ProviderId, string> = {
+  claude: "curl -fsSL https://claude.ai/install.sh | bash",
+  codex: "npm install -g @openai/codex",
+};
+
+function shellQuote(s: string): string {
+  return /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replaceAll("'", `'\\''`)}'`;
+}
+
+function rejectedFix(provider: ProviderId, reason: Rejection): Fix {
+  const bin = `\`${binName[provider]}\``;
+  const action = "Remove it from your path, or point Bezl at the real one.";
+  if (reason.kind === "says")
+    return {
+      problem: `This ${bin} is not ${cliName[provider]}`,
+      says: `Its version output says "${reason.detail}"`,
+      action,
+    };
+  // Silence or a crash is not proof of an impostor.
+  return { problem: `Bezl could not identify this ${bin}`, says: rejectionText(reason), action };
+}
+
+function canaryFix(signin: ClaudeSignIn): Fix | null {
+  const see = "Run `claude` to see what it says.";
+  switch (signin.kind) {
+    case "signedIn":
+      return null;
+    case "signedOut":
+      return {
+        problem: "Claude Code is signed out",
+        says: signin.detail.says,
+        action: "Run `claude`, then `/login`.",
+      };
+    case "outOfQuota":
+      return {
+        problem: "Claude Code is out of quota",
+        says: signin.detail.says,
+        action: "Wait for it to reset, then Check again.",
+      };
+    case "unrecognized":
+      return {
+        problem: "Claude Code's sign-in canary was not recognized",
+        says: signin.detail.says,
+        action: see,
+      };
+    case "failed":
+      return {
+        problem: `Claude Code's sign-in canary: ${runErrorText(signin.detail)}`,
+        action: see,
+      };
+  }
+}
+
+function homeFix({ home, path, signin }: HomeSignIn, operatorIn: boolean): Fix | null {
+  const q = shellQuote(path);
+  const env = home === "workers" ? `CODEX_HOME=${q} ` : "";
+  const status = `Run \`${env}codex login status\` to see it.`;
+  switch (signin.kind) {
+    case "signedIn":
+      return null;
+    case "signedOut":
+    case "homeMissing": {
+      // Codex refuses a CODEX_HOME that does not exist.
+      const mkdir = signin.kind === "homeMissing" ? `mkdir -p ${q} && ` : "";
+      const problem =
+        home === "operator"
+          ? "Codex is signed out for you"
+          : operatorIn
+            ? "Codex is signed in for you, not for workers"
+            : "Codex is signed out for workers";
+      return { problem, action: `Run \`${mkdir}${env}codex login\`.` };
+    }
+    case "unrecognized":
+      return {
+        problem: `${homeName[home]}: sign-in status not recognized`,
+        says: signin.detail.says,
+        action: status,
+      };
+    case "failed":
+      return {
+        problem: `${homeName[home]}: ${runErrorText(signin.detail)}`,
+        action: status,
+      };
+  }
+}
+
+export function fixes({ discovery, signin, readOnly }: ProviderCheck): Fix[] {
+  const { provider } = discovery;
+  if (discovery.found === null)
+    return [
+      ...discovery.rejected.map((r) => rejectedFix(provider, r.reason)),
+      {
+        problem: `No ${cliName[provider]} on your path`,
+        action: `Install it: \`${install[provider]}\``,
+      },
+    ];
+  const homes = signin.kind === "homes" ? signin.detail : [];
+  const operatorIn = homes.some((h) => h.home === "operator" && h.signin.kind === "signedIn");
+  const signinFixes =
+    signin.kind === "canary"
+      ? [canaryFix(signin.detail)]
+      : homes.map((h) => homeFix(h, operatorIn));
+  const probeFix: Fix | null =
+    readOnly.kind === "couldNotRun"
+      ? {
+          problem: "The read-only probe could not run",
+          says: readOnly.detail.says,
+          action: "Check again to probe it again.",
+        }
+      : null;
+  return [...signinFixes, probeFix].filter((f): f is Fix => f !== null);
+}
+
+const capabilityName: Record<Capability, string> = {
+  fileWrites: "File writes",
+  shell: "Shell",
+  mcpTools: "MCP tools",
+  hooks: "Hooks",
+  network: "Network",
+};
+const capabilityOrder: Capability[] = ["fileWrites", "shell", "mcpTools", "hooks", "network"];
+
+/** One row per capability: how Bezl's flags hold it, and what the probe saw (`null` unprobed). */
+export type CapabilityRow = {
+  capability: Capability;
+  label: string;
+  enforcement: string;
+  outcome: Shown | null;
+  note?: string;
+};
+
+function enforcementText(e: Enforcement): string {
+  return e.kind === "blocked" ? `Blocked by \`${e.detail.flag.join(" ")}\`` : "Instruction only";
+}
+
+function probed(o: ProbeOutcome): Pick<CapabilityRow, "outcome" | "note"> {
+  switch (o.kind) {
+    case "passed":
+      return { outcome: good("Passed") };
+    case "failed":
+      return { outcome: failed("Failed"), note: o.detail.evidence };
+    case "notProbed":
+      return { outcome: quiet("Not probed"), note: o.detail.why };
+  }
+}
+
+export function capabilityRows({ enforcement, readOnly }: ProviderCheck): CapabilityRow[] {
+  return capabilityOrder.map((capability) => ({
+    capability,
+    label: capabilityName[capability],
+    enforcement: enforcementText(enforcement[capability]),
+    ...(readOnly.kind === "probed"
+      ? probed(readOnly.detail.capabilities[capability])
+      : { outcome: null }),
+  }));
+}
+
+/** The reviewer's overall read-only state; `null` with no binary. */
+export function readOnlyShown({
+  readOnly,
+}: ProviderCheck): { shown: Shown; detail?: string } | null {
+  switch (readOnly.kind) {
+    case "noBinary":
+      return null;
+    case "needsSignIn":
+      return { shown: needsYou("Not probed: needs sign-in") };
+    case "couldNotRun":
+      return { shown: failed("Could not run") };
+    case "probed": {
+      const { version, probedAt, capabilities } = readOnly.detail;
+      const kinds = Object.values(capabilities).map((o) => o.kind);
+      const on = new Date(probedAt * 1000).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const shown = kinds.includes("failed")
+        ? failed("Not read-only")
+        : kinds.every((k) => k === "passed")
+          ? good("All five passed")
+          : quiet("Partly probed");
+      return { shown, detail: `Probed ${version} on ${on}` };
+    }
+  }
+}

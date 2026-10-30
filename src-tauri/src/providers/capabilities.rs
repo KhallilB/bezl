@@ -1,6 +1,7 @@
 //! How each provider's reviewer is kept read-only: by flag or sandbox, or only by asking.
 use super::Provider;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// A way a reviewer could change state.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -100,6 +101,15 @@ pub const RECORD: &[Entry] = {
         blocked(Codex, Network, CODEX_READ_ONLY, CODEX_PROBED),
     ]
 };
+
+/// One provider's row of `RECORD`, keyed for the Providers screen.
+pub fn enforcement(provider: Provider) -> BTreeMap<Capability, Enforcement> {
+    RECORD
+        .iter()
+        .filter(|e| e.provider == provider)
+        .map(|e| (e.capability, e.enforcement))
+        .collect()
+}
 
 /// Claude: one `--settings` only; with two the first wins and hooks run.
 pub fn reviewer_args(provider: Provider) -> &'static [&'static str] {
@@ -304,6 +314,21 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn enforcement_maps_every_capability_for_the_screen() {
+        assert_eq!(
+            serde_json::to_value(enforcement(Codex)).unwrap(),
+            serde_json::json!({
+                "fileWrites": {"kind": "blocked", "detail": {"flag": ["--sandbox", "read-only"]}},
+                "shell": {"kind": "blocked", "detail": {"flag": ["--sandbox", "read-only"]}},
+                "mcpTools": {"kind": "instructionOnly"},
+                "hooks": {"kind": "instructionOnly"},
+                "network": {"kind": "blocked", "detail": {"flag": ["--sandbox", "read-only"]}},
+            })
+        );
+        assert_eq!(enforcement(ClaudeCode).len(), CAPABILITIES.len());
     }
 
     #[test]
