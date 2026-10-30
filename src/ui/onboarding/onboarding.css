@@ -1,0 +1,74 @@
+/* First run: one centred card on the app canvas. Bezl's own elements only. */
+.onboarding {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: var(--kb-space-6) var(--kb-space-4);
+  background:
+    radial-gradient(
+      60% 45% at 50% 30%,
+      color-mix(in oklab, var(--kb-color-info) 8%, transparent),
+      transparent 70%
+    ),
+    var(--kb-color-bg);
+  color: var(--kb-color-fg);
+  font-family: "Geist Variable", var(--kb-font-sans);
+}
+
+/* Brand, copy, callout and action share the card's left edge. */
+.onboarding-card {
+  display: grid;
+  justify-items: start;
+  gap: var(--kb-space-6);
+  width: min(28rem, 100%);
+}
+
+.onboarding-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
+}
+
+.onboarding-mark {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.375rem;
+  background: conic-gradient(
+    from 200deg,
+    var(--kb-color-info),
+    var(--kb-color-accent),
+    var(--kb-color-info)
+  );
+  box-shadow: 0 0 16px color-mix(in oklab, var(--kb-color-info) 40%, transparent);
+}
+
+.onboarding-copy {
+  display: grid;
+  gap: var(--kb-space-2);
+}
+
+.onboarding-copy h1 {
+  margin: 0;
+  font-size: var(--kb-text-h2-size);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.onboarding-copy p {
+  margin: 0;
+  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  font-size: var(--kb-size-md);
+  line-height: 1.5;
+}
+
+.onboarding code {
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: 0.9em;
+}
+
+.onboarding-card > [role="alert"] {
+  justify-self: stretch;
+}

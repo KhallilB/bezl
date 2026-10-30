@@ -1,3 +1,4 @@
+import { Button } from "@kb.ui/react";
 import type { ReactNode } from "react";
 import { LightIcon } from "../journey/icons";
 import { type JourneyTask, lightLabel, type ProviderUsage, taskLight } from "../journey/model";
@@ -8,11 +9,44 @@ export type AppShellProps = {
   usage: ProviderUsage[];
   currentTaskId?: string;
   onOpenTask: (taskId: string) => void;
+  /** Shows New task above the list when given. */
+  onNewTask?: () => void;
   children: ReactNode;
 };
 
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M8 3.25v9.5M3.25 8h9.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** The task list before the first task: one sentence and one action. */
+export function EmptyTasks({ onNewTask }: { onNewTask: () => void }) {
+  return (
+    <section className="shell-empty" aria-labelledby="shell-empty-title">
+      <h1 id="shell-empty-title">No tasks yet</h1>
+      <p>
+        Describe a change, choose who writes and who reviews, and Bezl sets up a worktree for it.
+      </p>
+      <Button variant="secondary" onClick={onNewTask}>
+        <PlusIcon />
+        New task
+      </Button>
+    </section>
+  );
+}
+
 /** Sidebar of every task, each with its light, beside the open task. */
-export function AppShell({ tasks, usage, currentTaskId, onOpenTask, children }: AppShellProps) {
+export function AppShell({
+  tasks,
+  usage,
+  currentTaskId,
+  onOpenTask,
+  onNewTask,
+  children,
+}: AppShellProps) {
   return (
     <div className="shell">
       <aside className="shell-side">
@@ -20,6 +54,12 @@ export function AppShell({ tasks, usage, currentTaskId, onOpenTask, children }: 
           <span className="shell-mark" aria-hidden="true" />
           Bezl
         </span>
+        {onNewTask ? (
+          <button type="button" className="shell-new" onClick={onNewTask}>
+            <PlusIcon />
+            New task
+          </button>
+        ) : null}
         <nav aria-label="Tasks" className="shell-tasks">
           <ul>
             {tasks.map((task) => {

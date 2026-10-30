@@ -1,10 +1,15 @@
 import type { StageId } from "../journey/model";
 import { oneOf, type Scene, type Theme, themes } from "./states";
 
-export const chapters = ["Your tasks", "Design states"] as const;
+export const chapters = ["Getting started", "Your tasks", "Design states"] as const;
 export type Chapter = (typeof chapters)[number];
 
+export type Preflight = "checking" | "ready" | "impostor" | "noWriter";
+
 export type TourView =
+  | { kind: "choose"; refused?: boolean }
+  | { kind: "providers"; result: Preflight }
+  | { kind: "empty" }
   | { kind: "task"; taskId: string; stage: StageId }
   | { kind: "state"; scene: Scene }
   | { kind: "overview" };
@@ -12,6 +17,55 @@ export type TourView =
 export type Step = { id: string; chapter: Chapter; title: string; note: string; view: TourView };
 
 export const steps: Step[] = [
+  {
+    id: "open-repo",
+    chapter: "Getting started",
+    title: "Open a repository",
+    note: "Bezl works inside a git repository and keeps every record in it, on this machine.",
+    view: { kind: "choose" },
+  },
+  {
+    id: "not-git",
+    chapter: "Getting started",
+    title: "Only a git repository",
+    note: "Any other folder is refused, with the reason and what to choose instead.",
+    view: { kind: "choose", refused: true },
+  },
+  {
+    id: "preflight",
+    chapter: "Getting started",
+    title: "Preflight",
+    note: "Bezl finds each agent CLI by its version output and checks its sign-in. One status line shows progress.",
+    view: { kind: "providers", result: "checking" },
+  },
+  {
+    id: "providers",
+    chapter: "Getting started",
+    title: "Providers",
+    note: "One card per CLI: version, sign-in, the read-only probe and usage reporting.",
+    view: { kind: "providers", result: "ready" },
+  },
+  {
+    id: "impostor",
+    chapter: "Getting started",
+    title: "An impostor on PATH",
+    note: "A binary named codex that is not Codex is rejected and named, never run as a worker.",
+    view: { kind: "providers", result: "impostor" },
+  },
+  {
+    id: "no-writer",
+    chapter: "Getting started",
+    title: "No writer yet",
+    note: "Without a CLI that can write, Providers says why and names the command to run. Bezl never signs in for you.",
+    view: { kind: "providers", result: "noWriter" },
+  },
+  {
+    id: "empty-list",
+    chapter: "Getting started",
+    title: "Ready for a first task",
+    note: "Once a CLI can write, the task list opens empty, with one action: New task.",
+    view: { kind: "empty" },
+  },
   {
     id: "tasks",
     chapter: "Your tasks",

@@ -11,7 +11,11 @@ import {
 import { tasks, usage } from "../journey/fixtures";
 import type { StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
-import { AppShell } from "../shell/AppShell";
+import { ChooseRepository } from "../onboarding/ChooseRepository";
+import { claudeFound, codexProbed, noWriter, thisMachine } from "../providers/fixtures";
+import type { ProviderCheck } from "../providers/model";
+import { Providers } from "../providers/Providers";
+import { AppShell, EmptyTasks } from "../shell/AppShell";
 import { task } from "../task/fixtures";
 import type { WorkerView } from "../task/model";
 import { Task } from "../task/Task";
@@ -30,6 +34,7 @@ import {
 import {
   chapters,
   keyAction,
+  type Preflight,
   parseTour,
   step,
   steps,
@@ -290,18 +295,48 @@ function TaskView({ place, onPlace }: { place: Place; onPlace: (place: Place) =>
   );
 }
 
+const preflight: Record<Exclude<Preflight, "checking">, ProviderCheck[]> = {
+  ready: [claudeFound, codexProbed],
+  impostor: thisMachine,
+  noWriter,
+};
+
 function View({
   view,
   place,
   onPlace,
   onOpen,
+  onGoTo,
 }: {
   view: TourView;
   place: Place | null;
   onPlace: (place: Place) => void;
   onOpen: OpenState;
+  /** Moves the tour to a step by id, as a click in a screen would. */
+  onGoTo: (id: string) => void;
 }) {
   switch (view.kind) {
+    case "choose":
+      return (
+        <ChooseRepository
+          onChoose={() => onGoTo("preflight")}
+          {...(view.refused
+            ? { refused: { path: "~/Downloads", reason: "Not a git repository" } }
+            : {})}
+        />
+      );
+    case "providers":
+      return view.result === "checking" ? (
+        <Providers checks={null} checking />
+      ) : (
+        <Providers checks={preflight[view.result]} onCheckAgain={() => onGoTo("preflight")} />
+      );
+    case "empty":
+      return (
+        <AppShell tasks={[]} usage={usage} onOpenTask={() => {}} onNewTask={() => onGoTo("tasks")}>
+          <EmptyTasks onNewTask={() => onGoTo("tasks")} />
+        </AppShell>
+      );
     case "task":
       return <TaskView place={place ?? view} onPlace={onPlace} />;
     case "state":
@@ -359,7 +394,20 @@ export function Walkthrough() {
     <div className="walkthrough">
       <div className="walkthrough-view">
         {current ? (
-          <View view={current.view} place={place} onPlace={setPlace} onOpen={openState} />
+          <View
+            view={current.view}
+            place={place}
+            onPlace={setPlace}
+            onOpen={openState}
+            onGoTo={(id) =>
+              jump(
+                Math.max(
+                  steps.findIndex((s) => s.id === id),
+                  0,
+                ),
+              )
+            }
+          />
         ) : null}
       </div>
       <Dock tour={tour} act={act} jump={jump} />
