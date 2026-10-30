@@ -261,6 +261,36 @@ pub fn probe(
     envs: &[(&str, &OsStr)],
     timeout: Duration,
 ) -> Result<ProbeRecord, String> {
+    let (stdout, seen) = run(
+        provider,
+        &found.path,
+        reviewer_args(provider),
+        envs,
+        timeout,
+    )?;
+    Ok(ProbeRecord {
+        provider,
+        version: found.version.clone(),
+        reviewer_args: reviewer_args(provider)
+            .iter()
+            .map(|a| a.to_string())
+            .collect(),
+        probed_at: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+        capabilities: verdict(provider, &stdout, &seen)?,
+        cost: cost(provider, &stdout),
+    })
+}
+
+/// One run with `reviewer` args: its stdout and what the scratch repo showed.
+pub(crate) fn run(
+    provider: Provider,
+    binary: &Path,
+    reviewer: &[&str],
+    envs: &[(&str, &OsStr)],
+    timeout: Duration,
+) -> Result<(String, Seen), String> {
     let scratch = Scratch::new().map_err(|e| e.to_string())?;
     let (root, repo) = (&scratch.0, scratch.0.join("repo"));
     make_repo(root, &repo)?;
@@ -271,18 +301,17 @@ pub fn probe(
 
     let mcp_control = match provider {
         Provider::Codex => {
-            codex_config_run(&found.path, root, &repo, timeout)?;
+            codex_config_run(binary, root, &repo, reviewer, timeout)?;
             root.join(MCP_CONTROL).exists()
         }
         Provider::ClaudeCode => false,
     };
-    let args = probe_args(provider, &repo, port);
+    let args = probe_args(provider, &repo, port, reviewer);
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
-    let ran =
-        exec::run_in(&found.path, &args, envs, Some(&repo), timeout).map_err(|e| match e {
-            RunError::TimedOut => "timed out".to_string(),
-            RunError::DidNotStart(says) => says,
-        })?;
+    let ran = exec::run_in(binary, &args, envs, Some(&repo), timeout).map_err(|e| match e {
+        RunError::TimedOut => "timed out".to_string(),
+        RunError::DidNotStart(says) => says,
+    })?;
 
     let markers = [HOOK_MARKER, MCP_MARKER, MCP_CONTROL].map(String::from);
     let seen = Seen {
@@ -301,23 +330,11 @@ pub fn probe(
         listener_hit: listener.accept().is_ok(),
         port,
     };
-    Ok(ProbeRecord {
-        provider,
-        version: found.version.clone(),
-        reviewer_args: reviewer_args(provider)
-            .iter()
-            .map(|a| a.to_string())
-            .collect(),
-        probed_at: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs()),
-        capabilities: verdict(provider, &ran.stdout, &seen)?,
-        cost: cost(provider, &ran.stdout),
-    })
+    Ok((ran.stdout, seen))
 }
 
 /// Reviewer args go last for Claude: `--tools` and `--mcp-config` would swallow a prompt after them.
-fn probe_args(provider: Provider, repo: &Path, port: u16) -> Vec<String> {
+fn probe_args(provider: Provider, repo: &Path, port: u16, reviewer: &[&str]) -> Vec<String> {
     match provider {
         Provider::ClaudeCode => [
             "-p",
@@ -330,20 +347,20 @@ fn probe_args(provider: Provider, repo: &Path, port: u16) -> Vec<String> {
             "--no-session-persistence",
         ]
         .into_iter()
-        .chain(reviewer_args(provider).iter().copied())
+        .chain(reviewer.iter().copied())
         .map(String::from)
         .collect(),
-        Provider::Codex => codex_exec(repo, &[], &prompt(port)),
+        Provider::Codex => codex_exec(repo, &[], reviewer, &prompt(port)),
     }
 }
 
-fn codex_exec(repo: &Path, config: &[String], prompt: &str) -> Vec<String> {
+fn codex_exec(repo: &Path, config: &[String], reviewer: &[&str], prompt: &str) -> Vec<String> {
     let repo = repo.to_string_lossy();
     ["exec", "--json", "--ephemeral", "-C", &repo]
         .into_iter()
         .map(String::from)
         .chain(config.iter().cloned())
-        .chain(reviewer_args(Provider::Codex).iter().map(|a| a.to_string()))
+        .chain(reviewer.iter().map(|a| a.to_string()))
         .chain([prompt.to_string()])
         .collect()
 }
@@ -354,6 +371,7 @@ fn codex_config_run(
     codex: &Path,
     root: &Path,
     repo: &Path,
+    reviewer: &[&str],
     timeout: Duration,
 ) -> Result<(), String> {
     let marker = |name: &str| Value::from(root.join(name).to_string_lossy()).to_string();
@@ -369,7 +387,7 @@ fn codex_config_run(
         "-c".into(),
         format!("mcp_servers.bezl_control.args=[{}]", marker(MCP_CONTROL)),
     ];
-    let args = codex_exec(repo, &control, "Reply ok.");
+    let args = codex_exec(repo, &control, reviewer, "Reply ok.");
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     let env = [("CODEX_HOME", home.0.as_os_str())];
     match exec::run_in(

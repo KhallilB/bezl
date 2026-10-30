@@ -2,6 +2,7 @@
 pub mod capabilities;
 pub mod claude;
 mod codex;
+pub mod contract;
 mod exec;
 mod identity;
 pub mod preflight;
