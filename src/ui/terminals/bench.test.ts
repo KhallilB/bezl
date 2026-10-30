@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { fnv1a, StreamCheck } from "./bench";
+import { fnv1a, memoryMb, StreamCheck } from "./bench";
 
 const bytes = (s: string) => new TextEncoder().encode(s);
 
@@ -43,5 +43,33 @@ describe("StreamCheck", () => {
     const short = new StreamCheck();
     short.push(bytes("ac\r\n"));
     expect(short.result().hash).not.toBe(whole.result().hash);
+  });
+});
+
+describe("memoryMb", () => {
+  const t = { idleStart: 0, idleEnd: 10, start: 20, streamsDone: 30, restStart: 40, restEnd: 50 };
+
+  test("counts rest over the idle median measured in the same run", () => {
+    const mem: [number, number][] = [
+      [0, 170],
+      [5, 180],
+      [10, 400],
+      [25, 650],
+      [45, 300],
+      [50, 320],
+    ];
+    expect(memoryMb(mem, t)).toEqual({
+      idle: 180,
+      burstPeak: 650,
+      restPeak: 320,
+      restOverIdle: 140,
+    });
+  });
+
+  test("a window without samples is NaN, so no line can pass on it", () => {
+    const m = memoryMb([[25, 500]], t);
+    expect(m.idle).toBeNaN();
+    expect(m.restOverIdle).toBeNaN();
+    expect(m.restOverIdle < 150).toBe(false);
   });
 });

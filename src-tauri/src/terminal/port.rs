@@ -9,9 +9,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::ipc::{Channel, InvokeResponseBody};
 
-/// Undrawn bytes per pane before its agent is held. M4 allows 1 MiB; all panes share one
-/// webview queue, so echo waits behind every pane's backlog: 1 MiB measured 578 ms, 128 KiB 31 ms.
-pub const PANE_LIMIT: usize = 128 * 1024;
+/// Undrawn bytes per pane before its agent is held; M4 allows 1 MiB. All panes share one webview
+/// queue, so echo waits behind every backlog: 512 KiB in 256 KiB messages measured 30 ms at most.
+pub const PANE_LIMIT: usize = 512 * 1024;
 
 pub type PaneId = u32;
 
