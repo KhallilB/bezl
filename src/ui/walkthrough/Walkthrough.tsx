@@ -11,6 +11,9 @@ import {
 import { tasks, usage } from "../journey/fixtures";
 import type { StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
+import { crew, drafts, paths, startedTask, suggestions } from "../newtask/fixtures";
+import { NewTask } from "../newtask/NewTask";
+import { SetupConfirm } from "../newtask/SetupConfirm";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
 import { claudeFound, codexProbed, noWriter, thisMachine } from "../providers/fixtures";
 import type { ProviderCheck } from "../providers/model";
@@ -333,10 +336,56 @@ function View({
       );
     case "empty":
       return (
-        <AppShell tasks={[]} usage={usage} onOpenTask={() => {}} onNewTask={() => onGoTo("tasks")}>
-          <EmptyTasks onNewTask={() => onGoTo("tasks")} />
+        <AppShell
+          tasks={[]}
+          usage={usage}
+          onOpenTask={() => {}}
+          onNewTask={() => onGoTo("new-task")}
+        >
+          <EmptyTasks onNewTask={() => onGoTo("new-task")} />
         </AppShell>
       );
+    case "newTask":
+      return (
+        <AppShell tasks={[]} usage={usage} onOpenTask={() => {}}>
+          <NewTask
+            key={`${view.draft}-${view.focus}`}
+            repo="studio-web"
+            branch="main"
+            initial={drafts[view.draft]}
+            suggestions={suggestions}
+            providers={crew}
+            paths={paths}
+            onStart={() => onGoTo("setup")}
+            {...(view.focus ? { focus: view.focus } : {})}
+          />
+        </AppShell>
+      );
+    case "setup": {
+      const asking = startedTask("asking");
+      return (
+        <AppShell tasks={[asking]} usage={usage} currentTaskId={asking.id} onOpenTask={() => {}}>
+          <SetupConfirm
+            repo={asking.repo}
+            command="bun install"
+            onAllow={() => onGoTo("preparing")}
+            onDeny={() => {}}
+          />
+        </AppShell>
+      );
+    }
+    case "started": {
+      const started = startedTask("allowed");
+      return (
+        <AppShell tasks={[started]} usage={usage} currentTaskId={started.id} onOpenTask={() => {}}>
+          <TaskPage
+            task={started}
+            stage={place?.stage ?? started.current}
+            onStage={(stage) => onPlace({ taskId: started.id, stage })}
+          />
+        </AppShell>
+      );
+    }
     case "task":
       return <TaskView place={place ?? view} onPlace={onPlace} />;
     case "state":

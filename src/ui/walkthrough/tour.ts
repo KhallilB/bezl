@@ -1,8 +1,11 @@
 import type { StageId } from "../journey/model";
+import type { drafts } from "../newtask/fixtures";
 import { oneOf, type Scene, type Theme, themes } from "./states";
 
-export const chapters = ["Getting started", "Your tasks", "Design states"] as const;
+export const chapters = ["Getting started", "Start a task", "Your tasks", "Design states"] as const;
 export type Chapter = (typeof chapters)[number];
+
+export type Draft = keyof typeof drafts;
 
 export type Preflight = "checking" | "ready" | "impostor" | "noWriter";
 
@@ -10,6 +13,9 @@ export type TourView =
   | { kind: "choose"; refused?: boolean }
   | { kind: "providers"; result: Preflight }
   | { kind: "empty" }
+  | { kind: "newTask"; draft: Draft; focus?: "crew" }
+  | { kind: "setup" }
+  | { kind: "started" }
   | { kind: "task"; taskId: string; stage: StageId }
   | { kind: "state"; scene: Scene }
   | { kind: "overview" };
@@ -65,6 +71,48 @@ export const steps: Step[] = [
     title: "Ready for a first task",
     note: "Once a CLI can write, the task list opens empty, with one action: New task.",
     view: { kind: "empty" },
+  },
+  {
+    id: "new-task",
+    chapter: "Start a task",
+    title: "Write the brief",
+    note: "In your own words. Readiness checks five things as you type; none of them blocks starting.",
+    view: { kind: "newTask", draft: "blank" },
+  },
+  {
+    id: "readiness",
+    chapter: "Start a task",
+    title: "Fill the gaps",
+    note: "Each gap says why it matters and offers a suggestion you can add in one click.",
+    view: { kind: "newTask", draft: "partial" },
+  },
+  {
+    id: "brief-ready",
+    chapter: "Start a task",
+    title: "Done when, and who checks",
+    note: "Bezl checks its items after every step; yours wait for you at Review.",
+    view: { kind: "newTask", draft: "ready" },
+  },
+  {
+    id: "crew",
+    chapter: "Start a task",
+    title: "Choose the crew",
+    note: "Only providers that passed preflight. A reviewer from the writer's own vendor is allowed, and labelled.",
+    view: { kind: "newTask", draft: "ready", focus: "crew" },
+  },
+  {
+    id: "setup",
+    chapter: "Start a task",
+    title: "Setup asks first",
+    note: "A setup command is a needs-you item. Bezl runs nothing in your repository unasked.",
+    view: { kind: "setup" },
+  },
+  {
+    id: "preparing",
+    chapter: "Start a task",
+    title: "Preparing",
+    note: "Bezl makes the task's worktree and branch, then Plan starts.",
+    view: { kind: "started" },
   },
   {
     id: "tasks",
