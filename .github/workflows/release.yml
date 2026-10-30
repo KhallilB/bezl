@@ -90,6 +90,10 @@ jobs:
       - uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
+      # Zig 0.15.2 can't link against the 26.4+ macOS SDKs: https://codeberg.org/ziglang/zig/issues/31756
+      - name: Use Xcode 26.3 for Zig
+        if: runner.os == 'macOS'
+        run: echo "DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer" >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
