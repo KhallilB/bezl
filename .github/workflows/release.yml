@@ -1,9 +1,11 @@
 name: Release
 
-# Tag push only: builds installers into a draft release, published by hand after a look.
+# Tag push builds installers into a draft release, published by hand after a look.
+# Manual run is a dry run: builds every target, no release.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -11,6 +13,7 @@ permissions:
 jobs:
   release:
     name: Draft release
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       id: ${{ steps.draft.outputs.id }}
@@ -57,6 +60,8 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     needs: release
+    # Skipped release (dry run) must not skip the build.
+    if: ${{ !failure() && !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -81,6 +86,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      # libghostty-vt builds Ghostty from source; keep in step with src-tauri/Cargo.toml.
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
