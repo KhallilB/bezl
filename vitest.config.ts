@@ -6,6 +6,8 @@ import viteConfig from "./vite.config";
 export default mergeConfig(
   viteConfig,
   defineConfig({
+    // Tauri's strict 1420 must not reach the browser server: concurrent runs share port 63315.
+    server: { strictPort: false },
     test: {
       // Survives bun install (keyed on bun.lock): parent-resolved imports load a second React.
       fsModuleCache: false,
@@ -16,7 +18,7 @@ export default mergeConfig(
             name: "unit",
             environment: "jsdom",
             // Vite, not Node, must load kbui so preserveSymlinks applies in jsdom.
-            server: { deps: { inline: [/@kbui\//] } },
+            server: { deps: { inline: [/@kb\.ui\//] } },
             setupFiles: ["./src/test/setup.ts"],
             include: ["src/**/*.test.{ts,tsx}"],
             exclude: ["src/**/*.browser.test.tsx"],
