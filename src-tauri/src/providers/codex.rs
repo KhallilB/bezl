@@ -1,4 +1,4 @@
-use super::exec::{self, RunError};
+use super::exec::{self, Ran, RunError};
 use serde::Serialize;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -39,7 +39,12 @@ pub fn codex_signin(codex: &Path, home: &Path, timeout: Duration) -> CodexSignIn
         return CodexSignIn::HomeMissing;
     }
     let env = [("CODEX_HOME", home.as_os_str())];
-    let ran = match exec::run(codex, &["login", "status"], &env, timeout) {
+    signin_from(exec::run(codex, &["login", "status"], &env, timeout))
+}
+
+/// Split from the run so contract tests parse captured output.
+pub(crate) fn signin_from(ran: Result<Ran, RunError>) -> CodexSignIn {
+    let ran = match ran {
         Ok(ran) => ran,
         Err(e) => return CodexSignIn::Failed(e),
     };

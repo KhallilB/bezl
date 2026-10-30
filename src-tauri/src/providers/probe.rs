@@ -249,6 +249,32 @@ pub fn probe(
     envs: &[(&str, &OsStr)],
     timeout: Duration,
 ) -> Result<ProbeRecord, String> {
+    let (stdout, seen) = run(
+        provider,
+        &found.path,
+        reviewer_args(provider),
+        envs,
+        timeout,
+    )?;
+    Ok(ProbeRecord {
+        provider,
+        version: found.version.clone(),
+        probed_at: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+        capabilities: verdict(provider, &stdout, &seen)?,
+        cost: cost(provider, &stdout),
+    })
+}
+
+/// One run with `reviewer` args: its stdout and what the scratch repo showed.
+pub(crate) fn run(
+    provider: Provider,
+    binary: &Path,
+    reviewer: &[&str],
+    envs: &[(&str, &OsStr)],
+    timeout: Duration,
+) -> Result<(String, Seen), String> {
     let scratch = Scratch::new().map_err(|e| e.to_string())?;
     let (root, repo) = (&scratch.0, scratch.0.join("repo"));
     make_repo(root, &repo)?;
@@ -257,13 +283,12 @@ pub fn probe(
     let port = listener.local_addr().map_err(|e| e.to_string())?.port();
     let before = entries(root);
 
-    let args = probe_args(provider, root, &repo, port);
+    let args = probe_args(provider, root, &repo, port, reviewer);
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
-    let ran =
-        exec::run_in(&found.path, &args, envs, Some(&repo), timeout).map_err(|e| match e {
-            RunError::TimedOut => "timed out".to_string(),
-            RunError::DidNotStart(says) => says,
-        })?;
+    let ran = exec::run_in(binary, &args, envs, Some(&repo), timeout).map_err(|e| match e {
+        RunError::TimedOut => "timed out".to_string(),
+        RunError::DidNotStart(says) => says,
+    })?;
 
     let markers = [HOOK_MARKER, MCP_MARKER].map(String::from);
     let seen = Seen {
@@ -281,19 +306,17 @@ pub fn probe(
         listener_hit: listener.accept().is_ok(),
         port,
     };
-    Ok(ProbeRecord {
-        provider,
-        version: found.version.clone(),
-        probed_at: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs()),
-        capabilities: verdict(provider, &ran.stdout, &seen)?,
-        cost: cost(provider, &ran.stdout),
-    })
+    Ok((ran.stdout, seen))
 }
 
 /// Reviewer args go last for Claude: `--tools` and `--mcp-config` would swallow a prompt after them.
-fn probe_args(provider: Provider, root: &Path, repo: &Path, port: u16) -> Vec<String> {
+fn probe_args(
+    provider: Provider,
+    root: &Path,
+    repo: &Path,
+    port: u16,
+    reviewer: &[&str],
+) -> Vec<String> {
     let mut args: Vec<String> = match provider {
         Provider::ClaudeCode => [
             "-p",
@@ -323,7 +346,7 @@ fn probe_args(provider: Provider, root: &Path, repo: &Path, port: u16) -> Vec<St
             ),
         ],
     };
-    args.extend(reviewer_args(provider).iter().map(|a| a.to_string()));
+    args.extend(reviewer.iter().map(|a| a.to_string()));
     if provider == Provider::Codex {
         args.push(prompt(port));
     }
