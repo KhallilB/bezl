@@ -177,7 +177,6 @@ const denyScopes: JourneyTask = {
     build: {
       lead: "Codex has a question.",
       rest: "It stopped before overwriting a file.",
-      quote: "src/policy.rs has your uncommitted edits. Overwrite them, or work around them?",
       sections: [],
       takes: [
         {

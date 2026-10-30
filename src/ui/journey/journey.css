@@ -49,6 +49,10 @@
   letter-spacing: -0.01em;
 }
 
+.journey-history {
+  margin-inline-start: auto;
+}
+
 .journey-repo {
   color: var(--kb-color-muted);
   font-family: var(--journey-mono);

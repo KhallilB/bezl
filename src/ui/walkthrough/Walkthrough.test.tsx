@@ -216,3 +216,34 @@ describe("Walkthrough stage details", () => {
     );
   });
 });
+
+describe("Walkthrough needs you and look back", () => {
+  test("Approvals shows its count in the sidebar and empties as you answer", async () => {
+    at("?screen=walkthrough&step=approvals");
+    render(<Walkthrough />);
+    const link = screen.getByRole("link", { name: /Approvals, 3 need you/ });
+    expect(link).toHaveAttribute("aria-current", "page");
+    for (const name of ["Work around them", "Deny", "Side with Codex"]) {
+      await userEvent.click(screen.getByRole("button", { name }));
+    }
+    expect(screen.getByRole("heading", { name: "Nothing needs you" })).toBeVisible();
+    expect(screen.getByRole("link", { name: /^Approvals$/ })).toBeVisible();
+  });
+
+  test("answering inline also leaves the Approvals count", async () => {
+    at("?screen=walkthrough&step=question");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Work around them" }));
+    expect(screen.getByRole("link", { name: /Approvals, 2 need you/ })).toBeVisible();
+  });
+
+  test("History opens from the task's header and returns to it", async () => {
+    at("?screen=walkthrough&step=ship");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "History" }));
+    expect(within(dock()).getByText(position("history"))).toBeVisible();
+    expect(screen.getByRole("list", { name: "Timeline" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Back to task" }));
+    expect(screen.getByText("Ready to ship.")).toBeVisible();
+  });
+});

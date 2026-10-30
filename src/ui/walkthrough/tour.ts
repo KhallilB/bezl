@@ -2,7 +2,14 @@ import type { StageId } from "../journey/model";
 import type { drafts } from "../newtask/fixtures";
 import { oneOf, type Scene, type Theme, themes } from "./states";
 
-export const chapters = ["Getting started", "Start a task", "Your tasks", "Design states"] as const;
+export const chapters = [
+  "Getting started",
+  "Start a task",
+  "Your tasks",
+  "Needs you",
+  "Look back",
+  "Design states",
+] as const;
 export type Chapter = (typeof chapters)[number];
 
 export type Draft = keyof typeof drafts;
@@ -18,6 +25,8 @@ export type TourView =
   | { kind: "started" }
   /** `kept`: the list after take A was kept on Review. */
   | { kind: "task"; taskId: string; stage: StageId; kept?: boolean }
+  | { kind: "approvals"; cleared?: boolean }
+  | { kind: "history" }
   | { kind: "state"; scene: Scene }
   | { kind: "overview" };
 
@@ -140,7 +149,7 @@ export const steps: Step[] = [
     id: "question",
     chapter: "Your tasks",
     title: "A question waits on you",
-    note: "When a worker stops to ask, the task turns amber where you will see it.",
+    note: "When a worker stops to ask, the task turns amber and the question waits in its stage. Answer it there.",
     view: { kind: "task", taskId: "deny-scopes", stage: "build" },
   },
   {
@@ -163,6 +172,27 @@ export const steps: Step[] = [
     title: "Ready to ship",
     note: "The pull request beside how it got here. That history goes into its description.",
     view: { kind: "task", taskId: "empty-state", stage: "ship", kept: true },
+  },
+  {
+    id: "approvals",
+    chapter: "Needs you",
+    title: "One queue for you",
+    note: "Questions, access requests and disputed findings from every task wait here. Each choice says what happens next.",
+    view: { kind: "approvals" },
+  },
+  {
+    id: "approvals-clear",
+    chapter: "Needs you",
+    title: "Nothing needs you",
+    note: "An empty queue says so. Every answer stays in its task's history.",
+    view: { kind: "approvals", cleared: true },
+  },
+  {
+    id: "history",
+    chapter: "Look back",
+    title: "How it got here",
+    note: "Every event, the terminal snapshots and what each worker changed, with your minutes beside the agents'.",
+    view: { kind: "history" },
   },
   {
     id: "state-idle",
