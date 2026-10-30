@@ -1,3 +1,4 @@
+pub mod domain;
 pub mod providers;
 mod spike_pty;
 
