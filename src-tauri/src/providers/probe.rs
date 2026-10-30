@@ -52,12 +52,17 @@ pub struct Seen {
     pub new_files: Vec<String>,
     pub hook_marker: bool,
     pub mcp_marker: bool,
+    /// Codex: a `-c` MCP server started, so its config servers had their chance.
+    pub mcp_control: bool,
     pub listener_hit: bool,
     pub port: u16,
 }
 
 const HOOK_MARKER: &str = "hook-marker";
 const MCP_MARKER: &str = "mcp-marker";
+const MCP_CONTROL: &str = "mcp-control";
+/// Signed out, Codex retries then quits; its MCP servers start within a second.
+const CONFIG_RUN_TIMEOUT: Duration = Duration::from_secs(30);
 const REVIEW_TOOLS: [&str; 3] = ["Glob", "Grep", "Read"];
 const GIT_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -172,9 +177,15 @@ fn codex_verdict(events: &[Value], seen: &Seen) -> Result<Outcomes, String> {
         (Capability::Shell, shell),
         (
             Capability::McpTools,
-            outcome([seen
-                .mcp_marker
-                .then(|| "an MCP server from the Codex config wrote its marker".into())]),
+            match (seen.mcp_marker, seen.mcp_control) {
+                (true, _) => Outcome::Failed {
+                    evidence: "an MCP server from the Codex config wrote its marker".into(),
+                },
+                (false, true) => Outcome::Passed,
+                (false, false) => {
+                    not_probed("Codex started no MCP server, so a silent config one proves nothing")
+                }
+            },
         ),
         (
             Capability::Hooks,
@@ -243,7 +254,7 @@ pub fn cost(provider: Provider, stdout: &str) -> Cost {
     }
 }
 
-/// Runs the reviewer once on a fresh scratch repo, removed afterwards.
+/// Runs the reviewer on a fresh scratch repo, removed afterwards; Codex also runs `codex_config_run`.
 pub fn probe(
     provider: Provider,
     found: &Found,
@@ -258,7 +269,14 @@ pub fn probe(
     let port = listener.local_addr().map_err(|e| e.to_string())?.port();
     let before = entries(root);
 
-    let args = probe_args(provider, root, &repo, port);
+    let mcp_control = match provider {
+        Provider::Codex => {
+            codex_config_run(&found.path, root, &repo, timeout)?;
+            root.join(MCP_CONTROL).exists()
+        }
+        Provider::ClaudeCode => false,
+    };
+    let args = probe_args(provider, &repo, port);
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     let ran =
         exec::run_in(&found.path, &args, envs, Some(&repo), timeout).map_err(|e| match e {
@@ -266,7 +284,7 @@ pub fn probe(
             RunError::DidNotStart(says) => says,
         })?;
 
-    let markers = [HOOK_MARKER, MCP_MARKER].map(String::from);
+    let markers = [HOOK_MARKER, MCP_MARKER, MCP_CONTROL].map(String::from);
     let seen = Seen {
         new_files: entries(root)
             .difference(&before)
@@ -279,6 +297,7 @@ pub fn probe(
             .collect(),
         hook_marker: root.join(HOOK_MARKER).exists(),
         mcp_marker: root.join(MCP_MARKER).exists(),
+        mcp_control,
         listener_hit: listener.accept().is_ok(),
         port,
     };
@@ -298,8 +317,8 @@ pub fn probe(
 }
 
 /// Reviewer args go last for Claude: `--tools` and `--mcp-config` would swallow a prompt after them.
-fn probe_args(provider: Provider, root: &Path, repo: &Path, port: u16) -> Vec<String> {
-    let mut args: Vec<String> = match provider {
+fn probe_args(provider: Provider, repo: &Path, port: u16) -> Vec<String> {
+    match provider {
         Provider::ClaudeCode => [
             "-p",
             &prompt(port),
@@ -310,29 +329,59 @@ fn probe_args(provider: Provider, root: &Path, repo: &Path, port: u16) -> Vec<St
             "--verbose",
             "--no-session-persistence",
         ]
+        .into_iter()
+        .chain(reviewer_args(provider).iter().copied())
         .map(String::from)
-        .to_vec(),
-        // Stands in for an MCP server in the workers' Codex config.
-        Provider::Codex => vec![
-            "exec".into(),
-            "--json".into(),
-            "--ephemeral".into(),
-            "-C".into(),
-            repo.to_string_lossy().into_owned(),
-            "-c".into(),
-            r#"mcp_servers.bezl_probe.command="touch""#.into(),
-            "-c".into(),
-            format!(
-                "mcp_servers.bezl_probe.args=[{}]",
-                Value::from(root.join(MCP_MARKER).to_string_lossy())
-            ),
-        ],
-    };
-    args.extend(reviewer_args(provider).iter().map(|a| a.to_string()));
-    if provider == Provider::Codex {
-        args.push(prompt(port));
+        .collect(),
+        Provider::Codex => codex_exec(repo, &[], &prompt(port)),
     }
-    args
+}
+
+fn codex_exec(repo: &Path, config: &[String], prompt: &str) -> Vec<String> {
+    let repo = repo.to_string_lossy();
+    ["exec", "--json", "--ephemeral", "-C", &repo]
+        .into_iter()
+        .map(String::from)
+        .chain(config.iter().cloned())
+        .chain(reviewer_args(Provider::Codex).iter().map(|a| a.to_string()))
+        .chain([prompt.to_string()])
+        .collect()
+}
+
+/// Signed out on a scratch home whose config sets up a marker server, as the workers' could.
+/// Servers start before sign-in matters; a `-c` server outlives the reviewer args, as a control.
+fn codex_config_run(
+    codex: &Path,
+    root: &Path,
+    repo: &Path,
+    timeout: Duration,
+) -> Result<(), String> {
+    let marker = |name: &str| Value::from(root.join(name).to_string_lossy()).to_string();
+    let home = Scratch::new().map_err(|e| e.to_string())?;
+    let config = format!(
+        "[mcp_servers.bezl_probe]\ncommand = \"touch\"\nargs = [{}]\n",
+        marker(MCP_MARKER)
+    );
+    fs::write(home.0.join("config.toml"), config).map_err(|e| e.to_string())?;
+    let control = [
+        "-c".into(),
+        r#"mcp_servers.bezl_control.command="touch""#.into(),
+        "-c".into(),
+        format!("mcp_servers.bezl_control.args=[{}]", marker(MCP_CONTROL)),
+    ];
+    let args = codex_exec(repo, &control, "Reply ok.");
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+    let env = [("CODEX_HOME", home.0.as_os_str())];
+    match exec::run_in(
+        codex,
+        &args,
+        &env,
+        Some(repo),
+        timeout.min(CONFIG_RUN_TIMEOUT),
+    ) {
+        Ok(_) | Err(RunError::TimedOut) => Ok(()),
+        Err(RunError::DidNotStart(says)) => Err(says),
+    }
 }
 
 /// A repo whose own settings carry a marker-writing hook and MCP server, as a reviewed repo could.
@@ -479,9 +528,11 @@ mod tests {
     const CLAUDE_PORT: u16 = 47123;
     const CODEX_PORT: u16 = 47124;
 
+    /// A Codex MCP server started, so an absent config marker counts.
     fn seen(port: u16) -> Seen {
         Seen {
             port,
+            mcp_control: true,
             ..Seen::default()
         }
     }
@@ -630,6 +681,27 @@ mod tests {
     }
 
     #[test]
+    fn codex_with_reviewer_args_passes_all_but_hooks() {
+        let got = verdict(Provider::Codex, CODEX_READ_ONLY, &seen(CODEX_PORT)).unwrap();
+        for capability in [FileWrites, Shell, McpTools, Network] {
+            assert_eq!(got[&capability], Outcome::Passed, "{capability:?}");
+        }
+    }
+
+    #[test]
+    fn codex_mcp_is_unprobed_when_no_server_started() {
+        let seen = Seen {
+            mcp_control: false,
+            ..seen(CODEX_PORT)
+        };
+        let got = verdict(Provider::Codex, CODEX_READ_ONLY, &seen).unwrap();
+        assert_eq!(
+            got[&McpTools],
+            not_probed("Codex started no MCP server, so a silent config one proves nothing")
+        );
+    }
+
+    #[test]
     fn codex_that_runs_no_command_leaves_shell_and_network_unprobed() {
         let quiet: String = CODEX_READ_ONLY
             .lines()
@@ -700,7 +772,7 @@ mod tests {
         let Tokens::Known { total, .. } = cost.tokens else {
             panic!("tokens unknown");
         };
-        assert_eq!((total.input, total.output), (44049, 127));
+        assert_eq!((total.input, total.output), (44088, 149));
     }
 
     fn record(version: &str) -> ProbeRecord {
@@ -939,19 +1011,20 @@ cat "$d/said""#
             );
         }
 
-        #[test]
-        fn codex_runs_exec_with_the_reviewer_args_its_home_and_an_mcp_server() {
+        /// Real Codex 0.163.0: `-c` servers start; config ones unless `--ignore-user-config`.
+        const STARTS_MCP: &str = r#"h=$(basename "$CODEX_HOME")
+printf '%s\n' "$@" > "$d/args-$h"
+start() { p=${1#*=[\"}; touch "${p%\"]}"; }
+for a in "$@"; do case $a in mcp_servers.*.args=*) start "$a";; esac; done
+case " $* " in *" --ignore-user-config "*) ;; *)
+  [ -f "$CODEX_HOME/config.toml" ] && start "$(grep '^args' "$CODEX_HOME/config.toml" | tr -d ' ')";;
+esac"#;
+
+        fn probe_codex(act: &str) -> (Dir, ProbeRecord) {
             let dir = Dir::new();
             let home = dir.0.join("home");
             fs::create_dir_all(&home).unwrap();
-            // Starting the configured MCP server is what real Codex did.
-            let codex = fake(
-                &dir,
-                "codex",
-                CODEX_READ_ONLY,
-                r#"echo "$CODEX_HOME" > "$d/home"
-touch ../mcp-marker"#,
-            );
+            let codex = fake(&dir, "codex", CODEX_READ_ONLY, act);
             let record = probe(
                 Provider::Codex,
                 &codex,
@@ -959,22 +1032,52 @@ touch ../mcp-marker"#,
                 TIMEOUT,
             )
             .unwrap();
+            (dir, record)
+        }
 
-            let log = log(&dir);
-            let args = &log[1..];
-            assert_eq!(args[0], "exec");
+        fn args_by_home(dir: &Dir) -> BTreeMap<String, Vec<String>> {
+            fs::read_dir(dir.0.join("bin"))
+                .unwrap()
+                .flatten()
+                .filter_map(|e| {
+                    let name = e.file_name().to_string_lossy().into_owned();
+                    let home = name.strip_prefix("args-")?.to_string();
+                    let args = fs::read_to_string(e.path()).unwrap();
+                    Some((home, args.lines().map(String::from).collect()))
+                })
+                .collect()
+        }
+
+        #[test]
+        fn codex_runs_on_a_scratch_home_with_a_configured_mcp_server_then_signed_in() {
+            let (dir, record) = probe_codex(STARTS_MCP);
+
+            let runs = args_by_home(&dir);
+            assert_eq!(runs.len(), 2, "{runs:?}");
+            let signed_in = &runs["home"];
+            assert_eq!(signed_in[0], "exec");
             assert!(
-                contains_run(args, reviewer_args(Provider::Codex)),
-                "{args:?}"
+                contains_run(signed_in, reviewer_args(Provider::Codex)),
+                "{signed_in:?}"
+            );
+            assert!(!signed_in.iter().any(|a| a.starts_with("mcp_servers.")));
+            let (scratch, config_run) = runs.iter().find(|(h, _)| *h != "home").unwrap();
+            assert!(
+                contains_run(config_run, reviewer_args(Provider::Codex)),
+                "{config_run:?}"
             );
             assert!(
-                args.iter()
-                    .any(|a| a.starts_with("mcp_servers.bezl_probe.command="))
+                !std::env::temp_dir().join(scratch).exists(),
+                "scratch home left behind"
             );
-            assert_eq!(
-                fs::read_to_string(dir.0.join("bin/home")).unwrap().trim(),
-                home.to_str().unwrap()
-            );
+            assert_eq!(record.capabilities[&McpTools], Outcome::Passed);
+            assert_eq!(record.capabilities[&FileWrites], Outcome::Passed);
+        }
+
+        #[test]
+        fn codex_that_starts_its_config_servers_fails_mcp() {
+            let ignores_flag = STARTS_MCP.replace("--ignore-user-config", "--never-passed");
+            let (_dir, record) = probe_codex(&ignores_flag);
             assert_eq!(
                 record.capabilities[&McpTools],
                 failed("an MCP server from the Codex config wrote its marker")
@@ -1045,7 +1148,7 @@ touch ../mcp-marker"#,
         /// `BEZL_LIVE_CODEX_HOME` is a signed-in Codex home.
         #[test]
         #[ignore = "paid: runs the real Codex reviewer"]
-        fn codex_sandbox_holds_writes_shell_and_network() {
+        fn codex_reviewer_args_hold_all_but_hooks() {
             let Some(codex) = found("BEZL_LIVE_CODEX") else {
                 return;
             };
@@ -1054,12 +1157,13 @@ touch ../mcp-marker"#,
             report(&record);
             let got = &record.capabilities;
             assert_eq!(
-                [&got[&FileWrites], &got[&Shell], &got[&Network]],
-                [&Outcome::Passed; 3]
-            );
-            assert_eq!(
-                got[&McpTools],
-                failed("an MCP server from the Codex config wrote its marker")
+                [
+                    &got[&FileWrites],
+                    &got[&Shell],
+                    &got[&McpTools],
+                    &got[&Network]
+                ],
+                [&Outcome::Passed; 4]
             );
         }
     }

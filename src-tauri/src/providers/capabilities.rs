@@ -50,8 +50,10 @@ const CLAUDE_NO_MCP: &[&str] = &[
 ];
 const CLAUDE_NO_HOOKS: &[&str] = &["--settings", r#"{"disableAllHooks":true}"#];
 const CODEX_READ_ONLY: &[&str] = &["--sandbox", "read-only"];
+/// Drops the workers' MCP servers and the project trust that loads a repo's own.
+const CODEX_NO_CONFIG: &[&str] = &["--ignore-user-config"];
 
-// The read-only probe (`probe.rs`) ran on these, 2026-10-29.
+// The read-only probe (`probe.rs`) ran on these, 2026-10-29; Codex again 2026-10-30.
 const CLAUDE_PROBED: Option<&str> = Some("2.1.312");
 const CODEX_PROBED: Option<&str> = Some("0.163.0");
 
@@ -95,8 +97,8 @@ pub const RECORD: &[Entry] = {
         blocked(ClaudeCode, Network, CLAUDE_TOOLS, CLAUDE_PROBED),
         blocked(Codex, FileWrites, CODEX_READ_ONLY, CODEX_PROBED),
         blocked(Codex, Shell, CODEX_READ_ONLY, CODEX_PROBED),
-        // A configured MCP server starts outside the sandbox.
-        instruction_only(Codex, McpTools, CODEX_PROBED),
+        // Servers start outside the sandbox; `-c mcp_servers={}` merges and stops none.
+        blocked(Codex, McpTools, CODEX_NO_CONFIG, CODEX_PROBED),
         instruction_only(Codex, Hooks, None),
         blocked(Codex, Network, CODEX_READ_ONLY, CODEX_PROBED),
     ]
@@ -123,7 +125,7 @@ pub fn reviewer_args(provider: Provider) -> &'static [&'static str] {
             "--settings",
             r#"{"disableAllHooks":true}"#,
         ],
-        Provider::Codex => CODEX_READ_ONLY,
+        Provider::Codex => &["--sandbox", "read-only", "--ignore-user-config"],
     }
 }
 
@@ -249,9 +251,13 @@ mod tests {
     }
 
     #[test]
-    fn codex_mcp_is_instruction_only_as_probed() {
-        // A configured MCP server started outside the sandbox and wrote its marker.
-        check(Codex, McpTools, (InstructionOnly, CODEX_PROBED));
+    fn codex_mcp_blocked_by_ignoring_user_config() {
+        // `-c mcp_servers={}` merges into the config and stops none of its servers.
+        check(
+            Codex,
+            McpTools,
+            blocked(&["--ignore-user-config"], CODEX_PROBED),
+        );
     }
 
     #[test]
@@ -271,8 +277,11 @@ mod tests {
     }
 
     #[test]
-    fn codex_reviewer_args_are_read_only_sandbox() {
-        assert_eq!(reviewer_args(Codex), ["--sandbox", "read-only"]);
+    fn codex_reviewer_args_are_read_only_sandbox_without_user_config() {
+        assert_eq!(
+            reviewer_args(Codex),
+            ["--sandbox", "read-only", "--ignore-user-config"]
+        );
     }
 
     #[test]
@@ -323,7 +332,7 @@ mod tests {
             serde_json::json!({
                 "fileWrites": {"kind": "blocked", "detail": {"flag": ["--sandbox", "read-only"]}},
                 "shell": {"kind": "blocked", "detail": {"flag": ["--sandbox", "read-only"]}},
-                "mcpTools": {"kind": "instructionOnly"},
+                "mcpTools": {"kind": "blocked", "detail": {"flag": ["--ignore-user-config"]}},
                 "hooks": {"kind": "instructionOnly"},
                 "network": {"kind": "blocked", "detail": {"flag": ["--sandbox", "read-only"]}},
             })
@@ -343,12 +352,12 @@ mod tests {
             })
         );
         assert_eq!(
-            serde_json::to_value(entry(Codex, McpTools)).unwrap(),
+            serde_json::to_value(entry(Codex, Hooks)).unwrap(),
             serde_json::json!({
                 "provider": "codex",
-                "capability": "mcpTools",
+                "capability": "hooks",
                 "enforcement": {"kind": "instructionOnly"},
-                "establishedOn": "0.163.0",
+                "establishedOn": null,
             })
         );
     }
