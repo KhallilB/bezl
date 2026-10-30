@@ -42,10 +42,10 @@
   font-size: var(--kb-size-sm);
 }
 
-/* xterm paints this box's colours; its DOM renderer needs them opaque. */
+/* xterm paints this box's colours, so they must be opaque: the well's own. */
 .terminal-screen,
 .snapshot-screen {
-  background: var(--kb-color-bg);
+  background: var(--kb-panel-well);
   color: var(--kb-color-fg);
 }
 
