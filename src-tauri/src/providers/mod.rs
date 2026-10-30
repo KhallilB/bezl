@@ -8,6 +8,7 @@ pub mod preflight;
 pub mod probe;
 #[cfg(all(test, unix))]
 mod testing;
+pub mod tiers;
 pub mod usage;
 
 pub use codex::{CodexSignIn, SignInMethod, codex_signin, operator_codex_home};

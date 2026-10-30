@@ -79,11 +79,33 @@ export type Enforcement =
   | { kind: "blocked"; detail: { flag: string[] } }
   | { kind: "instructionOnly" };
 
-export type ReadOnlyCheck =
+/** `preflight.rs` `Recorded`: a paid probe's result, kept once per CLI version. */
+export type Recorded<R> =
   | { kind: "noBinary" }
   | { kind: "needsSignIn" }
-  | { kind: "probed"; detail: ProbeRecord }
+  | { kind: "probed"; detail: R }
   | { kind: "couldNotRun"; detail: { says: string } };
+
+export type ReadOnlyCheck = Recorded<ProbeRecord>;
+
+/** `tiers.rs`: coordination tiers for batches, 0 to 2. */
+export type Tier = "stepBoundary" | "mcpTool" | "liveInput";
+
+export type TierOutcome =
+  | { kind: "holds"; detail: { evidence: string } }
+  | { kind: "missing"; detail: { evidence: string } }
+  | { kind: "unknown"; detail: { why: string } };
+
+export type TierRecord = {
+  provider: ProviderId;
+  version: string;
+  /** Unix seconds. */
+  probedAt: number;
+  tiers: Record<Tier, TierOutcome>;
+  cost: { usd: number | null; tokens: Tokens };
+};
+
+export type TiersCheck = Recorded<TierRecord>;
 
 export type ProviderCheck = {
   discovery: {
@@ -94,6 +116,7 @@ export type ProviderCheck = {
   signin: SignInCheck;
   usage: Usage;
   readOnly: ReadOnlyCheck;
+  tiers: TiersCheck;
   enforcement: Record<Capability, Enforcement>;
 };
 
@@ -308,7 +331,17 @@ function homeFix({ home, path, signin }: HomeSignIn, operatorIn: boolean): Fix |
   }
 }
 
-export function fixes({ discovery, signin, readOnly }: ProviderCheck): Fix[] {
+function couldNotRunFix(probe: string, check: Recorded<unknown>): Fix | null {
+  return check.kind === "couldNotRun"
+    ? {
+        problem: `The ${probe} probe could not run`,
+        says: check.detail.says,
+        action: "Check again to probe it again.",
+      }
+    : null;
+}
+
+export function fixes({ discovery, signin, readOnly, tiers }: ProviderCheck): Fix[] {
   const { provider } = discovery;
   if (discovery.found === null)
     return [
@@ -324,15 +357,11 @@ export function fixes({ discovery, signin, readOnly }: ProviderCheck): Fix[] {
     signin.kind === "canary"
       ? [canaryFix(signin.detail)]
       : homes.map((h) => homeFix(h, operatorIn));
-  const probeFix: Fix | null =
-    readOnly.kind === "couldNotRun"
-      ? {
-          problem: "The read-only probe could not run",
-          says: readOnly.detail.says,
-          action: "Check again to probe it again.",
-        }
-      : null;
-  return [...signinFixes, probeFix].filter((f): f is Fix => f !== null);
+  return [
+    ...signinFixes,
+    couldNotRunFix("read-only", readOnly),
+    couldNotRunFix("coordination-tier", tiers),
+  ].filter((f): f is Fix => f !== null);
 }
 
 const capabilityName: Record<Capability, string> = {
@@ -379,11 +408,14 @@ export function capabilityRows({ enforcement, readOnly }: ProviderCheck): Capabi
   }));
 }
 
-/** The reviewer's overall read-only state; `null` with no binary. */
-export function readOnlyShown({
-  readOnly,
-}: ProviderCheck): { shown: Shown; detail?: string } | null {
-  switch (readOnly.kind) {
+export type Overall = { shown: Shown; detail?: string };
+
+/** A probe's overall state; `null` with no binary. `summary` judges a probed record. */
+function recordedShown<R extends { version: string; probedAt: number }>(
+  check: Recorded<R>,
+  summary: (record: R) => Shown,
+): Overall | null {
+  switch (check.kind) {
     case "noBinary":
       return null;
     case "needsSignIn":
@@ -391,19 +423,63 @@ export function readOnlyShown({
     case "couldNotRun":
       return { shown: failed("Could not run") };
     case "probed": {
-      const { version, probedAt, capabilities } = readOnly.detail;
-      const kinds = Object.values(capabilities).map((o) => o.kind);
+      const { version, probedAt } = check.detail;
       const on = new Date(probedAt * 1000).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       });
-      const shown = kinds.includes("failed")
-        ? failed("Not read-only")
-        : kinds.every((k) => k === "passed")
-          ? good("All five passed")
-          : quiet("Partly probed");
-      return { shown, detail: `Probed ${version} on ${on}` };
+      return { shown: summary(check.detail), detail: `Probed ${version} on ${on}` };
     }
   }
+}
+
+/** The reviewer's overall read-only state; `null` with no binary. */
+export function readOnlyShown({ readOnly }: ProviderCheck): Overall | null {
+  return recordedShown(readOnly, ({ capabilities }) => {
+    const kinds = Object.values(capabilities).map((o) => o.kind);
+    if (kinds.includes("failed")) return failed("Not read-only");
+    return kinds.every((k) => k === "passed") ? good("All five passed") : quiet("Partly probed");
+  });
+}
+
+const tierName: Record<Tier, string> = {
+  stepBoundary: "Tier 0: facts at step boundaries",
+  mcpTool: "Tier 1: Bezl MCP tool",
+  liveInput: "Tier 2: live input mid-step",
+};
+const tierOrder: Tier[] = ["stepBoundary", "mcpTool", "liveInput"];
+
+export type TierRow = { tier: Tier; label: string; outcome: Shown; note: string };
+
+/** A missing tier is a degradation, not a failure: batches fall back to Tier 0. */
+function tierOutcome(o: TierOutcome): Pick<TierRow, "outcome" | "note"> {
+  switch (o.kind) {
+    case "holds":
+      return { outcome: good("Holds"), note: o.detail.evidence };
+    case "missing":
+      return { outcome: quiet("Missing"), note: o.detail.evidence };
+    case "unknown":
+      return { outcome: quiet("Unknown"), note: o.detail.why };
+  }
+}
+
+/** One row per tier once probed; none before. */
+export function tierRows({ tiers }: ProviderCheck): TierRow[] {
+  if (tiers.kind !== "probed") return [];
+  const { tiers: outcomes } = tiers.detail;
+  return tierOrder.map((tier) => ({
+    tier,
+    label: tierName[tier],
+    ...tierOutcome(outcomes[tier]),
+  }));
+}
+
+export function tiersShown({ tiers }: ProviderCheck): Overall | null {
+  return recordedShown(tiers, (record) => {
+    const holding = tierOrder.filter((t) => record.tiers[t].kind === "holds").length;
+    return holding === tierOrder.length
+      ? good("All three hold")
+      : quiet(`${holding} of ${tierOrder.length} hold`);
+  });
 }

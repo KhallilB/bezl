@@ -1,0 +1,9 @@
+{"type":"thread.started","thread_id":"01a18ba3-3049-7270-8a38-c38117ffe76f"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll call the bezl `batch_state` tool twice."}}
+{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"bezl","tool":"batch_state","arguments":{},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"bezl","tool":"batch_state","arguments":{},"result":{"content":[{"type":"text","text":"Batch state: no changes."}],"structured_content":null},"error":null,"status":"completed"}}
+{"type":"item.started","item":{"id":"item_2","type":"mcp_tool_call","server":"bezl","tool":"batch_state","arguments":{},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_2","type":"mcp_tool_call","server":"bezl","tool":"batch_state","arguments":{},"result":{"content":[{"type":"text","text":"Batch state: no changes."}],"structured_content":null},"error":null,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"NONE"}}
+{"type":"turn.completed","usage":{"input_tokens":88049,"cached_input_tokens":77824,"cache_write_input_tokens":0,"output_tokens":100,"reasoning_output_tokens":0}}

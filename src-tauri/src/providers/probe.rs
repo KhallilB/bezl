@@ -463,10 +463,10 @@ fn entries(root: &Path) -> BTreeSet<String> {
     found
 }
 
-struct Scratch(PathBuf);
+pub(super) struct Scratch(pub(super) PathBuf);
 
 impl Scratch {
-    fn new() -> std::io::Result<Self> {
+    pub(super) fn new() -> std::io::Result<Self> {
         static N: AtomicU32 = AtomicU32::new(0);
         let n = N.fetch_add(1, Ordering::Relaxed);
         let dir = std::env::temp_dir().join(format!("bezl-probe-{}-{n}", std::process::id()));
