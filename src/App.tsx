@@ -25,8 +25,8 @@ export function App() {
   const cfg = useSpikeConfig();
   const [workers, setWorkers] = useState<WorkerView[]>(initialWorkers);
   if (cfg?.enabled) return <PtySpike config={cfg} />;
-  // No navigation yet; ?screen=providers opens the Providers screen.
-  if (new URLSearchParams(window.location.search).get("screen") === "providers") {
+  // No task list before M5, so first run opens on Providers; ?screen=task shows the sample Task.
+  if (new URLSearchParams(window.location.search).get("screen") !== "task") {
     return (
       <AppTheme>
         <ProvidersScreen />

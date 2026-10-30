@@ -1,21 +1,46 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProviderCheck } from "./model";
 import { Providers } from "./Providers";
 
-/** Runs preflight once over IPC; it can take seconds, so the screen shows "checking" first. */
+/** Preflight takes seconds; a rerun keeps the last results, and runs never overlap. */
 export function ProvidersScreen() {
   const [checks, setChecks] = useState<ProviderCheck[] | null>(null);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string>();
-  useEffect(() => {
-    let live = true;
-    invoke<ProviderCheck[]>("providers_preflight").then(
-      (c) => live && setChecks(c),
-      (e: unknown) => live && setError(String(e)),
-    );
-    return () => {
-      live = false;
-    };
+  const running = useRef(false);
+  const live = useRef(true);
+
+  const check = useCallback(() => {
+    if (running.current) return;
+    running.current = true;
+    setChecking(true);
+    setError(undefined);
+    invoke<ProviderCheck[]>("providers_preflight")
+      .then(
+        (c) => live.current && setChecks(c),
+        (e: unknown) => live.current && setError(String(e)),
+      )
+      .finally(() => {
+        running.current = false;
+        if (live.current) setChecking(false);
+      });
   }, []);
-  return <Providers checks={checks} {...(error ? { error } : {})} />;
+
+  useEffect(() => {
+    live.current = true;
+    check();
+    return () => {
+      live.current = false;
+    };
+  }, [check]);
+
+  return (
+    <Providers
+      checks={checks}
+      checking={checking}
+      onCheckAgain={check}
+      {...(error ? { error } : {})}
+    />
+  );
 }

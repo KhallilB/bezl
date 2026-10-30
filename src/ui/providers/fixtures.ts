@@ -1,6 +1,27 @@
-import type { ProviderCheck, Usage } from "./model";
+import type { Capability, Enforcement, ProviderCheck, Usage } from "./model";
 
 const unknown: Usage = { tokens: { kind: "unknown" }, limits: { kind: "unknown" } };
+
+const blocked = (...flag: string[]): Enforcement => ({ kind: "blocked", detail: { flag } });
+const told: Enforcement = { kind: "instructionOnly" };
+const claudeTools = blocked("--tools", "Read,Glob,Grep");
+const codexSandbox = blocked("--sandbox", "read-only");
+
+// `capabilities.rs` RECORD as preflight serializes it.
+export const claudeEnforcement: Record<Capability, Enforcement> = {
+  fileWrites: claudeTools,
+  shell: claudeTools,
+  mcpTools: blocked("--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}'),
+  hooks: blocked("--settings", '{"disableAllHooks":true}'),
+  network: claudeTools,
+};
+export const codexEnforcement: Record<Capability, Enforcement> = {
+  fileWrites: codexSandbox,
+  shell: codexSandbox,
+  mcpTools: told,
+  hooks: told,
+  network: codexSandbox,
+};
 const canaryCounts = { input: 2, output: 4, cacheRead: 0, cacheWrite: 29763 };
 const probeCounts = { input: 4, output: 459, cacheRead: 12798, cacheWrite: 6718 };
 
@@ -47,6 +68,7 @@ export const claudeFound: ProviderCheck = {
       },
     },
   },
+  enforcement: claudeEnforcement,
 };
 
 /** Shapes from claude 2.1.312's `rate_limit_event`; the hit is the synthesized 429. */
@@ -91,6 +113,7 @@ export const thisMachine: ProviderCheck[] = [
     signin: { kind: "noBinary" },
     usage: unknown,
     readOnly: { kind: "noBinary" },
+    enforcement: codexEnforcement,
   },
 ];
 
@@ -124,4 +147,61 @@ export const codexFound: ProviderCheck = {
   usage: unknown,
   // Reviewers run in the workers' home, signed out here.
   readOnly: { kind: "needsSignIn" },
+  enforcement: codexEnforcement,
 };
+
+/** Both homes signed in; the live probe of 2026-10-29, where MCP failed. */
+export const codexProbed: ProviderCheck = {
+  ...codexFound,
+  discovery: { ...codexFound.discovery, rejected: [] },
+  signin: {
+    kind: "homes",
+    detail: [
+      {
+        home: "operator",
+        path: "/Users/me/.codex",
+        signin: { kind: "signedIn", detail: "chatGpt" },
+      },
+      {
+        home: "workers",
+        path: "/Users/me/Library/Application Support/dev.bezl.app/codex-home",
+        signin: { kind: "signedIn", detail: "chatGpt" },
+      },
+    ],
+  },
+  readOnly: {
+    kind: "probed",
+    detail: {
+      provider: "codex",
+      version: "0.163.0",
+      probedAt: 1793313000,
+      capabilities: {
+        fileWrites: { kind: "passed" },
+        shell: { kind: "passed" },
+        mcpTools: {
+          kind: "failed",
+          detail: { evidence: "an MCP server from the Codex config wrote its marker" },
+        },
+        hooks: {
+          kind: "notProbed",
+          detail: { why: "Codex runs only hooks trusted in its home; not probed" },
+        },
+        network: { kind: "passed" },
+      },
+      cost: { usd: null, tokens: { kind: "unknown" } },
+    },
+  },
+};
+
+export const claudeSignedOut: ProviderCheck = {
+  ...claudeFound,
+  signin: {
+    kind: "canary",
+    detail: { kind: "signedOut", detail: { says: "Not logged in · Please run /login" } },
+  },
+  usage: unknown,
+  readOnly: { kind: "needsSignIn" },
+};
+
+/** Claude signed out, only an impostor `codex`: nothing can write. */
+export const noWriter: ProviderCheck[] = [claudeSignedOut, thisMachine[1] as ProviderCheck];
