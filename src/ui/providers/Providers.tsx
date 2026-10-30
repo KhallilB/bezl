@@ -27,6 +27,8 @@ import {
   rejectionText,
   type Shown,
   signinShown,
+  tierRows,
+  tiersShown,
   tokensText,
   unknownText,
   windowText,
@@ -189,6 +191,44 @@ function ReadOnly({ check }: { check: ProviderCheck }) {
   );
 }
 
+function Tiers({ check }: { check: ProviderCheck }) {
+  const overall = tiersShown(check);
+  if (overall === null) return null;
+  const rows = tierRows(check);
+  return (
+    <section className="providers-section">
+      <Inline gap="sm" justify="between">
+        <Heading level={3} size="sm">
+          Coordination tiers
+        </Heading>
+        <Shows shown={overall.shown} />
+      </Inline>
+      <Text size="sm" tone="muted">
+        {[overall.detail, "Recorded for batches; nothing uses them yet."]
+          .filter(Boolean)
+          .join(". ")}
+      </Text>
+      {rows.length > 0 ? (
+        <ul className="providers-list" aria-label="Tiers">
+          {rows.map((row) => (
+            <li key={row.tier} className="providers-home">
+              <Inline gap="sm" justify="between">
+                <Text as="span" size="sm">
+                  {row.label}
+                </Text>
+                <Shows shown={row.outcome} />
+              </Inline>
+              <Text as="span" size="sm" tone="muted">
+                {row.note}
+              </Text>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 function Fixes({ check }: { check: ProviderCheck }) {
   const list = fixes(check);
   if (list.length === 0) return null;
@@ -242,6 +282,7 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
         <Fixes check={check} />
         <SignIn check={check} />
         <ReadOnly check={check} />
+        <Tiers check={check} />
         <UsageList check={check} />
         {rejected.length > 0 ? (
           <section>

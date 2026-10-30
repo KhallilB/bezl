@@ -15,6 +15,8 @@ import {
   type HomeSignIn,
   type ProviderCheck,
   readOnlyShown,
+  tierRows,
+  tiersShown,
 } from "./model";
 
 const workersPath = "/Users/me/Library/Application Support/dev.bezl.app/codex-home";
@@ -164,6 +166,22 @@ describe("fixes", () => {
   });
 });
 
+describe("tier probe fixes", () => {
+  test("a tier probe that could not run says so and is rerun by Check again", () => {
+    const check: ProviderCheck = {
+      ...claudeFound,
+      tiers: { kind: "couldNotRun", detail: { says: "timed out" } },
+    };
+    expect(fixes(check)).toEqual([
+      {
+        problem: "The coordination-tier probe could not run",
+        says: "timed out",
+        action: "Check again to probe it again.",
+      },
+    ]);
+  });
+});
+
 describe("capabilityRows", () => {
   test("merges each capability's enforcement with its probe result", () => {
     expect(capabilityRows(codexProbed)).toEqual([
@@ -244,5 +262,86 @@ describe("readOnlyShown", () => {
       readOnlyShown({ ...claudeFound, readOnly: { kind: "couldNotRun", detail: { says: "x" } } }),
     ).toEqual({ shown: { label: "Could not run", tone: "blocked", icon: "blocked" } });
     expect(readOnlyShown(thisMachine[1] as ProviderCheck)).toBeNull();
+  });
+});
+
+describe("tierRows", () => {
+  test("names each tier and shows its result in the probe's words", () => {
+    expect(tierRows(codexProbed)).toEqual([
+      {
+        tier: "stepBoundary",
+        label: "Tier 0: facts at step boundaries",
+        outcome: { label: "Holds", tone: "success", icon: "finished" },
+        note: "one exec call ran one turn and ended with turn.completed",
+      },
+      {
+        tier: "mcpTool",
+        label: "Tier 1: Bezl MCP tool",
+        outcome: { label: "Holds", tone: "success", icon: "finished" },
+        note: "exec --json has no init tool list; the agent called bezl's batch_state",
+      },
+      {
+        tier: "liveInput",
+        label: "Tier 2: live input mid-step",
+        outcome: { label: "Missing", tone: "neutral", icon: "idle" },
+        note: "codex queue took the input mid-step, but the step ended without it",
+      },
+    ]);
+  });
+
+  test("an unknown tier shows why, never a pass", () => {
+    const check: ProviderCheck = {
+      ...codexProbed,
+      tiers: {
+        kind: "probed",
+        detail: {
+          ...(codexProbed.tiers.kind === "probed" ? codexProbed.tiers.detail : ({} as never)),
+          tiers: {
+            stepBoundary: { kind: "holds", detail: { evidence: "ran" } },
+            mcpTool: { kind: "unknown", detail: { why: "no call" } },
+            liveInput: { kind: "unknown", detail: { why: "no push" } },
+          },
+        },
+      },
+    };
+    expect(tierRows(check).map((r) => [r.outcome?.label, r.note])).toEqual([
+      ["Holds", "ran"],
+      ["Unknown", "no call"],
+      ["Unknown", "no push"],
+    ]);
+  });
+
+  test("an unprobed CLI has no tier rows", () => {
+    expect(tierRows(codexFound)).toEqual([]);
+  });
+});
+
+describe("tiersShown", () => {
+  const on = (s: number) =>
+    new Date(s * 1000).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  test("counts the tiers that hold", () => {
+    expect(tiersShown(claudeFound)).toEqual({
+      shown: { label: "All three hold", tone: "success", icon: "finished" },
+      detail: `Probed 2.1.312 on ${on(1793344492)}`,
+    });
+    expect(tiersShown(codexProbed)).toEqual({
+      shown: { label: "2 of 3 hold", tone: "neutral", icon: "idle" },
+      detail: `Probed 0.163.0 on ${on(1793344492)}`,
+    });
+  });
+
+  test("an unprobed CLI says why", () => {
+    expect(tiersShown(codexFound)).toEqual({
+      shown: { label: "Not probed: needs sign-in", tone: "warning", icon: "blocked" },
+    });
+    expect(
+      tiersShown({ ...claudeFound, tiers: { kind: "couldNotRun", detail: { says: "x" } } }),
+    ).toEqual({ shown: { label: "Could not run", tone: "blocked", icon: "blocked" } });
+    expect(tiersShown(thisMachine[1] as ProviderCheck)).toBeNull();
   });
 });

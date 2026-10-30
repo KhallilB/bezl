@@ -186,10 +186,38 @@ describe("Providers", () => {
     expect(within(rows[0] as HTMLElement).getByText("--sandbox read-only").tagName).toBe("CODE");
   });
 
+  test("lists each coordination tier with its result, a missing one in the probe's words", () => {
+    render(<Providers checks={[codexProbed]} />);
+    const codex = screen.getByRole("region", { name: "Codex" });
+    const section = within(codex).getByRole("heading", { name: "Coordination tiers" }).parentElement
+      ?.parentElement as HTMLElement;
+    expect(section).toHaveTextContent("2 of 3 hold");
+    expect(section).toHaveTextContent("Recorded for batches; nothing uses them yet.");
+    const rows = within(within(codex).getByRole("list", { name: "Tiers" })).getAllByRole(
+      "listitem",
+    );
+    expect(rows).toHaveLength(3);
+    const live = rows[2] as HTMLElement;
+    expect(live).toHaveTextContent("Tier 2: live input mid-step");
+    expect(live).toHaveTextContent(
+      "codex queue took the input mid-step, but the step ended without it",
+    );
+    expect(within(live).getByText("Missing").closest(".kb-status")).toHaveAttribute(
+      "data-tone",
+      "neutral",
+    );
+  });
+
+  test("shows no tiers for a CLI not found", () => {
+    render(<Providers checks={[thisMachine[1] as ProviderCheck]} />);
+    expect(screen.queryByRole("heading", { name: "Coordination tiers" })).toBeNull();
+  });
+
   test("shows enforcement before a probe, and nothing for a CLI not found", () => {
     render(<Providers checks={[codexFound, thisMachine[1] as ProviderCheck]} />);
     const [found, missing] = screen.getAllByRole("region") as [HTMLElement, HTMLElement];
-    expect(within(found).getByText("Not probed: needs sign-in")).toBeVisible();
+    // Read-only and tiers both wait on sign-in.
+    expect(within(found).getAllByText("Not probed: needs sign-in")).toHaveLength(2);
     expect(within(found).getByRole("list", { name: "Capabilities" })).toHaveTextContent(
       "Instruction only",
     );
