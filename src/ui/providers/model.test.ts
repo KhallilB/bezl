@@ -236,6 +236,25 @@ describe("readOnlyShown", () => {
     });
   });
 
+  test("passed and unprobed, none failed, is partly probed", () => {
+    if (codexProbed.readOnly.kind !== "probed") throw new Error("fixture not probed");
+    const { detail } = codexProbed.readOnly;
+    const partly: ProviderCheck = {
+      ...codexProbed,
+      readOnly: {
+        kind: "probed",
+        detail: {
+          ...detail,
+          capabilities: { ...detail.capabilities, mcpTools: { kind: "passed" } },
+        },
+      },
+    };
+    expect(readOnlyShown(partly)).toEqual({
+      shown: { label: "Partly probed", tone: "neutral", icon: "idle" },
+      detail: `Probed 0.163.0 on ${on(1793313000)}`,
+    });
+  });
+
   test("an unprobed reviewer says why", () => {
     expect(readOnlyShown(codexFound)).toEqual({
       shown: { label: "Not probed: needs sign-in", tone: "warning", icon: "blocked" },
