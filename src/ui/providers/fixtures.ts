@@ -48,6 +48,15 @@ export const claudeFound: ProviderCheck = {
     detail: {
       provider: "claude",
       version: "2.1.312",
+      reviewerArgs: [
+        "--tools",
+        "Read,Glob,Grep",
+        "--strict-mcp-config",
+        "--mcp-config",
+        '{"mcpServers":{}}',
+        "--settings",
+        '{"disableAllHooks":true}',
+      ],
       probedAt: 1793312545,
       capabilities: {
         fileWrites: { kind: "passed" },
@@ -174,6 +183,7 @@ export const codexProbed: ProviderCheck = {
     detail: {
       provider: "codex",
       version: "0.163.0",
+      reviewerArgs: ["--sandbox", "read-only"],
       probedAt: 1793313000,
       capabilities: {
         fileWrites: { kind: "passed" },

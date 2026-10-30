@@ -29,6 +29,7 @@ pub type Outcomes = BTreeMap<Capability, Outcome>;
 pub struct ProbeRecord {
     pub provider: Provider,
     pub version: String,
+    pub reviewer_args: Vec<String>,
     /// Unix seconds.
     pub probed_at: u64,
     pub capabilities: Outcomes,
@@ -284,6 +285,10 @@ pub fn probe(
     Ok(ProbeRecord {
         provider,
         version: found.version.clone(),
+        reviewer_args: reviewer_args(provider)
+            .iter()
+            .map(|a| a.to_string())
+            .collect(),
         probed_at: SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_secs()),
@@ -440,11 +445,14 @@ pub fn record_path(dir: &Path, provider: Provider, version: &str) -> PathBuf {
     dir.join(format!("{}-{version}.json", provider.binary_name()))
 }
 
-/// A record that is missing, unreadable or for another CLI is no record.
+/// A record that is missing, unreadable, for another CLI or probed with other reviewer args is no record.
 pub fn load(dir: &Path, provider: Provider, version: &str) -> Option<ProbeRecord> {
     let text = fs::read_to_string(record_path(dir, provider, version)).ok()?;
     let record: ProbeRecord = serde_json::from_str(&text).ok()?;
-    (record.provider == provider && record.version == version).then_some(record)
+    (record.provider == provider
+        && record.version == version
+        && record.reviewer_args == reviewer_args(provider))
+    .then_some(record)
 }
 
 /// Written aside then renamed, so a crash never leaves half a record.
@@ -699,6 +707,7 @@ mod tests {
         ProbeRecord {
             provider: Provider::Codex,
             version: version.into(),
+            reviewer_args: vec!["--sandbox".into(), "workspace-write".into()],
             probed_at: 1_793_312_058,
             capabilities: outcomes([
                 (FileWrites, Outcome::Passed),
@@ -721,6 +730,7 @@ mod tests {
             json!({
                 "provider": "codex",
                 "version": "0.163.0",
+                "reviewerArgs": ["--sandbox", "workspace-write"],
                 "probedAt": 1_793_312_058,
                 "capabilities": {
                     "fileWrites": { "kind": "passed" },
@@ -739,17 +749,45 @@ mod tests {
         use super::*;
         use crate::providers::testing::Dir;
 
+        /// Probed with today's Codex reviewer args.
+        fn current(version: &str) -> ProbeRecord {
+            ProbeRecord {
+                reviewer_args: reviewer_args(Provider::Codex)
+                    .iter()
+                    .map(|a| a.to_string())
+                    .collect(),
+                ..record(version)
+            }
+        }
+
         #[test]
         fn a_stored_record_loads_for_its_provider_and_version_only() {
             let dir = Dir::new();
             let cache = dir.0.join("probes");
-            store(&cache, &record("0.163.0")).unwrap();
+            store(&cache, &current("0.163.0")).unwrap();
             assert_eq!(
                 load(&cache, Provider::Codex, "0.163.0"),
-                Some(record("0.163.0"))
+                Some(current("0.163.0"))
             );
             assert_eq!(load(&cache, Provider::Codex, "0.164.0"), None);
             assert_eq!(load(&cache, Provider::ClaudeCode, "0.163.0"), None);
+        }
+
+        #[test]
+        fn a_record_probed_with_other_reviewer_args_is_no_record() {
+            let dir = Dir::new();
+            store(&dir.0, &record("0.163.0")).unwrap();
+            assert_eq!(load(&dir.0, Provider::Codex, "0.163.0"), None);
+        }
+
+        #[test]
+        fn a_record_from_before_reviewer_args_were_kept_is_no_record() {
+            let dir = Dir::new();
+            let mut old = serde_json::to_value(current("0.163.0")).unwrap();
+            old.as_object_mut().unwrap().remove("reviewerArgs");
+            let path = record_path(&dir.0, Provider::Codex, "0.163.0");
+            std::fs::write(&path, old.to_string()).unwrap();
+            assert_eq!(load(&dir.0, Provider::Codex, "0.163.0"), None);
         }
 
         #[test]
@@ -829,6 +867,7 @@ cat "$d/said""#
                 (record.provider, record.version.as_str()),
                 (Provider::ClaudeCode, "9.9.9")
             );
+            assert_eq!(record.reviewer_args, reviewer_args(Provider::ClaudeCode));
             assert_eq!(record.capabilities, all_passed());
             assert_eq!(record.cost, cost(Provider::ClaudeCode, CLAUDE_READ_ONLY));
             let log = log(&dir);
