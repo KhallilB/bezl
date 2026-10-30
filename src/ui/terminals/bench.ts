@@ -45,3 +45,34 @@ export class StreamCheck {
     return { bytes: this.bytes, retriedCr: this.retriedCr, hash };
   }
 }
+
+/** A footprint sample: [ms since epoch, MB]. */
+export type MemSample = [number, number];
+
+export type BenchTimes = {
+  idleStart: number;
+  idleEnd: number;
+  start: number;
+  streamsDone: number;
+  restStart: number;
+  restEnd: number;
+};
+
+/** M4's memory lines. Idle is a median, so one startup spike can't lift the baseline. */
+export function memoryMb(mem: MemSample[], t: BenchTimes) {
+  const window = (from: number, to: number) =>
+    mem.filter(([at]) => at >= from && at <= to).map(([, mb]) => mb);
+  // An empty window is NaN, never -Infinity, which would pass every "under" line.
+  const peak = (xs: number[]) => (xs.length ? Math.max(...xs) : Number.NaN);
+  const idleSamples = window(t.idleStart, t.idleEnd).sort((a, b) => a - b);
+  const idle = idleSamples.length
+    ? (idleSamples[Math.floor(idleSamples.length / 2)] as number)
+    : Number.NaN;
+  const restPeak = peak(window(t.restStart, t.restEnd));
+  return {
+    idle,
+    burstPeak: peak(window(t.start, t.streamsDone)),
+    restPeak,
+    restOverIdle: restPeak - idle,
+  };
+}

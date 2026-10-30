@@ -1,7 +1,7 @@
 // Checks a terminal-bench run against M4's pass mark. Usage: bun check.ts <out-dir>
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fnv1a } from "../../src/ui/terminals/bench";
+import { type BenchTimes, fnv1a, type MemSample, memoryMb } from "../../src/ui/terminals/bench";
 
 const MIB = 1024 * 1024;
 const out = process.argv[2] ?? ".";
@@ -22,24 +22,20 @@ const report = JSON.parse(readFileSync(join(out, "result.json"), "utf8")) as {
   echoMs: { burst: number[]; rest: number[] };
   snapshots: { pane: string; rows: number; matched: boolean }[];
   canvases: number;
-  t: { start: number; streamsDone: number; restStart: number; restEnd: number };
+  t: BenchTimes;
 };
 const mem = readFileSync(join(out, "mem.log"), "utf8")
   .trim()
   .split("\n")
-  .map((l) => l.split(" ").map(Number) as [number, number]);
-const within = (from: number, to: number) =>
-  Math.max(...mem.filter(([t]) => t >= from && t <= to).map(([, mb]) => mb));
-
-const burstMb = within(report.t.start, report.t.streamsDone);
-const restMb = within(report.t.restStart, report.t.restEnd);
+  .map((l) => l.split(" ").map(Number) as MemSample);
+const memory = memoryMb(mem, report.t);
 const echo = [...report.echoMs.burst, ...report.echoMs.rest];
 const lines = {
   noLostBytes: report.panes.every(
     (p) => p.code === 0 && p.hash === expected.hash && p.bytes - p.retriedCr === expected.bytes,
   ),
-  restUnder150Mb: restMb < 150,
-  burstUnder600Mb: burstMb < 600,
+  restUnder150MbOverIdle: memory.restOverIdle < 150,
+  burstUnder600Mb: memory.burstPeak < 600,
   echoUnder100Ms: echo.length > 0 && Math.max(...echo) < 100,
   snapshotsMatch: report.snapshots.length === report.panes.length && report.snapshots.every((s) => s.matched),
 };
@@ -52,7 +48,7 @@ console.log(
       panes: report.panes,
       streamSeconds: (report.t.streamsDone - report.t.start) / 1000,
       aggregateMBps: (3 * expected.bytes) / MIB / ((report.t.streamsDone - report.t.start) / 1000),
-      memoryMb: { burstPeak: burstMb, restPeak: restMb, samples: mem.length },
+      memoryMb: { ...memory, samples: mem.length },
       echoMs: {
         burst: { n: report.echoMs.burst.length, median: median(report.echoMs.burst), max: Math.max(...report.echoMs.burst) },
         rest: { n: report.echoMs.rest.length, median: median(report.echoMs.rest), max: Math.max(...report.echoMs.rest) },
