@@ -1,9 +1,12 @@
 //! The terminal port: every open pane by id, and the commands the screen drives them with.
 use super::pane::{Output, Pane, Spawn};
+use super::record::{Record, Saved, SavedRef};
 use std::collections::HashMap;
 use std::io;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::ipc::{Channel, InvokeResponseBody};
 
 /// Undrawn bytes per pane before its agent is held. M4 allows 1 MiB; all panes share one
@@ -15,14 +18,38 @@ pub type PaneId = u32;
 #[derive(Default)]
 pub struct TerminalPort {
     next: AtomicU32,
-    panes: Mutex<HashMap<PaneId, Arc<Pane>>>,
+    panes: Mutex<HashMap<PaneId, Arc<Entry>>>,
+}
+
+struct Entry {
+    pane: Pane,
+    name: String,
+    /// Where the agent runs; its clone holds the pane's snapshots.
+    cwd: PathBuf,
 }
 
 impl TerminalPort {
-    pub fn open(&self, spec: Spawn, out: impl Output) -> io::Result<PaneId> {
-        let pane = Pane::spawn(spec, out, PANE_LIMIT)?;
+    /// `name` keys the pane's folder in the record.
+    pub fn open(&self, name: &str, spec: Spawn, out: impl Output) -> io::Result<PaneId> {
+        let cwd = match &spec.cwd {
+            Some(cwd) => cwd.clone(),
+            None => std::env::current_dir()?,
+        };
+        let pane = Pane::spawn(
+            Spawn {
+                cwd: Some(cwd.clone()),
+                ..spec
+            },
+            out,
+            PANE_LIMIT,
+        )?;
         let id = self.next.fetch_add(1, Ordering::Relaxed);
-        self.panes.lock().unwrap().insert(id, Arc::new(pane));
+        let entry = Entry {
+            pane,
+            name: name.into(),
+            cwd,
+        };
+        self.panes.lock().unwrap().insert(id, Arc::new(entry));
         Ok(id)
     }
 
@@ -41,20 +68,33 @@ impl TerminalPort {
         self.with(id, |p| p.resize(cols, rows))
     }
 
+    /// Saves what the pane's screen shows into the record of the checkout it runs in.
+    pub fn snapshot(&self, id: PaneId) -> io::Result<SavedRef> {
+        let entry = self.entry(id)?;
+        let snapshot = entry.pane.snapshot()?;
+        let taken_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(io::Error::other)?
+            .as_millis() as u64;
+        Record::for_checkout(&entry.cwd)?.save(&entry.name, taken_at, &snapshot)
+    }
+
     /// Kills the pane's agent and forgets the pane. Closing an unknown pane is a no-op.
     pub fn close(&self, id: PaneId) {
-        let pane = self.panes.lock().unwrap().remove(&id);
-        if let Some(pane) = pane {
-            pane.close();
+        let entry = self.panes.lock().unwrap().remove(&id);
+        if let Some(entry) = entry {
+            entry.pane.close();
         }
     }
 
     fn with<T>(&self, id: PaneId, f: impl FnOnce(&Pane) -> io::Result<T>) -> io::Result<T> {
-        // A clone, so a write held by a full PTY never holds the map.
-        let pane = self.panes.lock().unwrap().get(&id).cloned();
-        let pane =
-            pane.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("no pane {id}")))?;
-        f(&pane)
+        f(&self.entry(id)?.pane)
+    }
+
+    /// A clone, so a write held by a full PTY never holds the map.
+    fn entry(&self, id: PaneId) -> io::Result<Arc<Entry>> {
+        let entry = self.panes.lock().unwrap().get(&id).cloned();
+        entry.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("no pane {id}")))
     }
 }
 
@@ -71,11 +111,12 @@ impl Output for ChannelOutput {
     }
 }
 
-/// `argv` defaults to the login shell, `cwd` to the app's working directory.
+/// `argv` defaults to the login shell, `cwd` to the app's working directory, `name` to "pane".
 #[tauri::command]
 pub fn terminal_open(
     argv: Option<Vec<String>>,
-    cwd: Option<std::path::PathBuf>,
+    cwd: Option<PathBuf>,
+    name: Option<String>,
     cols: u16,
     rows: u16,
     on_output: Channel<InvokeResponseBody>,
@@ -87,15 +128,43 @@ pub fn terminal_open(
             "-l".into(),
         ]
     });
-    let cwd = cwd.or_else(|| std::env::current_dir().ok());
     let spec = Spawn {
         argv,
         cwd,
         cols,
         rows,
     };
-    port.open(spec, ChannelOutput(on_output))
+    let name = name.as_deref().unwrap_or("pane");
+    port.open(name, spec, ChannelOutput(on_output))
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn terminal_snapshot(
+    id: PaneId,
+    port: tauri::State<'_, TerminalPort>,
+) -> Result<SavedRef, String> {
+    port.snapshot(id).map_err(|e| e.to_string())
+}
+
+/// Snapshots in the record of the app's own checkout, newest first.
+#[tauri::command]
+pub fn terminal_snapshots() -> Result<Vec<SavedRef>, String> {
+    app_record()
+        .and_then(|r| r.list())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn terminal_snapshot_open(pane: String, taken_at: u64) -> Result<Saved, String> {
+    app_record()
+        .and_then(|r| r.open(&pane, taken_at))
+        .map_err(|e| e.to_string())
+}
+
+// Panes default to the app's working directory, so their snapshots land in its record.
+fn app_record() -> io::Result<Record> {
+    Record::for_checkout(&std::env::current_dir()?)
 }
 
 /// Async so a write held by a full PTY never blocks the main thread.
@@ -163,9 +232,11 @@ mod tests {
         let port = TerminalPort::default();
         let (tx, _rx) = mpsc::channel();
         let a = port
-            .open(spec(&["cat"]), Exits(Mutex::new(tx.clone())))
+            .open("pane", spec(&["cat"]), Exits(Mutex::new(tx.clone())))
             .unwrap();
-        let b = port.open(spec(&["cat"]), Exits(Mutex::new(tx))).unwrap();
+        let b = port
+            .open("pane", spec(&["cat"]), Exits(Mutex::new(tx)))
+            .unwrap();
         assert_ne!(a, b);
     }
 
@@ -191,7 +262,9 @@ mod tests {
     fn close_kills_the_agent_and_forgets_the_pane() {
         let port = TerminalPort::default();
         let (tx, rx) = mpsc::channel();
-        let id = port.open(spec(&["cat"]), Exits(Mutex::new(tx))).unwrap();
+        let id = port
+            .open("pane", spec(&["cat"]), Exits(Mutex::new(tx)))
+            .unwrap();
         port.close(id);
         assert!(
             rx.recv_timeout(Duration::from_secs(5)).is_ok(),
@@ -204,10 +277,59 @@ mod tests {
     }
 
     #[test]
+    fn snapshots_a_pane_into_its_checkouts_record() {
+        let repo = std::env::temp_dir().join(format!("bezl-port-snap-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&repo);
+        std::fs::create_dir_all(&repo).unwrap();
+        assert!(
+            std::process::Command::new("git")
+                .args(["init", "-q"])
+                .current_dir(&repo)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let port = TerminalPort::default();
+        let (tx, rx) = mpsc::channel();
+        let mut s = spec(&["printf", "snapshot me"]);
+        s.cwd = Some(repo.clone());
+        let id = port.open("Writer", s, Exits(Mutex::new(tx))).unwrap();
+        rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let saved = port.snapshot(id).unwrap();
+        assert_eq!(saved.pane, "writer");
+        let back = Record::for_checkout(&repo)
+            .unwrap()
+            .open(&saved.pane, saved.taken_at)
+            .unwrap();
+        assert_eq!(back.snapshot.plain.trim_end(), "snapshot me");
+        assert_eq!(
+            port.snapshot(99).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+        let _ = std::fs::remove_dir_all(&repo);
+    }
+
+    #[test]
+    fn a_pane_outside_a_checkout_has_no_record_to_save_to() {
+        let dir = std::env::temp_dir().join(format!("bezl-port-nogit-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let port = TerminalPort::default();
+        let (tx, _rx) = mpsc::channel();
+        let mut s = spec(&["cat"]);
+        s.cwd = Some(dir.clone());
+        let id = port.open("pane", s, Exits(Mutex::new(tx))).unwrap();
+        assert_eq!(
+            port.snapshot(id).unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn a_failed_spawn_opens_nothing() {
         let port = TerminalPort::default();
         let (tx, _rx) = mpsc::channel();
-        assert!(port.open(spec(&[]), Exits(Mutex::new(tx))).is_err());
+        assert!(port.open("pane", spec(&[]), Exits(Mutex::new(tx))).is_err());
         assert!(port.panes.lock().unwrap().is_empty());
     }
 }

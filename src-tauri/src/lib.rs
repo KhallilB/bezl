@@ -13,6 +13,9 @@ pub fn run() {
             terminal::port::terminal_drawn,
             terminal::port::terminal_resize,
             terminal::port::terminal_close,
+            terminal::port::terminal_snapshot,
+            terminal::port::terminal_snapshots,
+            terminal::port::terminal_snapshot_open,
             terminal::bench::terminal_bench,
             terminal::bench::terminal_bench_done
         ])

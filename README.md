@@ -42,8 +42,8 @@ You can also build Bezl from source; see [Develop](#develop).
 | Layer | Choice | Status |
 |---|---|---|
 | Host | Tauri 2; the Rust core will own the domain and policy | Shell built |
-| Live terminal | `@xterm/xterm` and `portable-pty`, bytes over a raw IPC channel | Prototype |
-| Terminal snapshots | `libghostty-vt` headless, with `@xterm/addon-serialize` as the fallback | Planned |
+| Live terminal | `@xterm/xterm` and `portable-pty`, bytes over a raw IPC channel with backpressure | Built |
+| Terminal snapshots | `libghostty-vt` headless, saved in `.git/bezl/terminals/` | Built |
 | Records | Append-only JSONL events and TOML manifests in `.git/bezl/`, per clone and never tracked | Planned |
 | UI | React 19 and kbui 0.4.0, from GitHub release tarballs | Built |
 | Model endpoints | Ollama on this machine, local or cloud models, for jobs without tools | Planned |
@@ -53,7 +53,7 @@ You can also build Bezl from source; see [Develop](#develop).
 ```text
 src/ui/task/    Task screen, on fixture data for now
 src/ui/theme/   app theme and tokens
-src/spike/      live terminal prototype, removed once the real terminal lands
+src/ui/terminals/ agent terminals and their snapshots
 src-tauri/      Tauri shell and thin commands
 ```
 
@@ -66,6 +66,8 @@ Agent instruction and settings files are gitignored at any depth: `CLAUDE.md`, `
 ```bash
 mise install && bun install
 ```
+
+The Rust build also needs Zig 0.15.2 for `libghostty-vt` (`brew install zig@0.15`), and fetches Ghostty the first time.
 
 ```bash
 bun run check

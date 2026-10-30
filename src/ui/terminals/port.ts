@@ -1,6 +1,18 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 
-export type PaneSpec = { argv?: string[]; cwd?: string; cols: number; rows: number };
+/** `name` keys the pane's snapshots in the record. */
+export type PaneSpec = { argv?: string[]; cwd?: string; name?: string; cols: number; rows: number };
+
+export type SavedRef = { pane: string; takenAt: number };
+
+/** A snapshot from the record: the screen as Ghostty parsed it. */
+export type Saved = SavedRef & { cols: number; rows: number; plain: string; vt: string };
+
+export type TerminalRecord = {
+  /** Newest first. */
+  list(): Promise<SavedRef[]>;
+  open(ref: SavedRef): Promise<Saved>;
+};
 
 export type PaneOutput = {
   bytes(chunk: Uint8Array): void;
@@ -15,6 +27,8 @@ export type PaneHandle = {
   /** The screen drew `n` more bytes; the agent is held once `PANE_LIMIT` (128 KiB) is undrawn. */
   drawn(n: number): void;
   resize(cols: number, rows: number): void;
+  /** Saves what the screen shows into the record of the pane's checkout. */
+  snapshot(): Promise<SavedRef>;
   close(): void;
 };
 
@@ -36,6 +50,7 @@ export const tauriPort: TerminalPort = {
     const id = await invoke<number>("terminal_open", {
       argv: spec.argv ?? null,
       cwd: spec.cwd ?? null,
+      name: spec.name ?? null,
       cols: spec.cols,
       rows: spec.rows,
       onOutput,
@@ -45,7 +60,13 @@ export const tauriPort: TerminalPort = {
       write: (data) => invoke("terminal_write", { id, data }),
       drawn: (n) => void invoke("terminal_drawn", { id, n }).catch(closed),
       resize: (cols, rows) => void invoke("terminal_resize", { id, cols, rows }).catch(closed),
+      snapshot: () => invoke<SavedRef>("terminal_snapshot", { id }),
       close: () => void invoke("terminal_close", { id }).catch(closed),
     };
   },
+};
+
+export const tauriRecord: TerminalRecord = {
+  list: () => invoke<SavedRef[]>("terminal_snapshots"),
+  open: ({ pane, takenAt }) => invoke<Saved>("terminal_snapshot_open", { pane, takenAt }),
 };

@@ -2,8 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 import { StreamCheck } from "./bench";
-import { tauriPort } from "./port";
+import { type PaneHandle, tauriPort, tauriRecord } from "./port";
 import { type PaneConfig, Terminals } from "./Terminals";
+import { replayRows, screenRows } from "./xterm";
 
 type Bench = { payload: string; result: string };
 
@@ -35,6 +36,8 @@ function startRun(bench: Bench) {
   const start = Date.now();
   const checks = Array.from({ length: STREAMS }, () => new StreamCheck());
   const exits: { code: number | null; ms: number }[] = [];
+  const terms: Terminal[] = [];
+  const handles: PaneHandle[] = [];
   let allExited: () => void = () => {};
   const streamsDone = new Promise<void>((r) => (allExited = r));
   let echo: Terminal | null = null;
@@ -45,6 +48,8 @@ function startRun(bench: Bench) {
   const panes: PaneConfig[] = checks.map((check, i) => ({
     label: `Stream ${i + 1}`,
     argv: ["cat", bench.payload],
+    onTerminal: (t) => (terms[i] = t),
+    onHandle: (h) => (handles[i] = h),
     onDrawn: (chunk) => check.push(chunk),
     onExit: (code) => {
       exits[i] = { code, ms: Date.now() - start };
@@ -93,10 +98,24 @@ function startRun(bench: Bench) {
     }
     const restStart = streamsAt + SETTLE_MS;
     await sleep(Math.max(0, restStart - Date.now()) + REST_MS);
+    // After the rest window, so saving never shows in its memory.
+    const snapshots = await Promise.all(
+      handles.map(async (h, i) => {
+        const saved = await tauriRecord.open(await h.snapshot());
+        const live = screenRows(terms[i] as Terminal);
+        const replayed = await replayRows(saved);
+        return {
+          pane: saved.pane,
+          rows: live.length,
+          matched: JSON.stringify(live) === JSON.stringify(replayed),
+        };
+      }),
+    );
     const report = {
       payload: bench.payload,
       panes: checks.map((c, i) => ({ ...c.result(), ...exits[i] })),
       echoMs: { burst, rest },
+      snapshots,
       canvases: document.querySelectorAll(".xterm-screen canvas").length,
       t: { start, streamsDone: streamsAt, restStart, restEnd: restStart + REST_MS },
     };

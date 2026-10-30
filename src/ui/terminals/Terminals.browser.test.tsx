@@ -16,6 +16,7 @@ type FakeHandle = {
   drawn: ReturnType<typeof vi.fn<PaneHandle["drawn"]>>;
   resize: ReturnType<typeof vi.fn<PaneHandle["resize"]>>;
   close: ReturnType<typeof vi.fn<PaneHandle["close"]>>;
+  snapshot: ReturnType<typeof vi.fn<PaneHandle["snapshot"]>>;
 };
 type Opened = { spec: PaneSpec; out: PaneOutput; handle: FakeHandle };
 
@@ -30,6 +31,7 @@ function fakePort(fail?: string) {
         drawn: vi.fn<PaneHandle["drawn"]>(),
         resize: vi.fn<PaneHandle["resize"]>(),
         close: vi.fn<PaneHandle["close"]>(),
+        snapshot: vi.fn<PaneHandle["snapshot"]>(async () => ({ pane: "writer", takenAt: 1 })),
       };
       opened.push({ spec, out, handle });
       return handle;

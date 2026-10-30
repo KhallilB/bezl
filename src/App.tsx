@@ -7,7 +7,7 @@ import * as samples from "./ui/task/fixtures";
 import type { WorkerView } from "./ui/task/model";
 import { Task } from "./ui/task/Task";
 import { TerminalBench } from "./ui/terminals/TerminalBench";
-import { TerminalsScreen } from "./ui/terminals/TerminalsScreen";
+import { SnapshotsScreen, TerminalsScreen } from "./ui/terminals/TerminalsScreen";
 import { AppTheme } from "./ui/theme/AppTheme";
 
 // Sample workers until the Rust domain projects real ones over IPC; ?sample= picks a state.
@@ -24,6 +24,7 @@ function initialWorkers(): WorkerView[] {
 
 const screens: Record<string, () => ReactNode> = {
   terminals: TerminalsScreen,
+  snapshots: SnapshotsScreen,
   "terminal-bench": TerminalBench,
 };
 
