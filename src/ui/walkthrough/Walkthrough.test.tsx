@@ -12,17 +12,19 @@ const dock = () => screen.getByRole("region", { name: "Walkthrough" });
 const tasks = () => screen.getByRole("navigation", { name: "Tasks" });
 const stageStrip = () => screen.getByRole("navigation", { name: "Stages" });
 const total = steps.length;
+/** "n of total" for a step id, as the dock shows it. */
+const position = (id: string) => `${steps.findIndex((s) => s.id === id) + 1} of ${total}`;
 
 beforeEach(() => {
   document.documentElement.dataset.theme = "dark";
-  at("?screen=walkthrough");
+  at("?screen=walkthrough&step=tasks");
 });
 afterEach(() => at(""));
 
 describe("Walkthrough tour", () => {
-  test("opens on the first step with its task, stage and status sentence", () => {
+  test("opens the step the URL names with its task, stage and status sentence", () => {
     render(<Walkthrough />);
-    expect(within(dock()).getByText(`1 of ${total}`)).toBeVisible();
+    expect(within(dock()).getByText(position("tasks"))).toBeVisible();
     expect(within(dock()).getByText("Every task in one list")).toBeVisible();
     expect(within(tasks()).getByRole("link", { current: "page" })).toHaveAccessibleName(
       /Empty state for Projects/,
@@ -35,29 +37,35 @@ describe("Walkthrough tour", () => {
     ).toBeVisible();
   });
 
+  test("starts at the first step, where Back is off", () => {
+    at("?screen=walkthrough");
+    render(<Walkthrough />);
+    expect(within(dock()).getByText(`1 of ${total}`)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+  });
+
   test("Next and Back walk the steps and keep the URL in step", async () => {
     render(<Walkthrough />);
-    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(within(dock()).getByText(`2 of ${total}`)).toBeVisible();
+    expect(within(dock()).getByText(position("stages"))).toBeVisible();
     expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(
       "Brief, done",
     );
     expect(window.location.search).toBe("?screen=walkthrough&step=stages&theme=dark");
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(within(dock()).getByText(`1 of ${total}`)).toBeVisible();
+    expect(within(dock()).getByText(position("tasks"))).toBeVisible();
   });
 
   test("arrow keys step, T flips the theme, modifiers are left alone", async () => {
     render(<Walkthrough />);
     await userEvent.keyboard("{ArrowRight}{ArrowRight}");
-    expect(within(dock()).getByText(`3 of ${total}`)).toBeVisible();
+    expect(within(dock()).getByText(position("working"))).toBeVisible();
     await userEvent.keyboard("{ArrowLeft}");
-    expect(within(dock()).getByText(`2 of ${total}`)).toBeVisible();
+    expect(within(dock()).getByText(position("stages"))).toBeVisible();
     await userEvent.keyboard("t");
     expect(document.documentElement.dataset.theme).toBe("light");
     await userEvent.keyboard("{Meta>}{ArrowRight}{/Meta}");
-    expect(within(dock()).getByText(`2 of ${total}`)).toBeVisible();
+    expect(within(dock()).getByText(position("stages"))).toBeVisible();
   });
 
   test("the contents menu jumps to any step", async () => {
@@ -122,5 +130,46 @@ describe("Walkthrough design states", () => {
     await userEvent.click(screen.getByRole("button", { name: "Open Long content, light" }));
     expect(within(dock()).getByText("Long content")).toBeVisible();
     expect(document.documentElement.dataset.theme).toBe("light");
+  });
+});
+
+describe("Walkthrough getting started", () => {
+  test("Choose a folder moves on to preflight", async () => {
+    at("?screen=walkthrough&step=open-repo");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Choose a folder" }));
+    expect(within(dock()).getByText(position("preflight"))).toBeVisible();
+    expect(screen.getByText("Checking agent CLIs…")).toBeVisible();
+  });
+
+  test("a folder that is not a repository is refused with its reason", () => {
+    at("?screen=walkthrough&step=not-git");
+    render(<Walkthrough />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Not a git repository");
+  });
+
+  test("Providers shows the real screen for each preflight result", () => {
+    at("?screen=walkthrough&step=providers");
+    const { unmount } = render(<Walkthrough />);
+    expect(screen.getByText("Ready: Claude Code and Codex can write.")).toBeVisible();
+    unmount();
+    at("?screen=walkthrough&step=impostor");
+    const impostor = render(<Walkthrough />);
+    expect(screen.getByText(/\/Users\/me\/\.bun\/bin\/codex/)).toBeVisible();
+    impostor.unmount();
+    at("?screen=walkthrough&step=no-writer");
+    render(<Walkthrough />);
+    expect(screen.getByText("No writer available")).toBeVisible();
+  });
+
+  test("the empty task list offers one action, which starts the tasks chapter", async () => {
+    at("?screen=walkthrough&step=empty-list");
+    render(<Walkthrough />);
+    expect(within(tasks()).queryAllByRole("link")).toHaveLength(0);
+    expect(screen.getByRole("heading", { level: 1, name: "No tasks yet" })).toBeVisible();
+    const actions = screen.getAllByRole("button", { name: "New task" });
+    expect(actions.length).toBeGreaterThan(0);
+    await userEvent.click(actions[0] as HTMLElement);
+    expect(within(dock()).getByText(position("tasks"))).toBeVisible();
   });
 });
