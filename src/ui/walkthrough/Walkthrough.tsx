@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { tasks, usage } from "../journey/fixtures";
+import { keptTasks, tasks, usage } from "../journey/fixtures";
 import type { StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
 import { crew, drafts, paths, startedTask, suggestions } from "../newtask/fixtures";
@@ -280,20 +280,33 @@ function ownsKeys(target: EventTarget | null) {
 
 type Place = { taskId: string; stage: StageId };
 
-function TaskView({ place, onPlace }: { place: Place; onPlace: (place: Place) => void }) {
-  const open = tasks.find((t) => t.id === place.taskId) ?? tasks[0];
+type TaskViewProps = {
+  place: Place;
+  kept: boolean;
+  onPlace: (place: Place) => void;
+  onKeep: () => void;
+};
+
+function TaskView({ place, kept, onPlace, onKeep }: TaskViewProps) {
+  const list = kept ? keptTasks : tasks;
+  const open = list.find((t) => t.id === place.taskId) ?? list[0];
   if (!open) return null;
   return (
     <AppShell
-      tasks={tasks}
+      tasks={list}
       usage={usage}
       currentTaskId={open.id}
       onOpenTask={(taskId) => {
-        const next = tasks.find((t) => t.id === taskId);
+        const next = list.find((t) => t.id === taskId);
         if (next) onPlace({ taskId, stage: next.current });
       }}
     >
-      <TaskPage task={open} stage={place.stage} onStage={(stage) => onPlace({ ...place, stage })} />
+      <TaskPage
+        task={open}
+        stage={place.stage}
+        onStage={(stage) => onPlace({ ...place, stage })}
+        onKeep={onKeep}
+      />
     </AppShell>
   );
 }
@@ -387,7 +400,14 @@ function View({
       );
     }
     case "task":
-      return <TaskView place={place ?? view} onPlace={onPlace} />;
+      return (
+        <TaskView
+          place={place ?? view}
+          kept={view.kept ?? false}
+          onPlace={onPlace}
+          onKeep={() => onGoTo("ship")}
+        />
+      );
     case "state":
       return <StateScene key={view.scene} scene={view.scene} />;
     case "overview":

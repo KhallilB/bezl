@@ -11,6 +11,7 @@ import {
   stageLabel,
   stageMarker,
 } from "./model";
+import { Passed, Problems, RowItem, Ship, Takes } from "./StageViews";
 
 type StageStripProps = { task: JourneyTask; stage: StageId; onStage: (stage: StageId) => void };
 
@@ -55,39 +56,39 @@ function SectionList({ section }: { section: Section }) {
       <h2 id={id}>{section.title}</h2>
       <ul>
         {section.rows.map((row) => (
-          <li key={row.text} className="journey-row" data-light={row.light}>
-            {row.light ? (
-              <span className="journey-row-icon">
-                <LightIcon light={row.light} />
-                <span className="journey-sr">{`${lightLabel[row.light]}: `}</span>
-              </span>
-            ) : null}
-            <span className={row.mono ? "journey-row-text journey-mono" : "journey-row-text"}>
-              {row.text}
-            </span>
-            {row.meta ? <span className="journey-row-meta">{row.meta}</span> : null}
-          </li>
+          <RowItem key={row.text} row={row} />
         ))}
       </ul>
     </section>
   );
 }
 
-function StagePane({ view }: { view: StageView }) {
+type PaneProps = TaskPageProps & { view: StageView };
+
+function StagePane({ task, stage, view, onStage, onKeep }: PaneProps) {
+  // Keeping is the decision Review waits on; once made, the buttons go.
+  const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
   return (
     <div className="journey-pane">
       {view.quote ? <blockquote className="journey-quote">{view.quote}</blockquote> : null}
+      {view.problems?.length ? <Problems problems={view.problems} /> : null}
+      {view.takes ? <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} /> : null}
+      {view.ship ? <Ship ship={view.ship} onBack={() => onStage("review")} /> : null}
       {view.sections.map((section) => (
         <SectionList key={section.title} section={section} />
       ))}
+      {view.passed?.length ? <Passed rows={view.passed} /> : null}
     </div>
   );
 }
 
-export type TaskPageProps = StageStripProps;
+export type TaskPageProps = StageStripProps & {
+  /** Keeps a take on Review, which hands it to Ship. */
+  onKeep?: (takeId: string) => void;
+};
 
 /** One task: its header, the stage strip, one status sentence and the open stage. */
-export function TaskPage({ task, stage, onStage }: TaskPageProps) {
+export function TaskPage({ task, stage, onStage, onKeep }: TaskPageProps) {
   const view = task.views[stage];
   return (
     <article className="journey" aria-labelledby={`task-${task.id}`}>
@@ -102,7 +103,14 @@ export function TaskPage({ task, stage, onStage }: TaskPageProps) {
           {view.rest ? ` ${view.rest}` : null}
         </p>
       </header>
-      <StagePane key={stage} view={view} />
+      <StagePane
+        key={stage}
+        task={task}
+        stage={stage}
+        view={view}
+        onStage={onStage}
+        {...(onKeep ? { onKeep } : {})}
+      />
     </article>
   );
 }

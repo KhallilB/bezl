@@ -203,3 +203,16 @@ describe("Walkthrough start a task", () => {
     );
   });
 });
+
+describe("Walkthrough stage details", () => {
+  test("keeping a take on Review moves the tour to Ship", async () => {
+    at("?screen=walkthrough&step=review-takes");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Keep take A" }));
+    expect(within(dock()).getByText(position("ship"))).toBeVisible();
+    expect(screen.getByText("Ready to ship.")).toBeVisible();
+    expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(
+      /Ship, needs you/,
+    );
+  });
+});

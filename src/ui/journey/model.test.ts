@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { type StageLights, stageMarker, taskLight } from "./model";
+import { diffLabel, type StageLights, stageMarker, taskLight } from "./model";
 
 const quiet: StageLights = {
   brief: "done",
@@ -47,4 +47,11 @@ test("stageMarker numbers a waiting stage and names every other light", () => {
   expect(stageMarker("waiting", 4)).toBe("5");
   expect(stageMarker("done", 0)).toBe("done");
   expect(stageMarker("needsYou", 5)).toBe("needs you");
+});
+
+describe("diffLabel", () => {
+  test("shows lines added and removed, and drops a zero removal", () => {
+    expect(diffLabel({ path: "a.ts", added: 31, removed: 4 })).toBe("+31 −4");
+    expect(diffLabel({ path: "a.ts", added: 43, removed: 0 })).toBe("+43");
+  });
 });

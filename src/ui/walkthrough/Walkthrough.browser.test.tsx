@@ -57,16 +57,16 @@ test("the page never scrolls sideways at phone width; the stage strip scrolls in
   expect(strip?.scrollWidth).toBeGreaterThan(strip?.clientWidth ?? 0);
 });
 
-test("the task title, stage markers, status and rows share one left edge", async () => {
+test("the task title, stage markers, status and the stage's content share one left edge", async () => {
   await page.viewport(1280, 800);
   const el = await mount("?screen=walkthrough&step=tasks&theme=dark");
   await new Promise((r) => setTimeout(r, 400));
   const left = (selector: string) =>
     Math.round(el.querySelector(selector)?.getBoundingClientRect().left ?? -1);
   const edge = left(".journey-title h1");
-  expect([left(".journey-marker"), left(".journey-status"), left(".journey-row-icon")]).toEqual([
-    edge,
-    edge,
-    edge,
-  ]);
+  expect([
+    left(".journey-marker"),
+    left(".journey-status"),
+    left(".journey-pane > :first-child"),
+  ]).toEqual([edge, edge, edge]);
 });
