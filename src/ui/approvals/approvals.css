@@ -90,29 +90,3 @@
 .needsyou-answered:empty {
   display: none;
 }
-
-/* Approvals: the queue on its own page, on the task page's left edge. */
-.approvals {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--kb-space-6);
-  max-width: 52rem;
-}
-
-.approvals-header {
-  display: grid;
-  gap: var(--kb-space-2);
-}
-
-.approvals-header h1 {
-  margin: 0;
-  font-size: var(--kb-text-h3-size);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.approvals-header p {
-  margin: 0;
-  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
-  font-size: var(--kb-size-lg);
-}

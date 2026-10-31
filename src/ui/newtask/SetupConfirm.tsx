@@ -13,18 +13,24 @@ export type SetupConfirmProps = {
 /** A setup command is a needs-you item: Bezl runs nothing in your repository unasked. */
 export function SetupConfirm({ repo, command, onAllow, onDeny }: SetupConfirmProps) {
   return (
-    <section className="newtask-setup" aria-labelledby="newtask-setup-title" data-light="needsYou">
-      <div className="newtask-setup-head">
-        <span className="newtask-setup-icon">
-          <LightIcon light="needsYou" />
-        </span>
-        <span className="newtask-repo">{`Needs you · ${repo}`}</span>
-      </div>
-      <h1 id="newtask-setup-title">Run setup in the new worktree?</h1>
-      <p>
-        The worktree needs its dependencies before anyone can plan or build. This command runs
-        there, never in your checkout.
-      </p>
+    <section className="newtask-setup page" aria-labelledby="newtask-setup-title">
+      <header className="page-header">
+        <div className="page-title-row">
+          <h1 id="newtask-setup-title" className="page-title">
+            Run setup in the new worktree?
+          </h1>
+          <span className="page-tag">{repo}</span>
+        </div>
+        <p className="page-status newtask-setup-status">
+          <span className="newtask-setup-icon">
+            <LightIcon light="needsYou" />
+          </span>
+          <span>
+            <strong>Needs you.</strong> The worktree needs its dependencies before anyone can plan
+            or build. This command runs there, never in your checkout.
+          </span>
+        </p>
+      </header>
       <pre className="newtask-command">
         <code>{command}</code>
       </pre>

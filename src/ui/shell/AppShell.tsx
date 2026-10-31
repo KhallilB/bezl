@@ -2,6 +2,7 @@ import { Button } from "@kb.ui/react";
 import type { ReactNode } from "react";
 import { LightIcon } from "../journey/icons";
 import { type JourneyTask, lightLabel, type ProviderUsage, taskLight } from "../journey/model";
+import "./page.css";
 import "./shell.css";
 
 export type AppShellProps = {
@@ -36,17 +37,30 @@ function InboxIcon() {
 /** The task list before the first task: one sentence and one action. */
 export function EmptyTasks({ onNewTask }: { onNewTask: () => void }) {
   return (
-    <section className="shell-empty" aria-labelledby="shell-empty-title">
-      <h1 id="shell-empty-title">No tasks yet</h1>
-      <p>
-        Describe a change, choose who writes and who reviews, and Bezl sets up a worktree for it.
-      </p>
-      <Button variant="secondary" onClick={onNewTask}>
-        <PlusIcon />
-        New task
-      </Button>
+    <section className="shell-empty page" aria-labelledby="shell-empty-title">
+      <header className="page-header">
+        <h1 id="shell-empty-title" className="page-title">
+          No tasks yet
+        </h1>
+        <p className="page-lead">
+          Describe a change, choose who writes and who reviews, and Bezl sets up a worktree for it.
+        </p>
+      </header>
+      <div>
+        <Button variant="secondary" onClick={onNewTask}>
+          <PlusIcon />
+          New task
+        </Button>
+      </div>
     </section>
   );
+}
+
+/** Narrow, the lists are one scrolling row; centres the open row in it. */
+function keepInView(row: HTMLElement | null) {
+  const bar = row?.closest<HTMLElement>(".shell-lists");
+  if (!row || !bar || bar.scrollWidth <= bar.clientWidth) return;
+  bar.scrollLeft = row.offsetLeft - bar.offsetLeft - (bar.clientWidth - row.offsetWidth) / 2;
 }
 
 /** Sidebar of every task, each with its light, beside the open task. */
@@ -66,70 +80,74 @@ export function AppShell({
           <span className="shell-mark" aria-hidden="true" />
           Bezl
         </span>
-        {onNewTask ? (
-          <button type="button" className="shell-new" onClick={onNewTask}>
-            <PlusIcon />
-            New task
-          </button>
-        ) : null}
-        {approvals ? (
-          <nav aria-label="Areas" className="shell-tasks">
-            <ul>
-              <li>
-                <a
-                  href="/approvals"
-                  className="shell-task shell-area"
-                  data-light={approvals.count > 0 ? "needsYou" : undefined}
-                  aria-current={approvals.current ? "page" : undefined}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    approvals.onOpen();
-                  }}
-                >
-                  <span className="shell-task-icon">
-                    <InboxIcon />
-                  </span>
-                  <span className="shell-task-title">Approvals</span>
-                  {approvals.count > 0 ? (
-                    <>
-                      <span className="shell-count" aria-hidden="true">
-                        {approvals.count}
-                      </span>
-                      <span className="shell-sr">{`, ${approvals.count} need you`}</span>
-                    </>
-                  ) : null}
-                </a>
-              </li>
-            </ul>
-          </nav>
-        ) : null}
-        <nav aria-label="Tasks" className="shell-tasks">
-          <ul>
-            {tasks.map((task) => {
-              const light = taskLight(task.stages);
-              return (
-                <li key={task.id}>
+        <div className="shell-lists">
+          {onNewTask ? (
+            <button type="button" className="shell-new" onClick={onNewTask}>
+              <PlusIcon />
+              New task
+            </button>
+          ) : null}
+          {approvals ? (
+            <nav aria-label="Areas" className="shell-tasks">
+              <ul>
+                <li>
                   <a
-                    href={`#${task.id}`}
-                    className="shell-task"
-                    data-light={light}
-                    aria-current={task.id === currentTaskId ? "page" : undefined}
+                    href="/approvals"
+                    className="shell-task shell-area"
+                    data-light={approvals.count > 0 ? "needsYou" : undefined}
+                    aria-current={approvals.current ? "page" : undefined}
+                    ref={approvals.current ? keepInView : undefined}
                     onClick={(e) => {
                       e.preventDefault();
-                      onOpenTask(task.id);
+                      approvals.onOpen();
                     }}
                   >
                     <span className="shell-task-icon">
-                      <LightIcon light={light} />
+                      <InboxIcon />
                     </span>
-                    <span className="shell-task-title">{task.title}</span>
-                    <span className="shell-sr">{`, ${lightLabel[light]}`}</span>
+                    <span className="shell-task-title">Approvals</span>
+                    {approvals.count > 0 ? (
+                      <>
+                        <span className="shell-count" aria-hidden="true">
+                          {approvals.count}
+                        </span>
+                        <span className="shell-sr">{`, ${approvals.count} need you`}</span>
+                      </>
+                    ) : null}
                   </a>
                 </li>
-              );
-            })}
-          </ul>
-        </nav>
+              </ul>
+            </nav>
+          ) : null}
+          <nav aria-label="Tasks" className="shell-tasks">
+            <ul>
+              {tasks.map((task) => {
+                const light = taskLight(task.stages);
+                return (
+                  <li key={task.id}>
+                    <a
+                      href={`#${task.id}`}
+                      className="shell-task"
+                      data-light={light}
+                      aria-current={task.id === currentTaskId ? "page" : undefined}
+                      ref={task.id === currentTaskId ? keepInView : undefined}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onOpenTask(task.id);
+                      }}
+                    >
+                      <span className="shell-task-icon">
+                        <LightIcon light={light} />
+                      </span>
+                      <span className="shell-task-title">{task.title}</span>
+                      <span className="shell-sr">{`, ${lightLabel[light]}`}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </div>
         <dl className="shell-usage" aria-label="Provider usage">
           {usage.map((p) => (
             <div key={p.name}>

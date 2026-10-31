@@ -1,4 +1,5 @@
 import { Button, Callout } from "@kb.ui/react";
+import "../shell/page.css";
 import "./onboarding.css";
 
 export type Refusal = { path: string; reason: string };
@@ -18,13 +19,15 @@ export function ChooseRepository({ onChoose, refused }: ChooseRepositoryProps) {
           <span className="onboarding-mark" aria-hidden="true" />
           Bezl
         </span>
-        <div className="onboarding-copy">
-          <h1 id="onboarding-title">Open a repository</h1>
-          <p>
+        <header className="page-header">
+          <h1 id="onboarding-title" className="page-title">
+            Open a repository
+          </h1>
+          <p className="page-lead">
             Bezl works inside a git repository. Every task's record stays in its{" "}
             <code>.git/bezl</code> folder, on this machine.
           </p>
-        </div>
+        </header>
         {refused ? (
           <Callout tone="warning" role="alert" title={refused.reason}>
             <code>{refused.path}</code> has no git history. Choose the folder you cloned.

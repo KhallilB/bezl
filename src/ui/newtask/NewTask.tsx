@@ -123,7 +123,9 @@ function Parts({ draft }: { draft: BriefDraft }) {
       ) : null}
       {draft.doneWhen.length > 0 ? (
         <section className="newtask-section" aria-labelledby="newtask-done">
-          <h2 id="newtask-done">Done when</h2>
+          <h2 id="newtask-done" className="page-label">
+            Done when
+          </h2>
           <ul className="newtask-done" aria-labelledby="newtask-done">
             {draft.doneWhen.map((d) => (
               <li key={d.text} data-checker={d.checker}>
@@ -191,16 +193,18 @@ export function NewTask({
 
   return (
     <form
-      className="newtask"
+      className="newtask page"
       aria-labelledby="newtask-title"
       onSubmit={(e) => {
         e.preventDefault();
         onStart({ draft, writer, reviewer, paths, blockShip });
       }}
     >
-      <header className="newtask-header">
-        <h1 id="newtask-title">New task</h1>
-        <span className="newtask-repo">{`${repo} · ${branch}`}</span>
+      <header className="page-title-row">
+        <h1 id="newtask-title" className="page-title">
+          New task
+        </h1>
+        <span className="page-tag">{`${repo} · ${branch}`}</span>
       </header>
 
       <div className="newtask-brief">
@@ -234,7 +238,9 @@ export function NewTask({
 
       <Fieldset legend="Scope" className="newtask-scope">
         <section className="newtask-section" aria-labelledby="newtask-paths">
-          <h2 id="newtask-paths">Allowed paths</h2>
+          <h2 id="newtask-paths" className="newtask-field">
+            Allowed paths
+          </h2>
           <ul className="newtask-paths" aria-labelledby="newtask-paths">
             {paths.map((p) => (
               <li key={p}>{p}</li>

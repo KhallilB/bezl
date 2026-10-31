@@ -95,18 +95,15 @@ export function Approvals({
   onOpenTask,
 }: Required<Pick<ListProps, "onOpenTask">> & Omit<ListProps, "onOpenTask">) {
   return (
-    <section className="approvals" aria-labelledby="approvals-title">
-      {items.length === 0 ? (
-        <header className="approvals-header">
-          <h1 id="approvals-title">Nothing needs you</h1>
-          <p>Answers are kept in each task's history.</p>
-        </header>
-      ) : (
-        <header className="approvals-header">
-          <h1 id="approvals-title">Approvals</h1>
-          <p>{count(items.length)}</p>
-        </header>
-      )}
+    <section className="page" aria-labelledby="approvals-title">
+      <header className="page-header">
+        <h1 id="approvals-title" className="page-title">
+          {items.length === 0 ? "Nothing needs you" : "Approvals"}
+        </h1>
+        <p className="page-status">
+          {items.length === 0 ? "Answers are kept in each task's history." : count(items.length)}
+        </p>
+      </header>
       <NeedsYouList items={items} onItems={onItems} onOpenTask={onOpenTask} />
     </section>
   );

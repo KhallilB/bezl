@@ -56,7 +56,9 @@ function SectionList({ section }: { section: Section }) {
   const id = useId();
   return (
     <section className="journey-section" aria-labelledby={id}>
-      <h2 id={id}>{section.title}</h2>
+      <h2 id={id} className="page-label">
+        {section.title}
+      </h2>
       <ul>
         {section.rows.map((row) => (
           <RowItem key={row.text} row={row} />
@@ -108,19 +110,23 @@ export type TaskPageProps = StageStripProps & {
 export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageProps) {
   const view = task.views[stage];
   return (
-    <article className="journey" aria-labelledby={`task-${task.id}`}>
-      <header className="journey-header">
-        <div className="journey-title">
-          <h1 id={`task-${task.id}`}>{task.title}</h1>
-          <span className="journey-repo">{task.repo}</span>
+    <article className="journey page" aria-labelledby={`task-${task.id}`}>
+      <header className="page-header">
+        <div className="page-title-row">
+          <h1 id={`task-${task.id}`} className="page-title">
+            {task.title}
+          </h1>
+          <span className="page-tag">{task.repo}</span>
           {onHistory ? (
-            <Button variant="ghost" size="sm" className="journey-history" onClick={onHistory}>
-              History
-            </Button>
+            <span className="page-action">
+              <Button variant="ghost" size="sm" onClick={onHistory}>
+                History
+              </Button>
+            </span>
           ) : null}
         </div>
         <StageStrip task={task} stage={stage} onStage={onStage} />
-        <p className="journey-status">
+        <p className="page-status">
           <strong>{view.lead}</strong>
           {view.rest ? ` ${view.rest}` : null}
         </p>
