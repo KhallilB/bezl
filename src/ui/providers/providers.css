@@ -2,7 +2,7 @@
 .providers-screen {
   min-height: 100vh;
   box-sizing: border-box;
-  padding-block: var(--kb-space-6) var(--kb-space-8);
+  padding: var(--kb-space-8) calc(2 * var(--kb-space-6));
   background:
     radial-gradient(
       80% 50% at 50% 0%,
@@ -14,13 +14,21 @@
   font-family: "Geist Variable", var(--kb-font-sans);
 }
 
-.providers-content {
+/* Before the shell: the shell's page frame, centred, on its padding. */
+.providers-page {
+  margin-inline: auto;
+}
+
+.providers-grid {
   display: grid;
   gap: var(--kb-space-6);
 }
 
-.providers-grid {
-  align-items: start;
+/* A card title, as on take and needs-you cards. */
+.providers-title {
+  margin: 0;
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
 }
 
 /* Grid items default to min-content width; a long path would push the panel off-screen. */
@@ -54,14 +62,6 @@
   list-style: none;
 }
 
-.providers-header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--kb-space-3);
-  align-items: start;
-  justify-content: space-between;
-}
-
 .providers-section {
   display: grid;
   gap: var(--kb-space-1);
@@ -74,4 +74,10 @@
 /* Fix commands and flags hold long paths and JSON; wrap them rather than widen the panel. */
 .providers-code code {
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 52rem) {
+  .providers-screen {
+    padding: var(--kb-space-6) var(--kb-space-4);
+  }
 }
