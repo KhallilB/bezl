@@ -121,8 +121,14 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 name = "bezl"
 version = "0.1.0"
 dependencies = [
+ "block2",
  "libghostty-vt",
  "log",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "objc2-web-kit",
  "portable-pty",
  "proptest",
  "serde",
