@@ -1,0 +1,70 @@
+/* One frame for every screen in the shell: width, left edge, rhythm and heading scale. */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-8);
+  max-width: 52rem;
+}
+
+.page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-4);
+}
+
+.page-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--kb-space-1) var(--kb-space-3);
+}
+
+.page-title {
+  margin: 0;
+  font-size: var(--kb-text-h3-size);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.page-tag {
+  color: var(--kb-color-muted);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-xs);
+}
+
+/* Negative block margin: a button taller than the title must not push it down. */
+.page-action {
+  align-self: center;
+  margin-block: calc(-1 * var(--kb-space-2));
+  margin-inline-start: auto;
+}
+
+/* Where things stand, in one sentence: the lead in bold, then the rest. */
+.page-status {
+  margin: 0;
+  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  font-size: var(--kb-size-lg);
+  line-height: 1.4;
+}
+
+.page-status strong {
+  color: var(--kb-color-fg);
+  font-weight: 600;
+}
+
+/* What the screen is for, when nothing has happened yet. */
+.page-lead {
+  max-width: 40rem;
+  margin: 0;
+  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  font-size: var(--kb-size-md);
+  line-height: 1.5;
+}
+
+/* Section heading inside a page. */
+.page-label {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+  font-weight: 500;
+}

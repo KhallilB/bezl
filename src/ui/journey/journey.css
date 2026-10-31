@@ -1,12 +1,7 @@
-/* One task's page: header, stage strip, status sentence, then the open stage. */
+/* One task's page: header, stage strip, status sentence, then the open stage. Frame: page.css. */
 .journey {
   --journey-mono: "Geist Mono Variable", var(--kb-font-mono);
   --journey-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
-  display: grid;
-  /* minmax(0, 1fr): the strip's one-line width must not widen the page. */
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--kb-space-8);
-  max-width: 52rem;
 }
 
 .journey [data-light="done"] {
@@ -27,36 +22,6 @@
 
 .journey [data-light="waiting"] {
   --journey-ink: var(--kb-color-muted);
-}
-
-.journey-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--kb-space-4);
-}
-
-.journey-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--kb-space-1) var(--kb-space-3);
-}
-
-.journey-title h1 {
-  margin: 0;
-  font-size: var(--kb-text-h3-size);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.journey-history {
-  margin-inline-start: auto;
-}
-
-.journey-repo {
-  color: var(--kb-color-muted);
-  font-family: var(--journey-mono);
-  font-size: var(--kb-size-xs);
 }
 
 /* Stage strip: one line of pills joined by short rules; scrolls rather than wraps. */
@@ -159,18 +124,6 @@
   filter: drop-shadow(0 0 4px color-mix(in oklab, var(--journey-ink) 55%, transparent));
 }
 
-.journey-status {
-  margin: 0;
-  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
-  font-size: var(--kb-size-lg);
-  line-height: 1.4;
-}
-
-.journey-status strong {
-  color: var(--kb-color-fg);
-  font-weight: 600;
-}
-
 .journey-pane {
   display: grid;
   gap: var(--kb-space-8);
@@ -188,13 +141,6 @@
 .journey-section {
   display: grid;
   gap: var(--kb-space-2);
-}
-
-.journey-section h2 {
-  margin: 0;
-  color: var(--kb-color-muted);
-  font-size: var(--kb-size-xs);
-  font-weight: 500;
 }
 
 .journey-section ul {
@@ -265,13 +211,6 @@
   white-space: nowrap;
 }
 
-.journey-section h3 {
-  margin: 0;
-  color: var(--kb-color-muted);
-  font-size: var(--kb-size-xs);
-  font-weight: 500;
-}
-
 /* Takes: one card each, side by side while there is room. */
 .journey-takes-wrap {
   display: grid;
@@ -330,8 +269,8 @@
 }
 
 .journey-take-state > svg {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 1rem;
+  height: 1rem;
   color: var(--journey-ink);
 }
 
@@ -508,7 +447,7 @@
 
 .journey-ship-copy h2 {
   margin: 0;
-  font-size: var(--kb-size-lg);
+  font-size: var(--kb-size-md);
   font-weight: 600;
 }
 
@@ -535,23 +474,23 @@
   font-size: var(--kb-size-xs);
 }
 
-.journey-history {
+.journey-trail {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.journey-history .journey-row-text {
+.journey-trail .journey-row-text {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--kb-space-2);
 }
 
-.journey-history strong {
+.journey-trail strong {
   font-weight: 600;
 }
 
-.journey-history-text {
+.journey-trail-text {
   color: var(--kb-color-muted);
 }
 

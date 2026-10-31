@@ -158,7 +158,9 @@ export function Problems({ problems }: { problems: Problem[] }) {
   const [sent, setSent] = useState<ReadonlySet<number>>(new Set());
   return (
     <section className="journey-section" aria-labelledby={id}>
-      <h2 id={id}>Problems</h2>
+      <h2 id={id} className="page-label">
+        Problems
+      </h2>
       <ul className="journey-problems" aria-labelledby={id}>
         {problems.map((p, i) => (
           <li key={p.title} className="journey-problem" data-light="failed">
@@ -230,12 +232,16 @@ export function Ship({ ship, onBack }: { ship: ShipSummary; onBack: () => void }
         </ul>
       </div>
       <section className="journey-section" aria-labelledby={`${id}-changed`}>
-        <h3 id={`${id}-changed`}>What changed</h3>
+        <h3 id={`${id}-changed`} className="page-label">
+          What changed
+        </h3>
         <Files files={ship.files} label="What changed" />
       </section>
       <section className="journey-section" aria-labelledby={`${id}-history`}>
-        <h3 id={`${id}-history`}>How it got here</h3>
-        <ul className="journey-history" aria-labelledby={`${id}-history`}>
+        <h3 id={`${id}-history`} className="page-label">
+          How it got here
+        </h3>
+        <ul className="journey-trail" aria-labelledby={`${id}-history`}>
           {ship.history.map((h) => (
             <li key={h.stage} className="journey-row" data-light="done">
               <span className="journey-row-icon">
@@ -243,7 +249,7 @@ export function Ship({ ship, onBack }: { ship: ShipSummary; onBack: () => void }
               </span>
               <span className="journey-row-text">
                 <strong>{stageLabel[h.stage]}</strong>
-                <span className="journey-history-text">{h.text}</span>
+                <span className="journey-trail-text">{h.text}</span>
               </span>
             </li>
           ))}

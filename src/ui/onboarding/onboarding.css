@@ -1,4 +1,4 @@
-/* First run: one centred card on the app canvas. Bezl's own elements only. */
+/* First run: one centred card on the app canvas; title and lead from page.css. */
 .onboarding {
   display: grid;
   place-items: center;
@@ -43,25 +43,6 @@
     var(--kb-color-info)
   );
   box-shadow: 0 0 16px color-mix(in oklab, var(--kb-color-info) 40%, transparent);
-}
-
-.onboarding-copy {
-  display: grid;
-  gap: var(--kb-space-2);
-}
-
-.onboarding-copy h1 {
-  margin: 0;
-  font-size: var(--kb-text-h2-size);
-  font-weight: 600;
-  letter-spacing: -0.015em;
-}
-
-.onboarding-copy p {
-  margin: 0;
-  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
-  font-size: var(--kb-size-md);
-  line-height: 1.5;
 }
 
 .onboarding code {

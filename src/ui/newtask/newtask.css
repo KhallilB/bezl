@@ -1,17 +1,10 @@
-/* New task form and the setup question. Shares the task page's left edge and type scale. */
+/* New task form and the setup question. Frame and headings: page.css. */
 .newtask,
 .newtask-setup {
   --newtask-mono: "Geist Mono Variable", var(--kb-font-mono);
   --newtask-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
   --newtask-soft: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  max-width: 60rem;
   container-type: inline-size;
-}
-
-.newtask {
-  gap: var(--kb-space-8);
 }
 
 .newtask li {
@@ -22,27 +15,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.newtask-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--kb-space-1) var(--kb-space-3);
-}
-
-.newtask h1,
-.newtask-setup h1 {
-  margin: 0;
-  font-size: var(--kb-text-h3-size);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.newtask-repo {
-  color: var(--kb-color-muted);
-  font-family: var(--newtask-mono);
-  font-size: var(--kb-size-xs);
 }
 
 /* Brief beside its readiness; stacked when the page is narrow. */
@@ -77,8 +49,14 @@
   gap: var(--kb-space-3);
 }
 
-.newtask-parts dt,
-.newtask-section h2 {
+.newtask-field {
+  margin: 0;
+  color: var(--kb-color-fg);
+  font-size: var(--kb-text-small-size);
+  font-weight: var(--kb-font-weight-strong);
+}
+
+.newtask-parts dt {
   margin: 0;
   color: var(--kb-color-muted);
   font-size: var(--kb-size-xs);
@@ -251,29 +229,20 @@
 }
 
 /* Setup question: one needs-you item with its command. */
-.newtask-setup {
-  gap: var(--kb-space-4);
-  max-width: 40rem;
-}
-
-.newtask-setup-head {
+.newtask-setup-status {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--kb-space-2);
 }
 
+/* Nudged onto the first line's centre; the line is taller than the icon. */
 .newtask-setup-icon {
   display: inline-grid;
+  flex: none;
   width: 1rem;
   height: 1rem;
   color: var(--kb-color-warning);
-}
-
-.newtask-setup p {
-  margin: 0;
-  color: var(--newtask-soft);
-  font-size: var(--kb-size-md);
-  line-height: 1.5;
+  transform: translateY(0.125rem);
 }
 
 .newtask-command {
@@ -285,8 +254,4 @@
   background: color-mix(in oklab, var(--kb-color-fg) 4%, transparent);
   font-family: var(--newtask-mono);
   font-size: var(--kb-size-sm);
-}
-
-.newtask-setup .newtask-actions {
-  margin-block-start: var(--kb-space-2);
 }
