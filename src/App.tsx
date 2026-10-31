@@ -1,7 +1,7 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "@kb.ui/css/styles.css";
-import { type ReactNode, useState } from "react";
+import { lazy, type ReactNode, Suspense, useState } from "react";
 import { ProvidersScreen } from "./ui/providers/ProvidersScreen";
 import * as samples from "./ui/task/fixtures";
 import type { WorkerView } from "./ui/task/model";
@@ -22,10 +22,25 @@ function initialWorkers(): WorkerView[] {
   return name && name in pick ? pick[name as keyof typeof pick] : samples.running;
 }
 
+// Only a VITE_SCREEN=demo build bundles the demo driver.
+const DemoScreen =
+  import.meta.env.VITE_SCREEN === "demo"
+    ? lazy(() => import("./ui/demo/DemoScreen").then((m) => ({ default: m.DemoScreen })))
+    : null;
+
 const screens: Record<string, () => ReactNode> = {
   terminals: TerminalsScreen,
   snapshots: SnapshotsScreen,
   "terminal-bench": TerminalBench,
+  ...(DemoScreen
+    ? {
+        demo: () => (
+          <Suspense>
+            <DemoScreen />
+          </Suspense>
+        ),
+      }
+    : {}),
 };
 
 export function App() {
