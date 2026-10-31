@@ -1,7 +1,7 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "@kb.ui/css/styles.css";
-import type { ReactNode } from "react";
+import { lazy, type ReactNode, Suspense } from "react";
 import { ProvidersScreen } from "./ui/providers/ProvidersScreen";
 import { TerminalBench } from "./ui/terminals/TerminalBench";
 import { SnapshotsScreen, TerminalsScreen } from "./ui/terminals/TerminalsScreen";
@@ -16,12 +16,27 @@ function TaskScreen() {
   return <StateScene scene={scene} />;
 }
 
+// Only a VITE_SCREEN=demo build bundles the demo driver.
+const DemoScreen =
+  import.meta.env.VITE_SCREEN === "demo"
+    ? lazy(() => import("./ui/demo/DemoScreen").then((m) => ({ default: m.DemoScreen })))
+    : null;
+
 const screens: Record<string, () => ReactNode> = {
   task: TaskScreen,
   walkthrough: Walkthrough,
   terminals: TerminalsScreen,
   snapshots: SnapshotsScreen,
   "terminal-bench": TerminalBench,
+  ...(DemoScreen
+    ? {
+        demo: () => (
+          <Suspense>
+            <DemoScreen />
+          </Suspense>
+        ),
+      }
+    : {}),
 };
 
 export function App() {

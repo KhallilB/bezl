@@ -1,3 +1,5 @@
+#[cfg(all(debug_assertions, target_os = "macos"))]
+mod demo;
 pub mod domain;
 pub mod providers;
 pub mod terminal;
@@ -17,7 +19,15 @@ pub fn run() {
             terminal::port::terminal_snapshots,
             terminal::port::terminal_snapshot_open,
             terminal::bench::terminal_bench,
-            terminal::bench::terminal_bench_done
+            terminal::bench::terminal_bench_done,
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            demo::demo_plan,
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            demo::demo_log,
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            demo::demo_snap,
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            demo::demo_done
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -27,6 +37,8 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            #[cfg(all(debug_assertions, target_os = "macos"))]
+            demo::setup(app.handle())?;
             Ok(())
         })
         .run(tauri::generate_context!())
