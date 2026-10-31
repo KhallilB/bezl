@@ -1,16 +1,5 @@
-import {
-  Badge,
-  Button,
-  Callout,
-  Code,
-  Container,
-  Grid,
-  Heading,
-  Inline,
-  Panel,
-  Status,
-  Text,
-} from "@kb.ui/react";
+import { Badge, Button, Callout, Code, Inline, Panel, Status, Text } from "@kb.ui/react";
+import "../shell/page.css";
 import { StateIcon } from "../task/icons";
 import {
   canaryShown,
@@ -157,9 +146,7 @@ function ReadOnly({ check }: { check: ProviderCheck }) {
   return (
     <section className="providers-section">
       <Inline gap="sm" justify="between">
-        <Heading level={3} size="sm">
-          Read-only
-        </Heading>
+        <h3 className="page-label">Read-only</h3>
         <Shows shown={overall.shown} />
       </Inline>
       {overall.detail ? (
@@ -198,9 +185,7 @@ function Tiers({ check }: { check: ProviderCheck }) {
   return (
     <section className="providers-section">
       <Inline gap="sm" justify="between">
-        <Heading level={3} size="sm">
-          Coordination tiers
-        </Heading>
+        <h3 className="page-label">Coordination tiers</h3>
         <Shows shown={overall.shown} />
       </Inline>
       <Text size="sm" tone="muted">
@@ -234,9 +219,7 @@ function Fixes({ check }: { check: ProviderCheck }) {
   if (list.length === 0) return null;
   return (
     <section className="providers-section">
-      <Heading level={3} size="sm">
-        To fix
-      </Heading>
+      <h3 className="page-label">To fix</h3>
       <ul className="providers-list" aria-label="To fix">
         {list.map((f) => (
           <li key={f.problem} className="providers-home">
@@ -264,9 +247,9 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
   return (
     <Panel className="providers-panel" aria-labelledby={headingId}>
       <Panel.Header>
-        <Heading level={2} size="md" id={headingId}>
+        <h2 id={headingId} className="providers-title">
           {providerName[provider]}
-        </Heading>
+        </h2>
         <Shows shown={bin ? found : notFound} />
       </Panel.Header>
       <Panel.Body className="providers-body">
@@ -286,9 +269,7 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
         <UsageList check={check} />
         {rejected.length > 0 ? (
           <section>
-            <Heading level={3} size="sm">
-              Rejected
-            </Heading>
+            <h3 className="page-label">Rejected</h3>
             <ul className="providers-list" aria-label="Rejected binaries">
               {rejected.map((r) => (
                 <li key={r.path}>
@@ -327,19 +308,19 @@ export function Providers({ checks, checking = false, error, onCheckAgain }: Pro
   const busy = checking || (checks === null && !error);
   return (
     <div className="providers-screen">
-      <Container className="providers-content">
-        <header className="providers-header">
-          <div>
-            <Heading level={1} size="xl">
-              Providers
-            </Heading>
-            <Text tone="muted">Agent CLIs on PATH, identified by their version output.</Text>
+      <div className="page providers-page">
+        <header className="page-header">
+          <div className="page-title-row">
+            <h1 className="page-title">Providers</h1>
+            {onCheckAgain ? (
+              <span className="page-action">
+                <Button variant="secondary" size="sm" disabled={busy} onClick={onCheckAgain}>
+                  Check again
+                </Button>
+              </span>
+            ) : null}
           </div>
-          {onCheckAgain ? (
-            <Button variant="secondary" disabled={busy} onClick={onCheckAgain}>
-              Check again
-            </Button>
-          ) : null}
+          <p className="page-lead">Agent CLIs on PATH, identified by their version output.</p>
         </header>
         {busy ? (
           <Status tone="running" live icon={<StateIcon state="running" />}>
@@ -354,14 +335,14 @@ export function Providers({ checks, checking = false, error, onCheckAgain }: Pro
         {checks === null ? null : (
           <>
             <Writers checks={checks} />
-            <Grid className="providers-grid">
+            <div className="providers-grid">
               {checks.map((c) => (
                 <ProviderPanel key={c.discovery.provider} check={c} />
               ))}
-            </Grid>
+            </div>
           </>
         )}
-      </Container>
+      </div>
     </div>
   );
 }

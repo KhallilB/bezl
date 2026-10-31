@@ -152,3 +152,47 @@ test("at phone width the open task's row scrolls into the task bar", async () =>
   const row = el.querySelector(".shell-task[aria-current]")?.getBoundingClientRect();
   expect(row && bar && row.left >= bar.left && row.right <= bar.right).toBe(true);
 });
+
+const providerSteps = steps.filter((s) => s.view.kind === "providers");
+const stateSteps = steps.filter((s) => s.view.kind === "state");
+
+test("every step's title is one size, Providers and the design states included", async () => {
+  await page.viewport(1440, 900);
+  const seen = await each(
+    steps.filter((s) => s.view.kind !== "overview"),
+    (el) => getComputedStyle(el.querySelector("h1") as HTMLElement).fontSize,
+  );
+  expect(distinct(seen), JSON.stringify(seen)).toHaveLength(1);
+});
+
+test("Providers is one page as wide as the shell's, its action at the title row's end", async () => {
+  await page.viewport(1440, 900);
+  const seen = await each(providerSteps, (el) => {
+    const frame = el.querySelector(".page")?.getBoundingClientRect();
+    // Preflight is still checking, so it offers no Check again.
+    const action = el.querySelector(".page-action")?.getBoundingClientRect() ?? frame;
+    return `${Math.round(frame?.width ?? 0)} ${Math.round((frame?.right ?? 0) - (action?.right ?? 0))}`;
+  });
+  expect(distinct(seen), JSON.stringify(seen)).toEqual(new Set(["832 0"]));
+});
+
+test("card titles and the brand mark match the shell's", async () => {
+  await page.viewport(1440, 900);
+  const size = (el: Element | null) => (el ? getComputedStyle(el).fontSize : "none");
+  const width = (el: Element | null) => Math.round(el?.getBoundingClientRect().width ?? 0);
+  const shell = await each(
+    steps.filter((s) => s.id === "review-takes"),
+    (el) =>
+      `${size(el.querySelector(".journey-take h2"))} ${width(el.querySelector(".shell-mark"))}`,
+  );
+  const cards = await each([...providerSteps, ...stateSteps], (el) =>
+    [...el.querySelectorAll(".providers-panel h2, .task-cell h2")].map(size).join(),
+  );
+  const marks = await each(stateSteps, (el) => width(el.querySelector(".task-mark")));
+  const [title, mark] = String(shell["review-takes"]).split(" ");
+  // Preflight is still checking: no panels yet.
+  for (const [id, sizes] of Object.entries(cards).filter(([, sizes]) => sizes)) {
+    expect(new Set(sizes.split(",")), id).toEqual(new Set([title]));
+  }
+  expect(distinct(marks)).toEqual(new Set([mark]));
+});
