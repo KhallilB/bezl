@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
-    "check": "bun run typecheck && bun run lint && bun run test && bun run test:browser"
+    "check": "bun run typecheck && bun run lint && bun run test && bun run test:browser",
+    "capture:walkthrough": "bun scripts/walkthrough/capture.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",
