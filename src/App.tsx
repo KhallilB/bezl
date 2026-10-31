@@ -1,25 +1,19 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "@kb.ui/css/styles.css";
-import { lazy, type ReactNode, Suspense, useState } from "react";
+import { lazy, type ReactNode, Suspense } from "react";
 import { ProvidersScreen } from "./ui/providers/ProvidersScreen";
-import * as samples from "./ui/task/fixtures";
-import type { WorkerView } from "./ui/task/model";
-import { Task } from "./ui/task/Task";
 import { TerminalBench } from "./ui/terminals/TerminalBench";
 import { SnapshotsScreen, TerminalsScreen } from "./ui/terminals/TerminalsScreen";
 import { AppTheme } from "./ui/theme/AppTheme";
+import { parseFrame } from "./ui/walkthrough/states";
+import { StateScene, useDocumentTheme, Walkthrough } from "./ui/walkthrough/Walkthrough";
 
-// Sample workers until the Rust domain projects real ones over IPC; ?sample= picks a state.
-function initialWorkers(): WorkerView[] {
-  const name = new URLSearchParams(window.location.search).get("sample");
-  const pick = {
-    idle: samples.idle,
-    running: samples.running,
-    blocked: samples.blocked,
-    longContent: samples.longContent,
-  };
-  return name && name in pick ? pick[name as keyof typeof pick] : samples.running;
+// Sample workers until the Rust domain projects real ones over IPC; ?sample= and ?theme= pick one.
+function TaskScreen() {
+  const { scene, theme } = parseFrame(window.location.search);
+  useDocumentTheme(theme);
+  return <StateScene scene={scene} />;
 }
 
 // Only a VITE_SCREEN=demo build bundles the demo driver.
@@ -29,6 +23,8 @@ const DemoScreen =
     : null;
 
 const screens: Record<string, () => ReactNode> = {
+  task: TaskScreen,
+  walkthrough: Walkthrough,
   terminals: TerminalsScreen,
   snapshots: SnapshotsScreen,
   "terminal-bench": TerminalBench,
@@ -44,33 +40,15 @@ const screens: Record<string, () => ReactNode> = {
 };
 
 export function App() {
-  const [workers, setWorkers] = useState<WorkerView[]>(initialWorkers);
   // No task list before M5, so first run opens on Providers; ?screen= picks another screen,
   // or VITE_SCREEN in a build without a query.
   const name =
     new URLSearchParams(window.location.search).get("screen") ??
     (import.meta.env.VITE_SCREEN as string | undefined);
-  if (name !== "task") {
-    const Screen = name ? (screens[name] ?? ProvidersScreen) : ProvidersScreen;
-    return (
-      <AppTheme>
-        <Screen />
-      </AppTheme>
-    );
-  }
+  const Screen = name ? (screens[name] ?? ProvidersScreen) : ProvidersScreen;
   return (
     <AppTheme>
-      <Task
-        task={samples.task}
-        workers={workers}
-        onStop={(id) =>
-          setWorkers((all) =>
-            all.map((w) =>
-              w.id === id ? { ...w, state: "finished", summary: "Stopped by operator." } : w,
-            ),
-          )
-        }
-      />
+      <Screen />
     </AppTheme>
   );
 }

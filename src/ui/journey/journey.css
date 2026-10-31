@@ -1,0 +1,275 @@
+/* One task's page: header, stage strip, status sentence, then the open stage. */
+.journey {
+  --journey-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --journey-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
+  display: grid;
+  /* minmax(0, 1fr): the strip's one-line width must not widen the page. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-8);
+  max-width: 52rem;
+}
+
+.journey [data-light="done"] {
+  --journey-ink: var(--kb-color-success);
+}
+
+.journey [data-light="working"] {
+  --journey-ink: var(--kb-color-info);
+}
+
+.journey [data-light="needsYou"] {
+  --journey-ink: var(--kb-color-warning);
+}
+
+.journey [data-light="failed"] {
+  --journey-ink: var(--kb-color-danger);
+}
+
+.journey [data-light="waiting"] {
+  --journey-ink: var(--kb-color-muted);
+}
+
+.journey-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-4);
+}
+
+.journey-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--kb-space-1) var(--kb-space-3);
+}
+
+.journey-title h1 {
+  margin: 0;
+  font-size: var(--kb-text-h3-size);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.journey-repo {
+  color: var(--kb-color-muted);
+  font-family: var(--journey-mono);
+  font-size: var(--kb-size-xs);
+}
+
+/* Stage strip: one line of pills joined by short rules; scrolls rather than wraps. */
+.journey-strip {
+  /* Pull the first pill's padding and the ring's room out so its marker aligns with the title. */
+  margin-inline: calc(-1 * var(--kb-space-2) - 4px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.journey-strip ol {
+  display: flex;
+  align-items: center;
+  gap: var(--kb-space-1);
+  width: max-content;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+}
+
+/* kbui's reset spaces prose list items; these lists set their own rhythm. */
+.journey li {
+  margin: 0;
+}
+
+.journey-strip li {
+  display: flex;
+  align-items: center;
+  gap: var(--kb-space-1);
+}
+
+.journey-strip li + li::before {
+  content: "";
+  width: var(--kb-space-3);
+  height: 1px;
+  background: var(--journey-ring);
+}
+
+.journey-stage {
+  /* Containing block for its hidden label, so the strip's scroller clips it. */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+  padding: var(--kb-space-1) var(--kb-space-3) var(--kb-space-1) var(--kb-space-2);
+  border: 0;
+  border-radius: var(--kb-radius-full);
+  background: transparent;
+  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  font: inherit;
+  font-size: var(--kb-size-sm);
+  line-height: 1.5rem;
+  cursor: pointer;
+  transition:
+    background-color var(--kb-motion-duration-fast) var(--kb-motion-easing-standard),
+    color var(--kb-motion-duration-fast) var(--kb-motion-easing-standard);
+}
+
+.journey-stage:hover {
+  background: color-mix(in oklab, var(--kb-color-fg) 5%, transparent);
+  color: var(--kb-color-fg);
+}
+
+.journey-stage:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 1px;
+}
+
+.journey-stage[aria-current="step"] {
+  background: color-mix(in oklab, var(--kb-color-fg) 9%, transparent);
+  box-shadow: inset 0 0 0 1px var(--journey-ring);
+  color: var(--kb-color-fg);
+  font-weight: 500;
+}
+
+.journey-marker {
+  display: inline-grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--journey-ink);
+  font-family: var(--journey-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.journey-marker > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.journey-stage[data-light="waiting"] .journey-marker {
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--journey-ring);
+}
+
+.journey-stage[data-light="needsYou"] .journey-marker,
+.journey-stage[data-light="working"] .journey-marker {
+  filter: drop-shadow(0 0 4px color-mix(in oklab, var(--journey-ink) 55%, transparent));
+}
+
+.journey-status {
+  margin: 0;
+  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  font-size: var(--kb-size-lg);
+  line-height: 1.4;
+}
+
+.journey-status strong {
+  color: var(--kb-color-fg);
+  font-weight: 600;
+}
+
+.journey-pane {
+  display: grid;
+  gap: var(--kb-space-8);
+}
+
+.journey-quote {
+  margin: 0;
+  padding-inline-start: var(--kb-space-4);
+  border-inline-start: 2px solid color-mix(in oklab, var(--kb-color-info) 60%, transparent);
+  font-size: var(--kb-size-lg);
+  line-height: 1.5;
+  max-width: 40rem;
+}
+
+.journey-section {
+  display: grid;
+  gap: var(--kb-space-2);
+}
+
+.journey-section h2 {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+  font-weight: 500;
+}
+
+.journey-section ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Icon, text and meta sit on one baseline grid; rows without an icon keep the text column. */
+.journey-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--kb-space-3);
+  min-height: 2.5rem;
+  padding-block: var(--kb-space-2);
+  border-block-end: 1px solid var(--journey-ring);
+  font-size: var(--kb-size-sm);
+}
+
+.journey-row:last-child {
+  border-block-end: 0;
+}
+
+.journey-row-icon {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  color: var(--journey-ink, var(--kb-color-muted));
+}
+
+.journey-row-icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.journey-row-text {
+  grid-column: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.journey-mono {
+  font-family: var(--journey-mono);
+  font-size: var(--kb-size-xs);
+}
+
+.journey-row-meta {
+  grid-column: 3;
+  color: var(--kb-color-muted);
+  font-family: var(--journey-mono);
+  font-size: var(--kb-size-xs);
+  white-space: nowrap;
+}
+
+.journey-row[data-light="needsYou"] .journey-row-meta,
+.journey-row[data-light="failed"] .journey-row-meta {
+  color: var(--journey-ink);
+}
+
+.journey-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .journey-pane {
+    animation: journey-in 320ms var(--kb-motion-easing-enter) backwards;
+  }
+}
+
+@keyframes journey-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

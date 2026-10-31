@@ -1,0 +1,213 @@
+/* App shell: the task list beside the open task. Bezl's own elements only. */
+.shell {
+  --shell-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --shell-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      70% 45% at 60% 0%,
+      color-mix(in oklab, var(--kb-color-info) 6%, transparent),
+      transparent 70%
+    ),
+    var(--kb-color-bg);
+  color: var(--kb-color-fg);
+  font-family: "Geist Variable", var(--kb-font-sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Film grain: static, so depth reads without ambient motion. */
+.shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.shell-side {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kb-space-6);
+  height: 100vh;
+  box-sizing: border-box;
+  padding: var(--kb-space-6) var(--kb-space-3);
+  border-inline-end: 1px solid var(--shell-ring);
+  background: color-mix(in oklab, var(--kb-color-surface) 35%, transparent);
+}
+
+/* Brand, rows and usage share one inner edge: the row's own padding. */
+.shell-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+  padding-inline: var(--kb-space-3);
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
+}
+
+.shell-mark {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.375rem;
+  background: conic-gradient(
+    from 200deg,
+    var(--kb-color-info),
+    var(--kb-color-accent),
+    var(--kb-color-info)
+  );
+  box-shadow: 0 0 16px color-mix(in oklab, var(--kb-color-info) 40%, transparent);
+}
+
+.shell-tasks ul {
+  display: grid;
+  gap: var(--kb-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* kbui's reset spaces prose list items; the list sets its own gap. */
+.shell-tasks li {
+  margin: 0;
+}
+
+.shell-task {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--kb-space-3);
+  padding: var(--kb-space-2) var(--kb-space-3);
+  border-radius: var(--kb-radius-md);
+  color: color-mix(in oklab, var(--kb-color-fg) 82%, transparent);
+  font-size: var(--kb-size-sm);
+  line-height: 1.3;
+  text-decoration: none;
+  transition: background-color var(--kb-motion-duration-fast) var(--kb-motion-easing-standard);
+}
+
+.shell-task:hover {
+  background: color-mix(in oklab, var(--kb-color-fg) 5%, transparent);
+  color: var(--kb-color-fg);
+}
+
+.shell-task:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 1px;
+}
+
+.shell-task[aria-current="page"] {
+  background: color-mix(in oklab, var(--kb-color-fg) 8%, transparent);
+  box-shadow: inset 0 0 0 1px var(--shell-ring);
+  color: var(--kb-color-fg);
+  font-weight: 500;
+}
+
+.shell-task-icon {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+}
+
+.shell-task-icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.shell-task[data-light="working"] .shell-task-icon {
+  color: var(--kb-color-info);
+}
+
+.shell-task[data-light="needsYou"] .shell-task-icon {
+  color: var(--kb-color-warning);
+}
+
+.shell-task[data-light="failed"] .shell-task-icon {
+  color: var(--kb-color-danger);
+}
+
+.shell-task[data-light="passed"] .shell-task-icon {
+  color: var(--kb-color-success);
+}
+
+.shell-task[data-light="idle"] .shell-task-icon {
+  color: var(--kb-color-muted);
+}
+
+.shell-task-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.shell-usage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-1) var(--kb-space-4);
+  margin: auto 0 0;
+  padding-inline: var(--kb-space-3);
+  font-size: var(--kb-size-xs);
+  color: var(--kb-color-muted);
+}
+
+.shell-usage div {
+  display: flex;
+  gap: var(--kb-space-1);
+}
+
+.shell-usage dt,
+.shell-usage dd {
+  margin: 0;
+}
+
+.shell-usage dd {
+  color: var(--kb-color-fg);
+  font-family: var(--shell-mono);
+}
+
+.shell-main {
+  min-width: 0;
+  padding: var(--kb-space-8) calc(2 * var(--kb-space-6));
+}
+
+@media (max-width: 52rem) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .shell-side {
+    position: static;
+    height: auto;
+    gap: var(--kb-space-4);
+    padding: var(--kb-space-4) var(--kb-space-2);
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--shell-ring);
+  }
+
+  .shell-usage {
+    margin: 0;
+  }
+
+  .shell-main {
+    padding: var(--kb-space-6) var(--kb-space-4);
+  }
+}

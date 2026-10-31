@@ -1,0 +1,114 @@
+import type { StageId } from "../journey/model";
+import { oneOf, type Scene, type Theme, themes } from "./states";
+
+export const chapters = ["Your tasks", "Design states"] as const;
+export type Chapter = (typeof chapters)[number];
+
+export type TourView =
+  | { kind: "task"; taskId: string; stage: StageId }
+  | { kind: "state"; scene: Scene }
+  | { kind: "overview" };
+
+export type Step = { id: string; chapter: Chapter; title: string; note: string; view: TourView };
+
+export const steps: Step[] = [
+  {
+    id: "tasks",
+    chapter: "Your tasks",
+    title: "Every task in one list",
+    note: "Amber needs you, teal is working, red failed. Pick a task to open it.",
+    view: { kind: "task", taskId: "empty-state", stage: "review" },
+  },
+  {
+    id: "stages",
+    chapter: "Your tasks",
+    title: "Brief to Ship",
+    note: "Each stage has a light; click one to open it. Brief keeps your words and the done-when list.",
+    view: { kind: "task", taskId: "empty-state", stage: "brief" },
+  },
+  {
+    id: "working",
+    chapter: "Your tasks",
+    title: "Work in progress",
+    note: "A writer works in its own worktree; the plan lights up step by step.",
+    view: { kind: "task", taskId: "debounce", stage: "build" },
+  },
+  {
+    id: "question",
+    chapter: "Your tasks",
+    title: "A question waits on you",
+    note: "When a worker stops to ask, the task turns amber where you will see it.",
+    view: { kind: "task", taskId: "deny-scopes", stage: "build" },
+  },
+  {
+    id: "problems",
+    chapter: "Your tasks",
+    title: "Problems first",
+    note: "Check runs in the worktree and lists failures and code no test runs.",
+    view: { kind: "task", taskId: "snapshot", stage: "check" },
+  },
+  {
+    id: "state-idle",
+    chapter: "Design states",
+    title: "Idle",
+    note: "The interim Task screen with no task running.",
+    view: { kind: "state", scene: "idle" },
+  },
+  {
+    id: "state-running",
+    chapter: "Design states",
+    title: "Running",
+    note: "The writer's plane is lit; a comet travels its write edge.",
+    view: { kind: "state", scene: "running" },
+  },
+  {
+    id: "state-blocked",
+    chapter: "Design states",
+    title: "Blocked",
+    note: "The writer waits for an answer, so its plane casts warning light.",
+    view: { kind: "state", scene: "blocked" },
+  },
+  {
+    id: "state-long",
+    chapter: "Design states",
+    title: "Long content",
+    note: "Long output scrolls inside its panel and never spills.",
+    view: { kind: "state", scene: "longContent" },
+  },
+  {
+    id: "overview",
+    chapter: "Design states",
+    title: "Every state, both themes",
+    note: "Click any screen to open it full size.",
+    view: { kind: "overview" },
+  },
+];
+
+export type Tour = { index: number; theme: Theme };
+
+export function parseTour(search: string): Tour {
+  const query = new URLSearchParams(search);
+  const index = steps.findIndex((s) => s.id === query.get("step"));
+  return { index: Math.max(index, 0), theme: oneOf(themes, query.get("theme")) ?? "dark" };
+}
+
+export function tourSearch({ index, theme }: Tour): string {
+  return `?screen=walkthrough&step=${steps[index]?.id ?? steps[0]?.id}&theme=${theme}`;
+}
+
+export function step(tour: Tour, by: 1 | -1): Tour {
+  return { ...tour, index: Math.min(Math.max(tour.index + by, 0), steps.length - 1) };
+}
+
+export type TourAction = { type: "step"; by: 1 | -1 } | { type: "theme" };
+
+const keys: Record<string, TourAction> = {
+  ArrowRight: { type: "step", by: 1 },
+  ArrowLeft: { type: "step", by: -1 },
+  t: { type: "theme" },
+  T: { type: "theme" },
+};
+
+export function keyAction(key: string): TourAction | null {
+  return keys[key] ?? null;
+}

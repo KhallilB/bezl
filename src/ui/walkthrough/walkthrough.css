@@ -1,0 +1,275 @@
+/* Walkthrough chrome: the tour dock and the every-state overview. */
+.walkthrough {
+  --walkthrough-dock-space: 7.5rem;
+  --walkthrough-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
+  min-height: 100vh;
+  background: var(--kb-color-bg);
+  color: var(--kb-color-fg);
+  font-family: "Geist Variable", var(--kb-font-sans);
+}
+
+/* Room under the content so the dock never covers the last row. */
+.walkthrough-view {
+  padding-block-end: var(--walkthrough-dock-space);
+}
+
+.walkthrough-dock {
+  position: fixed;
+  inset-inline: var(--kb-space-4);
+  inset-block-end: var(--kb-space-4);
+  /* No z-index: menus and tooltips portal after the dock and must paint over it. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--kb-space-4);
+  width: min(44rem, calc(100% - 2 * var(--kb-space-4)));
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding: var(--kb-space-3) var(--kb-space-3) var(--kb-space-3) var(--kb-space-5);
+  border-radius: var(--kb-radius-lg);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--kb-color-fg) 6%, transparent), transparent),
+    color-mix(in oklab, var(--kb-color-bg) 78%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--kb-color-fg) 14%, transparent),
+    inset 0 0 0 1px var(--walkthrough-ring),
+    0 24px 48px -24px color-mix(in oklab, var(--kb-color-bg) 90%, transparent);
+}
+
+.walkthrough-copy {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.walkthrough-meta {
+  display: flex;
+  gap: var(--kb-space-2);
+  color: var(--kb-color-muted);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-xs);
+}
+
+.walkthrough-meta > span + span::before {
+  content: "·";
+  margin-inline-end: var(--kb-space-2);
+}
+
+.walkthrough-title {
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
+}
+
+.walkthrough-note {
+  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  font-size: var(--kb-size-xs);
+  line-height: 1.45;
+}
+
+.walkthrough-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--kb-space-1);
+}
+
+.walkthrough-controls svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.walkthrough-next {
+  gap: var(--kb-space-1);
+  padding-inline: var(--kb-space-4) var(--kb-space-3);
+}
+
+.walkthrough-separator {
+  align-self: stretch;
+  width: 1px;
+  margin: var(--kb-space-1);
+  background: var(--walkthrough-ring);
+}
+
+.walkthrough-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+}
+
+.walkthrough-hint kbd {
+  padding: 0 var(--kb-space-1);
+  border-radius: var(--kb-radius-sm);
+  box-shadow: inset 0 0 0 1px var(--walkthrough-ring);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-xs);
+}
+
+.walkthrough-contents {
+  min-width: 16rem;
+}
+
+.walkthrough-chapter {
+  display: block;
+  padding: var(--kb-space-2) var(--kb-space-3) var(--kb-space-1);
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+}
+
+.walkthrough-entry {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  gap: var(--kb-space-2);
+}
+
+.walkthrough-entry-n {
+  color: var(--kb-color-muted);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-xs);
+  text-align: end;
+}
+
+.walkthrough-entry[data-current] {
+  font-weight: 600;
+}
+
+/* Overview: the same screen, scaled, in every state and both themes. */
+.walkthrough-overview {
+  display: grid;
+  gap: var(--kb-space-8);
+  max-width: 96rem;
+  margin-inline: auto;
+  padding: var(--kb-space-8) calc(2 * var(--kb-space-6)) 0;
+}
+
+.walkthrough-intro {
+  display: grid;
+  gap: var(--kb-space-1);
+}
+
+.walkthrough-intro h1 {
+  margin: 0;
+  font-size: var(--kb-text-h3-size);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.walkthrough-intro p {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
+}
+
+.walkthrough-row {
+  display: grid;
+  gap: var(--kb-space-3);
+}
+
+.walkthrough-row h2 {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+  font-weight: 500;
+}
+
+.walkthrough-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--kb-space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.walkthrough-cell {
+  /* kbui's reset spaces prose list items; the grid sets its own gap. */
+  margin: 0;
+  position: relative;
+  display: grid;
+  gap: var(--kb-space-3);
+}
+
+.walkthrough-frame {
+  position: relative;
+  aspect-ratio: var(--walkthrough-ratio);
+  overflow: hidden;
+  border-radius: var(--kb-radius-lg);
+  box-shadow:
+    inset 0 0 0 1px var(--walkthrough-ring),
+    0 16px 32px -20px color-mix(in oklab, var(--kb-color-bg) 90%, transparent);
+  transition:
+    transform var(--kb-motion-duration-slow) var(--kb-motion-easing-standard),
+    box-shadow var(--kb-motion-duration-slow) var(--kb-motion-easing-standard);
+}
+
+.walkthrough-frame iframe {
+  position: absolute;
+  inset: 0 auto auto 0;
+  border: 0;
+  transform: scale(var(--walkthrough-scale, 0.25));
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.walkthrough-caption {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.walkthrough-caption-name {
+  font-size: var(--kb-size-sm);
+  font-weight: 500;
+}
+
+.walkthrough-caption-note {
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+}
+
+/* The whole cell is the button; it sits over the frame and caption. */
+.walkthrough-open {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: var(--kb-radius-lg);
+  background: transparent;
+  cursor: pointer;
+}
+
+.walkthrough-open:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 4px;
+}
+
+.walkthrough-cell:hover .walkthrough-frame,
+.walkthrough-cell:focus-within .walkthrough-frame {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--kb-color-info) 60%, transparent),
+    0 0 0 4px color-mix(in oklab, var(--kb-color-info) 14%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .walkthrough-cell:hover .walkthrough-frame,
+  .walkthrough-cell:focus-within .walkthrough-frame {
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 40rem) {
+  .walkthrough {
+    --walkthrough-dock-space: 9rem;
+  }
+
+  .walkthrough-dock {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--kb-space-2);
+    padding: var(--kb-space-3) var(--kb-space-4);
+  }
+
+  .walkthrough-controls {
+    justify-content: flex-end;
+  }
+
+  .walkthrough-overview {
+    padding-inline: var(--kb-space-4);
+  }
+}
