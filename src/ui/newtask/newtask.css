@@ -1,0 +1,292 @@
+/* New task form and the setup question. Shares the task page's left edge and type scale. */
+.newtask,
+.newtask-setup {
+  --newtask-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --newtask-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
+  --newtask-soft: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 60rem;
+  container-type: inline-size;
+}
+
+.newtask {
+  gap: var(--kb-space-8);
+}
+
+.newtask li {
+  margin: 0;
+}
+
+.newtask ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.newtask-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--kb-space-1) var(--kb-space-3);
+}
+
+.newtask h1,
+.newtask-setup h1 {
+  margin: 0;
+  font-size: var(--kb-text-h3-size);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.newtask-repo {
+  color: var(--kb-color-muted);
+  font-family: var(--newtask-mono);
+  font-size: var(--kb-size-xs);
+}
+
+/* Brief beside its readiness; stacked when the page is narrow. */
+.newtask-brief {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  align-items: start;
+  gap: var(--kb-space-6);
+}
+
+@container (max-width: 44rem) {
+  .newtask-brief {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.newtask-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-6);
+}
+
+.newtask-parts {
+  display: grid;
+  gap: var(--kb-space-3);
+  margin: 0;
+}
+
+.newtask-parts > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: var(--kb-space-3);
+}
+
+.newtask-parts dt,
+.newtask-section h2 {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+  font-weight: 500;
+}
+
+.newtask-parts dd {
+  margin: 0;
+  font-size: var(--kb-size-sm);
+}
+
+.newtask-section {
+  display: grid;
+  gap: var(--kb-space-2);
+}
+
+.newtask-done li,
+.newtask-paths li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--kb-space-3);
+  padding-block: var(--kb-space-2);
+  border-block-end: 1px solid var(--newtask-ring);
+  font-size: var(--kb-size-sm);
+}
+
+.newtask-paths li {
+  font-family: var(--newtask-mono);
+  font-size: var(--kb-size-xs);
+}
+
+.newtask-checker {
+  flex: none;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+}
+
+.newtask-done [data-checker="bezl"] .newtask-checker {
+  color: var(--kb-color-info);
+}
+
+/* Readiness: five checks, each gap with why and its one-click addition. */
+.newtask-readiness {
+  display: grid;
+  gap: var(--kb-space-3);
+  padding: var(--kb-space-4);
+  border-radius: var(--kb-radius-lg);
+  box-shadow: inset 0 0 0 1px var(--newtask-ring);
+  background: color-mix(in oklab, var(--kb-color-fg) 3%, transparent);
+}
+
+.newtask-readiness-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.newtask-readiness h2 {
+  margin: 0;
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
+}
+
+.newtask-readiness-head span {
+  color: var(--kb-color-muted);
+  font-family: var(--newtask-mono);
+  font-size: var(--kb-size-xs);
+}
+
+.newtask-readiness ul {
+  display: grid;
+  gap: var(--kb-space-3);
+}
+
+.newtask-check {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  column-gap: var(--kb-space-2);
+  row-gap: var(--kb-space-1);
+  align-items: start;
+  font-size: var(--kb-size-sm);
+}
+
+.newtask-check-icon {
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  margin-block-start: 0.125rem;
+  color: var(--kb-color-muted);
+}
+
+.newtask-check[data-met] .newtask-check-icon {
+  color: var(--kb-color-success);
+}
+
+.newtask-check:not([data-met]) .newtask-check-label {
+  font-weight: 500;
+}
+
+.newtask-check-why,
+.newtask-suggestion {
+  grid-column: 2;
+  margin: 0;
+  color: var(--newtask-soft);
+  font-size: var(--kb-size-xs);
+  line-height: 1.45;
+}
+
+.newtask-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kb-space-2);
+  padding: var(--kb-space-1) var(--kb-space-1) var(--kb-space-1) var(--kb-space-2);
+  border-radius: var(--kb-radius-md);
+  background: color-mix(in oklab, var(--kb-color-info) 8%, transparent);
+  color: var(--kb-color-fg);
+}
+
+.newtask-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Crew and scope: two columns of choices; one when narrow. */
+.newtask-crew > :last-child,
+.newtask-scope > :last-child {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--kb-space-6);
+}
+
+@container (max-width: 44rem) {
+  .newtask-crew > :last-child,
+  .newtask-scope > :last-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.newtask-choice {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.newtask-choice-note {
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+}
+
+.newtask-choice-note[data-tone="warning"] {
+  color: var(--kb-color-warning);
+}
+
+.newtask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--kb-space-3);
+}
+
+.newtask-actions > span {
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
+}
+
+/* Setup question: one needs-you item with its command. */
+.newtask-setup {
+  gap: var(--kb-space-4);
+  max-width: 40rem;
+}
+
+.newtask-setup-head {
+  display: flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+}
+
+.newtask-setup-icon {
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  color: var(--kb-color-warning);
+}
+
+.newtask-setup p {
+  margin: 0;
+  color: var(--newtask-soft);
+  font-size: var(--kb-size-md);
+  line-height: 1.5;
+}
+
+.newtask-command {
+  margin: 0;
+  padding: var(--kb-space-3) var(--kb-space-4);
+  overflow-x: auto;
+  border-radius: var(--kb-radius-md);
+  box-shadow: inset 0 0 0 1px var(--newtask-ring);
+  background: color-mix(in oklab, var(--kb-color-fg) 4%, transparent);
+  font-family: var(--newtask-mono);
+  font-size: var(--kb-size-sm);
+}
+
+.newtask-setup .newtask-actions {
+  margin-block-start: var(--kb-space-2);
+}

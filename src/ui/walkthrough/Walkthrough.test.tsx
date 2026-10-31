@@ -162,7 +162,7 @@ describe("Walkthrough getting started", () => {
     expect(screen.getByText("No writer available")).toBeVisible();
   });
 
-  test("the empty task list offers one action, which starts the tasks chapter", async () => {
+  test("the empty task list offers one action, which opens New task", async () => {
     at("?screen=walkthrough&step=empty-list");
     render(<Walkthrough />);
     expect(within(tasks()).queryAllByRole("link")).toHaveLength(0);
@@ -170,6 +170,36 @@ describe("Walkthrough getting started", () => {
     const actions = screen.getAllByRole("button", { name: "New task" });
     expect(actions.length).toBeGreaterThan(0);
     await userEvent.click(actions[0] as HTMLElement);
-    expect(within(dock()).getByText(position("tasks"))).toBeVisible();
+    expect(within(dock()).getByText(position("new-task"))).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "New task" })).toBeVisible();
+  });
+});
+
+describe("Walkthrough start a task", () => {
+  test("each brief step shows the form further filled in", () => {
+    at("?screen=walkthrough&step=new-task");
+    const blank = render(<Walkthrough />);
+    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveValue("");
+    blank.unmount();
+    at("?screen=walkthrough&step=brief-ready");
+    render(<Walkthrough />);
+    expect(screen.getByRole("button", { name: "Start task" })).toBeVisible();
+    expect(screen.getByRole("list", { name: "Done when" })).toBeVisible();
+  });
+
+  test("starting asks about setup, and Allow prepares the first task", async () => {
+    at("?screen=walkthrough&step=brief-ready");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Start task" }));
+    expect(within(dock()).getByText(position("setup"))).toBeVisible();
+    expect(screen.getByText("bun install")).toBeVisible();
+    expect(
+      within(tasks()).getByRole("link", { name: /Empty state for Projects, needs you/ }),
+    ).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Allow" }));
+    expect(within(dock()).getByText(position("preparing"))).toBeVisible();
+    expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(
+      /Plan, working/,
+    );
   });
 });
