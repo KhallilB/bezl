@@ -1,0 +1,118 @@
+/* Needs-you items: amber edge, the question, its choices. Same card in Approvals and inline. */
+.needsyou {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-3);
+}
+
+.needsyou-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-2);
+  padding: var(--kb-space-4);
+  border-radius: var(--kb-radius-lg);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kb-color-warning) 40%, transparent);
+  background: color-mix(in oklab, var(--kb-color-warning) 5%, transparent);
+  color: var(--kb-color-fg);
+}
+
+.needsyou-head {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--kb-space-2);
+}
+
+.needsyou-icon {
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  color: var(--kb-color-warning);
+}
+
+.needsyou-kind {
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
+}
+
+.needsyou-waited {
+  color: var(--kb-color-muted);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-xs);
+  white-space: nowrap;
+}
+
+.needsyou-task {
+  justify-self: start;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+  text-decoration: none;
+}
+
+.needsyou-task:hover {
+  color: var(--kb-color-fg);
+  text-decoration: underline;
+}
+
+.needsyou-task:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 2px;
+  border-radius: var(--kb-radius-sm);
+}
+
+.needsyou-prompt {
+  margin: 0;
+  font-size: var(--kb-size-md);
+  line-height: 1.5;
+}
+
+.needsyou-context {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-size: var(--kb-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.needsyou-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-2);
+  padding-block-start: var(--kb-space-1);
+}
+
+.needsyou-answered {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
+}
+
+.needsyou-answered:empty {
+  display: none;
+}
+
+/* Approvals: the queue on its own page, on the task page's left edge. */
+.approvals {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-6);
+  max-width: 52rem;
+}
+
+.approvals-header {
+  display: grid;
+  gap: var(--kb-space-2);
+}
+
+.approvals-header h1 {
+  margin: 0;
+  font-size: var(--kb-text-h3-size);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.approvals-header p {
+  margin: 0;
+  color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+  font-size: var(--kb-size-lg);
+}

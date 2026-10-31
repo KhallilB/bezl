@@ -1,4 +1,7 @@
+import { Button } from "@kb.ui/react";
 import { useId } from "react";
+import { NeedsYouList } from "../approvals/Approvals";
+import { itemsFor, type NeedsYouItem } from "../approvals/model";
 import "./journey.css";
 import { LightIcon } from "./icons";
 import {
@@ -65,12 +68,21 @@ function SectionList({ section }: { section: Section }) {
 
 type PaneProps = TaskPageProps & { view: StageView };
 
-function StagePane({ task, stage, view, onStage, onKeep }: PaneProps) {
+function StagePane({ task, stage, view, onStage, onKeep, needsYou, onNeedsYou }: PaneProps) {
   // Keeping is the decision Review waits on; once made, the buttons go.
   const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
+  const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
   return (
     <div className="journey-pane">
       {view.quote ? <blockquote className="journey-quote">{view.quote}</blockquote> : null}
+      {needsYou && onNeedsYou && here.length > 0 ? (
+        <NeedsYouList
+          items={here}
+          onItems={(left) =>
+            onNeedsYou(needsYou.filter((i) => !here.includes(i) || left.includes(i)))
+          }
+        />
+      ) : null}
       {view.problems?.length ? <Problems problems={view.problems} /> : null}
       {view.takes ? <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} /> : null}
       {view.ship ? <Ship ship={view.ship} onBack={() => onStage("review")} /> : null}
@@ -85,10 +97,15 @@ function StagePane({ task, stage, view, onStage, onKeep }: PaneProps) {
 export type TaskPageProps = StageStripProps & {
   /** Keeps a take on Review, which hands it to Ship. */
   onKeep?: (takeId: string) => void;
+  /** The whole queue; this task's items for the open stage show inline. */
+  needsYou?: NeedsYouItem[];
+  onNeedsYou?: (items: NeedsYouItem[]) => void;
+  /** Shows History in the header when given. */
+  onHistory?: () => void;
 };
 
 /** One task: its header, the stage strip, one status sentence and the open stage. */
-export function TaskPage({ task, stage, onStage, onKeep }: TaskPageProps) {
+export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageProps) {
   const view = task.views[stage];
   return (
     <article className="journey" aria-labelledby={`task-${task.id}`}>
@@ -96,6 +113,11 @@ export function TaskPage({ task, stage, onStage, onKeep }: TaskPageProps) {
         <div className="journey-title">
           <h1 id={`task-${task.id}`}>{task.title}</h1>
           <span className="journey-repo">{task.repo}</span>
+          {onHistory ? (
+            <Button variant="ghost" size="sm" className="journey-history" onClick={onHistory}>
+              History
+            </Button>
+          ) : null}
         </div>
         <StageStrip task={task} stage={stage} onStage={onStage} />
         <p className="journey-status">
@@ -103,14 +125,7 @@ export function TaskPage({ task, stage, onStage, onKeep }: TaskPageProps) {
           {view.rest ? ` ${view.rest}` : null}
         </p>
       </header>
-      <StagePane
-        key={stage}
-        task={task}
-        stage={stage}
-        view={view}
-        onStage={onStage}
-        {...(onKeep ? { onKeep } : {})}
-      />
+      <StagePane key={stage} task={task} stage={stage} view={view} onStage={onStage} {...rest} />
     </article>
   );
 }

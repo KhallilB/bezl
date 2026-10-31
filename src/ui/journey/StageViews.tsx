@@ -1,6 +1,7 @@
 import { Button, Input } from "@kb.ui/react";
 import { useId, useState } from "react";
 import { LightIcon } from "./icons";
+import "./journey.css";
 import {
   diffLabel,
   type FileChange,
@@ -29,7 +30,7 @@ export function RowItem({ row }: { row: Row }) {
   );
 }
 
-function Files({ files, label }: { files: FileChange[]; label: string }) {
+export function Files({ files, label }: { files: FileChange[]; label: string }) {
   return (
     <ul className="journey-files" aria-label={label}>
       {files.map((f) => (

@@ -2,14 +2,20 @@ import { Button, Menu, Tooltip } from "@kb.ui/react";
 import {
   type CSSProperties,
   type ReactElement,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
+import { Approvals } from "../approvals/Approvals";
+import { needsYou } from "../approvals/fixtures";
+import type { NeedsYouItem } from "../approvals/model";
+import { history } from "../history/fixtures";
+import { HistoryPage } from "../history/HistoryPage";
 import { keptTasks, tasks, usage } from "../journey/fixtures";
-import type { StageId } from "../journey/model";
+import type { JourneyTask, StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
 import { crew, drafts, paths, startedTask, suggestions } from "../newtask/fixtures";
 import { NewTask } from "../newtask/NewTask";
@@ -280,34 +286,64 @@ function ownsKeys(target: EventTarget | null) {
 
 type Place = { taskId: string; stage: StageId };
 
-type TaskViewProps = {
-  place: Place;
-  kept: boolean;
+/** The queue and the moves every screen after the first task shares. */
+type Shared = {
+  queue: NeedsYouItem[];
+  onQueue: (items: NeedsYouItem[]) => void;
   onPlace: (place: Place) => void;
-  onKeep: () => void;
+  onGoTo: (id: string) => void;
 };
 
-function TaskView({ place, kept, onPlace, onKeep }: TaskViewProps) {
-  const list = kept ? keptTasks : tasks;
-  const open = list.find((t) => t.id === place.taskId) ?? list[0];
-  if (!open) return null;
+/** The shell once tasks exist: the list, its lights and Approvals with its count. */
+function TasksShell({
+  list,
+  current,
+  shared,
+  children,
+}: {
+  list: JourneyTask[];
+  current: string | "approvals";
+  shared: Shared;
+  children: ReactNode;
+}) {
   return (
     <AppShell
       tasks={list}
       usage={usage}
-      currentTaskId={open.id}
+      currentTaskId={current}
+      approvals={{
+        count: shared.queue.length,
+        current: current === "approvals",
+        onOpen: () => shared.onGoTo("approvals"),
+      }}
       onOpenTask={(taskId) => {
         const next = list.find((t) => t.id === taskId);
-        if (next) onPlace({ taskId, stage: next.current });
+        if (next) shared.onPlace({ taskId, stage: next.current });
       }}
     >
+      {children}
+    </AppShell>
+  );
+}
+
+function TaskView({ place, kept, shared }: { place: Place; kept: boolean; shared: Shared }) {
+  const list = kept ? keptTasks : tasks;
+  const open = list.find((t) => t.id === place.taskId) ?? list[0];
+  if (!open) return null;
+  return (
+    <TasksShell list={list} current={open.id} shared={shared}>
       <TaskPage
         task={open}
         stage={place.stage}
-        onStage={(stage) => onPlace({ ...place, stage })}
-        onKeep={onKeep}
+        onStage={(stage) => shared.onPlace({ ...place, stage })}
+        onKeep={() => shared.onGoTo("ship")}
+        needsYou={shared.queue}
+        onNeedsYou={shared.onQueue}
+        {...(kept && open.id === history.taskId
+          ? { onHistory: () => shared.onGoTo("history") }
+          : {})}
       />
-    </AppShell>
+    </TasksShell>
   );
 }
 
@@ -323,14 +359,25 @@ function View({
   onPlace,
   onOpen,
   onGoTo,
+  queue,
+  onQueue,
 }: {
   view: TourView;
   place: Place | null;
   onPlace: (place: Place) => void;
   onOpen: OpenState;
+  /** Answers made on this step; null until the first. */
+  queue: NeedsYouItem[] | null;
+  onQueue: (items: NeedsYouItem[]) => void;
   /** Moves the tour to a step by id, as a click in a screen would. */
   onGoTo: (id: string) => void;
 }) {
+  const shared: Shared = {
+    queue: queue ?? (view.kind === "approvals" && view.cleared ? [] : needsYou),
+    onQueue,
+    onPlace,
+    onGoTo,
+  };
   switch (view.kind) {
     case "choose":
       return (
@@ -400,13 +447,26 @@ function View({
       );
     }
     case "task":
-      return (
-        <TaskView
-          place={place ?? view}
-          kept={view.kept ?? false}
-          onPlace={onPlace}
-          onKeep={() => onGoTo("ship")}
-        />
+      return <TaskView place={place ?? view} kept={view.kept ?? false} shared={shared} />;
+    case "approvals":
+      return place ? (
+        <TaskView place={place} kept={false} shared={shared} />
+      ) : (
+        <TasksShell list={tasks} current="approvals" shared={shared}>
+          <Approvals
+            items={shared.queue}
+            onItems={onQueue}
+            onOpenTask={(taskId, stage) => onPlace({ taskId, stage })}
+          />
+        </TasksShell>
+      );
+    case "history":
+      return place ? (
+        <TaskView place={place} kept shared={shared} />
+      ) : (
+        <TasksShell list={keptTasks} current={history.taskId} shared={shared}>
+          <HistoryPage history={history} onBack={() => onGoTo("ship")} />
+        </TasksShell>
       );
     case "state":
       return <StateScene key={view.scene} scene={view.scene} />;
@@ -420,6 +480,7 @@ export function Walkthrough() {
   const [tour, setTour] = useState(() => parseTour(window.location.search));
   // A click inside the shell moves off the step's own place until the step changes.
   const [place, setPlace] = useState<Place | null>(null);
+  const [queue, setQueue] = useState<NeedsYouItem[] | null>(null);
   useDocumentTheme(tour.theme);
 
   useEffect(() => {
@@ -428,6 +489,7 @@ export function Walkthrough() {
 
   const jump = useCallback((index: number) => {
     setPlace(null);
+    setQueue(null);
     setTour((t) => ({ ...t, index }));
   }, []);
 
@@ -437,6 +499,7 @@ export function Walkthrough() {
       return;
     }
     setPlace(null);
+    setQueue(null);
     setTour((t) => step(t, action.by));
   }, []);
 
@@ -455,6 +518,7 @@ export function Walkthrough() {
   const openState: OpenState = (scene, theme) => {
     const index = steps.findIndex((s) => s.view.kind === "state" && s.view.scene === scene);
     setPlace(null);
+    setQueue(null);
     setTour({ index: Math.max(index, 0), theme });
   };
 
@@ -468,6 +532,8 @@ export function Walkthrough() {
             place={place}
             onPlace={setPlace}
             onOpen={openState}
+            queue={queue}
+            onQueue={setQueue}
             onGoTo={(id) =>
               jump(
                 Math.max(

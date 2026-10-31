@@ -11,6 +11,8 @@ export type AppShellProps = {
   onOpenTask: (taskId: string) => void;
   /** Shows New task above the list when given. */
   onNewTask?: () => void;
+  /** Shows Approvals, with how many items wait on you, when given. */
+  approvals?: { count: number; current: boolean; onOpen: () => void };
   children: ReactNode;
 };
 
@@ -18,6 +20,15 @@ function PlusIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M8 3.25v9.5M3.25 8h9.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function InboxIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M2.75 9.25h3l1 1.5h2.5l1-1.5h3" strokeLinejoin="round" />
+      <path d="M4.25 3.25h7.5l1.5 6v3.5h-10.5v-3.5z" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -45,6 +56,7 @@ export function AppShell({
   currentTaskId,
   onOpenTask,
   onNewTask,
+  approvals,
   children,
 }: AppShellProps) {
   return (
@@ -59,6 +71,37 @@ export function AppShell({
             <PlusIcon />
             New task
           </button>
+        ) : null}
+        {approvals ? (
+          <nav aria-label="Areas" className="shell-tasks">
+            <ul>
+              <li>
+                <a
+                  href="/approvals"
+                  className="shell-task shell-area"
+                  data-light={approvals.count > 0 ? "needsYou" : undefined}
+                  aria-current={approvals.current ? "page" : undefined}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    approvals.onOpen();
+                  }}
+                >
+                  <span className="shell-task-icon">
+                    <InboxIcon />
+                  </span>
+                  <span className="shell-task-title">Approvals</span>
+                  {approvals.count > 0 ? (
+                    <>
+                      <span className="shell-count" aria-hidden="true">
+                        {approvals.count}
+                      </span>
+                      <span className="shell-sr">{`, ${approvals.count} need you`}</span>
+                    </>
+                  ) : null}
+                </a>
+              </li>
+            </ul>
+          </nav>
         ) : null}
         <nav aria-label="Tasks" className="shell-tasks">
           <ul>
