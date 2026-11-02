@@ -837,19 +837,20 @@
   gap: var(--kb-space-1);
 }
 
-/* Expand sits level with the caption, in the corner the caption leaves free. */
-.journey-preview-well {
-  position: relative;
+.journey-side-head {
+  display: flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+  width: 100%;
 }
 
-.journey-expand {
-  position: absolute;
-  inset-block-end: var(--kb-space-2);
-  inset-inline-end: var(--kb-space-2);
+.journey-side-head > button {
+  flex: none;
+  white-space: nowrap;
 }
 
-/* Design review: the screenshots get the window; pins and notes sit in a rail. */
-.journey-review {
+/* Full screen: path left, the view in the middle, what you picked right, the bar below. */
+.journey-full {
   display: flex;
   flex-direction: column;
   gap: var(--kb-space-3);
@@ -860,10 +861,223 @@
   border-radius: 0;
 }
 
-.journey-review .journey-preview-tools {
-  justify-content: flex-start;
-  align-items: end;
-  gap: var(--kb-space-3) var(--kb-space-6);
+.journey-full-head {
+  display: flex;
+  align-items: center;
+  gap: var(--kb-space-3);
+}
+
+.journey-full-head .journey-tabs {
+  flex: 0 1 24rem;
+  min-width: 0;
+}
+
+.journey-full-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--kb-space-4);
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Mid widths keep the canvas wide: path and selection share one column. */
+@media (min-width: 64rem) {
+  .journey-full-body {
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "canvas path" "canvas side";
+    overflow: hidden;
+  }
+
+  .journey-path {
+    grid-area: path;
+  }
+
+  .journey-full-canvas {
+    grid-area: canvas;
+  }
+
+  .journey-full-side {
+    grid-area: side;
+  }
+
+  /* Each column scrolls on its own; the canvas keeps the height it is given. */
+  .journey-path,
+  .journey-full-canvas,
+  .journey-full-side {
+    min-height: 0;
+  }
+
+  .journey-path,
+  .journey-full-side {
+    overflow: auto;
+  }
+}
+
+@media (min-width: 90rem) {
+  .journey-full-body {
+    grid-template-columns: 15rem minmax(0, 1fr) 16rem;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "path canvas side";
+  }
+}
+
+.journey-full-canvas {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.journey-preview[data-wide] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.journey-full-canvas .journey-intent {
+  overflow: auto;
+}
+
+.journey-full-bar:empty {
+  display: none;
+}
+
+.journey-full-bar > .journey-next {
+  position: static;
+}
+
+.journey-path,
+.journey-full-side {
+  display: grid;
+  align-content: start;
+  gap: var(--kb-space-2);
+}
+
+.journey-inspector {
+  display: grid;
+  align-content: start;
+  gap: var(--kb-space-2);
+}
+
+.journey-full-ask:empty {
+  display: none;
+}
+
+/* The rail is narrow: a question's kind drops under its text. */
+.journey-full-ask .journey-problem-head {
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+}
+
+.journey-full-ask .journey-problem-head > .journey-row-meta {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.journey-path ol,
+.journey-inspector ul {
+  display: grid;
+  gap: var(--kb-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-inspector p {
+  margin: 0;
+}
+
+.journey-inspector-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--kb-space-2);
+}
+
+.journey-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-2);
+}
+
+/* The evidence map; React Flow's own colours follow kbui's. */
+.journey-map {
+  --xy-background-color: var(--kb-material-recessed-face);
+  --xy-background-pattern-color: var(--kb-color-border);
+  --xy-edge-stroke: var(--kb-color-muted);
+  --xy-edge-stroke-selected: var(--kb-color-fg);
+  --xy-controls-button-background-color: var(--kb-material-raised-face);
+  --xy-controls-button-background-color-hover: var(--kb-material-recessed-face);
+  --xy-controls-button-color: var(--kb-color-fg);
+  --xy-controls-button-border-color: var(--kb-color-border);
+  --xy-attribution-background-color: transparent;
+  min-height: 24rem;
+  border: 1px solid var(--kb-color-border);
+  border-radius: var(--kb-radius-md);
+  overflow: hidden;
+}
+
+.journey-map-card {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--kb-space-3);
+  width: 12.5rem;
+  padding: var(--kb-space-2) var(--kb-space-3);
+  border: 1px solid var(--kb-material-raised-border);
+  border-radius: var(--kb-radius-md);
+  background: var(--kb-material-raised-face);
+  box-shadow: var(--kb-material-raised-shadow);
+  color: var(--kb-color-fg);
+  font-size: var(--kb-size-sm);
+  cursor: pointer;
+}
+
+.journey-map-card .react-flow__handle {
+  opacity: 0;
+}
+
+.selected > .journey-map-card {
+  border-color: color-mix(in oklab, var(--journey-ink) 60%, transparent);
+  box-shadow: 0 0 0 2px var(--kb-color-ring);
+}
+
+.journey-map-dim {
+  opacity: 0.35;
+}
+
+.journey-full-canvas > .journey-preview,
+.journey-full-canvas > .journey-map,
+.journey-full-canvas > .journey-intent {
+  flex: 1;
+  min-height: 0;
+}
+
+.journey-pin-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--kb-space-2);
+  padding: var(--kb-space-1);
+  border: 1px solid transparent;
+  border-radius: var(--kb-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.journey-pin-item:hover,
+.journey-pin-item[aria-current="true"] {
+  border-color: var(--kb-material-raised-border);
+  background: var(--kb-material-raised-face);
+}
+
+.journey-pin-item:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 2px;
+}
+
+.journey-shot-frame .journey-pin[data-active] {
+  box-shadow: 0 0 0 5px color-mix(in oklab, var(--kb-color-danger) 45%, transparent);
 }
 
 .journey-review-body {

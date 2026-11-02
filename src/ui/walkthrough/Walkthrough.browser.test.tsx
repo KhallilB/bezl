@@ -215,3 +215,31 @@ test("card titles and the brand mark match the shell's", async () => {
   }
   expect(distinct(marks)).toEqual(new Set([mark]));
 });
+
+const press = (root: ParentNode, text: string, selector = "button") =>
+  [...root.querySelectorAll<HTMLElement>(selector)]
+    .find((b) => b.textContent?.includes(text))
+    ?.click();
+
+for (const theme of ["dark", "light"] as const) {
+  test(`full screen draws the evidence map with one finding's chain lit, and passes the scan in ${theme}`, async () => {
+    await page.viewport(1440, 900);
+    await mount(`?screen=walkthrough&step=review-takes&theme=${theme}`);
+    press(document, "Full screen");
+    await expect.poll(() => document.querySelector('[role="dialog"]')).toBeTruthy();
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+    press(dialog, "Evidence", '[role="tab"]');
+    await expect.poll(() => dialog.querySelectorAll(".journey-map-card").length).toBe(12);
+    press(dialog, "Import from GitHub does nothing yet", ".journey-path button");
+    const lit = () =>
+      [...dialog.querySelectorAll<HTMLElement>(".react-flow__node")]
+        .filter(
+          (n) => n.querySelector(".journey-map-card") && !n.classList.contains("journey-map-dim"),
+        )
+        .map((n) => n.dataset.id)
+        .sort();
+    await expect.poll(lit).toEqual(["i2", "import", "link", "review"]);
+    const result = await axe.run(dialog);
+    expect(result.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+  });
+}

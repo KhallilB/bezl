@@ -1,6 +1,5 @@
-import { Badge, Button, Dialog, Input, Panel, Toolbar } from "@kb.ui/react";
+import { Badge, Button, Input, Panel, Toolbar } from "@kb.ui/react";
 import { type MouseEvent, type ReactNode, useState } from "react";
-import { usePortalRoot } from "../theme/AppTheme";
 import { type Shot, type ShotPin, type ShotSize, shotWidth } from "./model";
 
 type Note = ShotPin & { shot: string };
@@ -58,12 +57,14 @@ function ShotFigure({
   notes,
   spot,
   named,
+  focus,
   onPlace,
 }: {
   shot: Shot;
   size: ShotSize;
   notes: Note[];
   spot?: Spot | null;
+  focus?: string | null | undefined;
   /** Beside another, so the caption says which one it is. */
   named?: boolean;
   onPlace?: ((e: MouseEvent<HTMLButtonElement>) => void) | undefined;
@@ -85,6 +86,7 @@ function ShotFigure({
             key={p.text}
             className="journey-pin"
             data-kind="finding"
+            data-active={p.node && p.node === focus ? "" : undefined}
             style={{ left: `${p.x}%`, top: `${p.y}%` }}
             aria-hidden="true"
           >
@@ -129,24 +131,49 @@ function PinList({
   size,
   notes,
   label,
+  focus,
+  onPin,
 }: {
   shot: Shot;
   size: ShotSize;
   notes: Note[];
   label: string;
+  focus?: string | null | undefined;
+  /** Picks the trace node a finding is about. */
+  onPin?: ((node: string) => void) | undefined;
 }) {
   const findings = (shot.findings ?? []).filter((p) => p.size === size);
   const mine = notes.filter((n) => n.shot === shot.id && n.size === size);
   return findings.length || mine.length ? (
     <ol className="journey-pins" aria-label={label}>
-      {findings.map((p, i) => (
-        <li key={p.text}>
+      {findings.map((p, i) => {
+        const marker = (
           <Badge tone="danger" mono aria-hidden="true">
             {letter(i)}
           </Badge>
-          {p.text}
-        </li>
-      ))}
+        );
+        const node = p.node;
+        return (
+          <li key={p.text}>
+            {node && onPin ? (
+              <button
+                type="button"
+                className="journey-pin-item"
+                aria-current={node === focus ? "true" : undefined}
+                onClick={() => onPin(node)}
+              >
+                {marker}
+                {p.text}
+              </button>
+            ) : (
+              <>
+                {marker}
+                {p.text}
+              </>
+            )}
+          </li>
+        );
+      })}
       {mine.map((n, i) => (
         <li key={`${n.x}-${n.y}`}>
           <Badge tone="info" mono aria-hidden="true">
@@ -159,20 +186,41 @@ function PinList({
   ) : null;
 }
 
-/** Screenshots Bezl took of the change, pinned; Expand opens them full window, two side by side. */
-export function Preview({ shots, example }: { shots: Shot[]; example: Shot | null }) {
-  const portal = usePortalRoot();
+/** What you picked and noted in Design; shared by the side and full screen. */
+export function useDesign(shots: Shot[]) {
   const [picked, setPicked] = useState(shots[0]?.id);
   const [size, setSize] = useState<ShotSize>("phone");
   const [notes, setNotes] = useState<Note[]>([]);
+  const [beside, setBeside] = useState("");
+  return { picked, setPicked, size, setSize, notes, setNotes, beside, setBeside };
+}
+
+export type Design = ReturnType<typeof useDesign>;
+
+/** Screenshots Bezl took of the change, pinned; full screen adds a second one beside it. */
+export function Preview({
+  shots,
+  example,
+  design,
+  wide = false,
+  focus,
+  onPin,
+}: {
+  shots: Shot[];
+  example: Shot | null;
+  design: Design;
+  /** Full screen: labelled toolbars and a screenshot beside it. */
+  wide?: boolean;
+  focus?: string | null | undefined;
+  onPin?: ((node: string) => void) | undefined;
+}) {
+  const { picked, setPicked, size, setSize, notes, setNotes, beside, setBeside } = design;
   const [noting, setNoting] = useState(false);
   const [spot, setSpot] = useState<Spot | null>(null);
   const [text, setText] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const [beside, setBeside] = useState("");
   const shot = example ?? shots.find((s) => s.id === picked) ?? shots[0];
   if (!shot) return null;
-  const other = shots.find((s) => s.id === beside && s.id !== shot.id);
+  const other = wide ? shots.find((s) => s.id === beside && s.id !== shot.id) : undefined;
   const mine = notes.filter((n) => n.shot === shot.id && n.size === size);
   const place = (e: MouseEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -212,6 +260,7 @@ export function Preview({ shots, example }: { shots: Shot[]; example: Shot | nul
       notes={notes}
       spot={spot}
       named={Boolean(other)}
+      focus={focus}
       onPlace={noting && !spot ? place : undefined}
     />
   );
@@ -254,74 +303,61 @@ export function Preview({ shots, example }: { shots: Shot[]; example: Shot | nul
       </Button>
     </div>
   );
-  const pins = <PinList shot={shot} size={size} notes={notes} label="On this screenshot" />;
+  const pins = (
+    <PinList
+      shot={shot}
+      size={size}
+      notes={notes}
+      label="On this screenshot"
+      focus={focus}
+      onPin={onPin}
+    />
+  );
+  if (!wide) {
+    return (
+      <div className="journey-preview">
+        <div className="journey-preview-tools">{tools(false)}</div>
+        <Panel.Well>{figure}</Panel.Well>
+        {pins}
+        {noteTools}
+      </div>
+    );
+  }
   return (
-    <div className="journey-preview">
-      {expanded ? null : (
-        <>
-          <div className="journey-preview-tools">{tools(false)}</div>
-          <Panel.Well className="journey-preview-well">
-            {figure}
-            <Button
-              size="sm"
-              variant="secondary"
-              className="journey-expand"
-              onClick={() => setExpanded(true)}
-            >
-              Expand
-            </Button>
-          </Panel.Well>
+    <div className="journey-preview" data-wide="">
+      <div className="journey-preview-tools">
+        {tools(
+          true,
+          shots.length > 1 ? (
+            <Toggle
+              label="Beside it"
+              value={other?.id ?? ""}
+              options={[
+                ["", "Nothing"],
+                ...shots
+                  .filter((s) => s.id !== shot.id)
+                  .map((s): [string, string] => [s.id, s.name]),
+              ]}
+              onChange={setBeside}
+              shown
+              className="journey-tool journey-beside"
+            />
+          ) : null,
+        )}
+      </div>
+      <div className="journey-review-body">
+        <Panel.Well className="journey-review-canvas">
+          {figure}
+          {other ? <ShotFigure shot={other} size={size} notes={notes} named /> : null}
+        </Panel.Well>
+        <div className="journey-review-rail">
           {pins}
+          {other ? (
+            <PinList shot={other} size={size} notes={notes} label={`On ${other.name}`} />
+          ) : null}
           {noteTools}
-        </>
-      )}
-      <Dialog open={expanded} onOpenChange={setExpanded}>
-        {expanded ? (
-          <Dialog.Content
-            {...(portal ? { container: portal } : {})}
-            title={`Design review · ${shot.screen}`}
-            description="Bezl's findings and your notes, pinned where they are."
-            className="journey-review"
-          >
-            <div className="journey-preview-tools">
-              {tools(
-                true,
-                shots.length > 1 ? (
-                  <Toggle
-                    label="Beside it"
-                    value={other?.id ?? ""}
-                    options={[
-                      ["", "Nothing"],
-                      ...shots
-                        .filter((s) => s.id !== shot.id)
-                        .map((s): [string, string] => [s.id, s.name]),
-                    ]}
-                    onChange={setBeside}
-                    shown
-                    className="journey-tool journey-beside"
-                  />
-                ) : null,
-              )}
-            </div>
-            <div className="journey-review-body">
-              <Panel.Well className="journey-review-canvas">
-                {figure}
-                {other ? <ShotFigure shot={other} size={size} notes={notes} named /> : null}
-              </Panel.Well>
-              <div className="journey-review-rail">
-                {pins}
-                {other ? (
-                  <PinList shot={other} size={size} notes={notes} label={`On ${other.name}`} />
-                ) : null}
-                {noteTools}
-              </div>
-            </div>
-            <Dialog.Actions>
-              <Dialog.Close render={<Button variant="secondary" />}>Close</Dialog.Close>
-            </Dialog.Actions>
-          </Dialog.Content>
-        ) : null}
-      </Dialog>
+        </div>
+      </div>
     </div>
   );
 }

@@ -81,8 +81,8 @@ const importLink = "The Import from GitHub link does nothing yet";
 const reviewedA: Shot = {
   ...shotA,
   findings: [
-    { size: "phone", x: 50, y: 62.8, text: importLink },
-    { size: "desktop", x: 50, y: 59.2, text: importLink },
+    { size: "phone", x: 50, y: 62.8, text: importLink, node: "import" },
+    { size: "desktop", x: 50, y: 59.2, text: importLink, node: "import" },
   ],
 };
 const warm = projects(
@@ -116,16 +116,19 @@ const emptyTrace: Trace = {
     node("link", "change", "ImportLink", "Projects.tsx:41", "needsYou"),
     node("tests", "measured", "bun run test", "48 passed"),
     node("axe", "measured", "Accessibility", "0 issues"),
-    node("shots", "measured", "Screenshots", "375 and 1280 px"),
+    { ...node("shots", "measured", "Screenshots", "375 and 1280 px"), shot: "a" },
     node("review", "measured", "Codex review", "1 issue", "needsYou"),
-    node(
-      "import",
-      "decide",
-      "Import from GitHub does nothing yet",
-      "Codex vs Claude Code",
-      "needsYou",
-    ),
-    node("look", "decide", "Does it look right?", "your call", "needsYou"),
+    {
+      ...node(
+        "import",
+        "decide",
+        "Import from GitHub does nothing yet",
+        "Codex vs Claude Code",
+        "needsYou",
+      ),
+      shot: "a",
+    },
+    { ...node("look", "decide", "Does it look right?", "your call", "needsYou"), shot: "a" },
   ],
   links: [
     { from: "i1", to: "projects" },

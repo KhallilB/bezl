@@ -11,7 +11,8 @@ import {
   Switch,
 } from "@kb.ui/react";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { LightIcon, lightTone } from "./icons";
 import "./journey.css";
 import {
@@ -288,24 +289,33 @@ export function Compare({ compare }: { compare: Comparison }) {
   );
 }
 
-/** Send the problems back; Options sets who fixes, what goes and what runs after. */
-export function SendBack({
-  problems,
-  options,
-  shots,
-}: {
-  problems: Problem[];
-  options?: SendBackOptions | undefined;
-  /** Stage has screenshots, so they can go too. */
-  shots: boolean;
-}) {
-  const id = useId();
-  const { what, writers } = sendText(problems);
+/** Send-back's choices; held by the stage so the bar can move to full screen and back. */
+export function useSendBack(options?: SendBackOptions) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [fixer, setFixer] = useState(options?.fixers[0]?.id ?? "");
   const [checks, setChecks] = useState(options?.checks.map((c) => c.id) ?? []);
   const [carry, setCarry] = useState({ notes: true, shots: true });
+  return { open, setOpen, sent, setSent, fixer, setFixer, checks, setChecks, carry, setCarry };
+}
+
+/** Send the problems back; Options sets who fixes, what goes and what runs after. */
+export function SendBack({
+  problems,
+  options,
+  shots,
+  state,
+}: {
+  problems: Problem[];
+  options?: SendBackOptions | undefined;
+  /** Stage has screenshots, so they can go too. */
+  shots: boolean;
+  state: ReturnType<typeof useSendBack>;
+}) {
+  const id = useId();
+  const { what, writers } = sendText(problems);
+  const { open, setOpen, sent, setSent, fixer, setFixer, checks, setChecks, carry, setCarry } =
+    state;
   const to = options?.fixers.find((f) => f.id === fixer)?.name ?? writers;
   if (sent) {
     return (
@@ -385,14 +395,27 @@ export function SendBack({
   );
 }
 
+/** Where the stage's questions and bar go while the workspace is full screen; null keeps them in place. */
+export const FullSlots = createContext<{ ask: HTMLElement | null; bar: HTMLElement | null }>({
+  ask: null,
+  bar: null,
+});
+
+export function ToFull({ to, children }: { to: "ask" | "bar"; children: ReactNode }) {
+  const slot = useContext(FullSlots)[to];
+  return slot ? createPortal(children, slot) : children;
+}
+
 /** The stage's one next step, in the same place on every stage. */
 export function NextStep({ children }: { children: ReactNode }) {
   return (
-    <section className="journey-next" aria-label="Next step">
-      <Panel density="compact">
-        <div className="journey-next-body">{children}</div>
-      </Panel>
-    </section>
+    <ToFull to="bar">
+      <section className="journey-next" aria-label="Next step">
+        <Panel density="compact">
+          <div className="journey-next-body">{children}</div>
+        </Panel>
+      </section>
+    </ToFull>
   );
 }
 
