@@ -25,7 +25,7 @@ export type TourView =
   | { kind: "newTask"; draft: Draft; focus?: "crew"; issues?: "open" | "picked" }
   | { kind: "setup" }
   | { kind: "started" }
-  /** `kept`: the list after take A was kept on Review; `shipped`, after its pull request opened. */
+  /** `kept`: the list after the attempt was approved on Review; `shipped`, after its pull request opened. */
   | {
       kind: "task";
       taskId: string;
@@ -180,7 +180,7 @@ export const steps: Step[] = [
     id: "working",
     chapter: "Your tasks",
     title: "Work in progress",
-    note: "Each attempt works in its own copy of your code. A single line tells you what it's doing right now, and you can send it a message while it works.",
+    note: "The attempt works in its own copy of your code. A single line tells you what it's doing right now, and you can send it a message while it works.",
     view: { kind: "task", taskId: "debounce", stage: "build" },
   },
   {
@@ -207,8 +207,8 @@ export const steps: Step[] = [
   {
     id: "review-takes",
     chapter: "Your tasks",
-    title: "Two attempts, two reviews",
-    note: "The attempts line up row by row against your done-when lines, the checks, size and cost, with each one's review by the other coding agent. Keep heads each column, and the bar at the bottom says which one Bezl leans to and why.",
+    title: "Reviewed, before and after",
+    note: "Another coding agent reviews the attempt. Each done-when line shows how it is on main and after the change. Once you have answered the review's question, the bar at the bottom says why it's ready and ships it.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
@@ -250,7 +250,7 @@ export const steps: Step[] = [
     id: "history",
     chapter: "Look back",
     title: "How it got here",
-    note: "Look back over every event, open the terminal snapshots and see what each attempt changed, with the time you spent shown next to the agents' time.",
+    note: "Look back over every event, open the terminal snapshots and see what changed, with the time you spent shown next to the agents' time.",
     view: { kind: "history" },
   },
   {

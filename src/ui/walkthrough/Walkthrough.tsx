@@ -349,7 +349,7 @@ function TaskView({ place, kept, shipped, side, shared }: TaskViewProps) {
         task={open}
         stage={place.stage}
         onStage={(stage) => shared.onPlace({ ...place, stage })}
-        onKeep={() => shared.onGoTo("ship")}
+        onShip={() => shared.onGoTo("ship")}
         onNewTask={() => shared.onGoTo("new-task")}
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}

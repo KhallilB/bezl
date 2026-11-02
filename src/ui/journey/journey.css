@@ -553,13 +553,6 @@
   width: 36%;
 }
 
-.journey-table-take {
-  display: block;
-  margin-block-end: var(--kb-space-2);
-  color: var(--kb-color-fg);
-  font-weight: 600;
-}
-
 .journey-table th[scope="row"] {
   color: var(--kb-color-muted);
 }

@@ -16,7 +16,6 @@ import { LightIcon, lightTone } from "./icons";
 import "./journey.css";
 import {
   type CiStatus,
-  type CompareRow,
   type Comparison,
   ciText,
   diffLabel,
@@ -27,7 +26,6 @@ import {
   type Row,
   type SendBackOptions,
   type ShipSummary,
-  sizeLabel,
   stageLabel,
   type Take,
 } from "./model";
@@ -94,18 +92,18 @@ function Steer({ model }: { model: string }) {
   );
 }
 
-function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void) | undefined }) {
+function TakeCard({ take, lone }: { take: Take; lone: boolean }) {
+  // One attempt needs no letter; several keep theirs.
+  const name = lone ? `${take.model}'s attempt` : `Attempt ${take.id}, ${take.model}`;
   return (
-    <article
-      className="journey-take"
-      data-light={take.light}
-      aria-label={`Attempt ${take.id}, ${take.model}`}
-    >
+    <article className="journey-take" data-light={take.light} aria-label={name}>
       <Panel className="journey-take-panel">
         <Panel.Header className="journey-take-head">
-          <Badge mono aria-hidden="true">
-            {take.id}
-          </Badge>
+          {lone ? null : (
+            <Badge mono aria-hidden="true">
+              {take.id}
+            </Badge>
+          )}
           <h2>{take.model}</h2>
           <Status
             appearance="chip"
@@ -123,7 +121,7 @@ function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void
             </p>
           ) : null}
           {take.findings?.length ? (
-            <ul className="journey-findings" aria-label={`Issues on attempt ${take.id}`}>
+            <ul className="journey-findings" aria-label={`Issues on ${name}`}>
               {take.findings.map((f) => (
                 <li key={f.text} className="journey-row journey-finding" data-light={f.light}>
                   <span className="journey-row-icon">
@@ -140,38 +138,23 @@ function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void
           ) : null}
           {take.files?.length ? (
             <Panel.Well>
-              <Files files={take.files} label={`Files attempt ${take.id} changed`} />
+              <Files files={take.files} label={`Files ${take.model} changed`} />
             </Panel.Well>
           ) : null}
         </Panel.Body>
-        {onKeep ? (
-          <Panel.Footer>
-            <Button variant="secondary" onClick={() => onKeep(take.id)}>
-              {`Keep attempt ${take.id}`}
-            </Button>
-          </Panel.Footer>
-        ) : null}
       </Panel>
     </article>
   );
 }
 
-/** Attempts side by side; Build adds the message box under a working one. */
-export function Takes({
-  takes,
-  steer,
-  onKeep,
-}: {
-  takes: Take[];
-  steer: boolean;
-  onKeep?: ((id: string) => void) | undefined;
-}) {
+/** The attempt (or attempts); Build adds the message box under a working one. */
+export function Takes({ takes, steer }: { takes: Take[]; steer: boolean }) {
   const writing = steer ? takes.find((t) => t.light === "working") : undefined;
   return (
     <div className="journey-takes-wrap">
       <div className="journey-takes">
         {takes.map((t) => (
-          <TakeCard key={t.id} take={t} onKeep={onKeep} />
+          <TakeCard key={t.id} take={t} lone={takes.length === 1} />
         ))}
       </div>
       {writing ? <Steer model={writing.model} /> : null}
@@ -244,95 +227,62 @@ function sendText(problems: Problem[]): { what: string; writers: string } {
   };
 }
 
-const groups = ["Done when", "Review", "Checks", "Size", "Cost"];
-
-/** Review's attempts line by line; Keep sits in each attempt's column head. */
-export function Compare({
-  takes,
-  compare,
-  onKeep,
-}: {
-  takes: Take[];
-  compare: Comparison;
-  onKeep?: ((id: string) => void) | undefined;
-}) {
+/** Review: each line as it is on main and after the attempt. */
+export function Compare({ compare }: { compare: Comparison }) {
   const [diff, setDiff] = useState(false);
-  const cells = (f: (t: Take) => CompareRow["cells"][string]) =>
-    Object.fromEntries(takes.map((t) => [t.id, f(t)]));
-  const rows: CompareRow[] = [
-    ...compare.rows,
-    {
-      group: "Review",
-      label: "The other agent said",
-      cells: cells((t) => ({
-        light: t.findings?.some((f) => f.light !== "done") ? "needsYou" : "done",
-        text: t.verdict ? `${t.verdict.by}: ${t.verdict.text}` : "Not reviewed yet",
-      })),
-    },
-    {
-      group: "Size",
-      label: "Changed",
-      cells: cells((t) => ({ light: "done", text: sizeLabel(t.files ?? []) })),
-    },
-  ];
+  const { columns, rows } = compare;
   const shown = diff
-    ? rows.filter((r) => new Set(takes.map((t) => r.cells[t.id]?.text)).size > 1)
+    ? rows.filter((r) => new Set(columns.map((c) => r.cells[c.id]?.text)).size > 1)
     : rows;
+  const groups = [...new Set(shown.map((r) => r.group))];
   return (
     <section className="journey-section journey-compare" aria-label="Compare">
       <Switch label="Only what differs" checked={diff} onCheckedChange={setDiff} />
-      <table className="journey-table" aria-label="Compare the attempts">
+      <table className="journey-table" aria-label="Before and after">
         <thead>
           <tr>
             <th scope="col">
               <span className="journey-sr">What</span>
             </th>
-            {takes.map((t) => (
-              <th key={t.id} scope="col">
-                <span className="journey-table-take">{`${t.id} · ${t.model}`}</span>
-                {onKeep ? (
-                  <Button size="sm" variant="secondary" onClick={() => onKeep(t.id)}>
-                    {`Keep ${t.id}`}
-                  </Button>
-                ) : null}
+            {columns.map((c) => (
+              <th key={c.id} scope="col">
+                {c.name}
               </th>
             ))}
           </tr>
         </thead>
-        {groups
-          .filter((g) => shown.some((r) => r.group === g))
-          .map((g) => (
-            <tbody key={g}>
-              <tr>
-                <th scope="colgroup" colSpan={takes.length + 1} className="page-label">
-                  {g}
-                </th>
-              </tr>
-              {shown
-                .filter((r) => r.group === g)
-                .map((r) => (
-                  <tr key={r.label}>
-                    <th scope="row">{r.label}</th>
-                    {takes.map((t) => {
-                      const c = r.cells[t.id];
-                      return (
-                        <td key={t.id} data-light={c?.light}>
-                          {c ? (
-                            <>
-                              <span className="journey-row-icon">
-                                <LightIcon light={c.light} />
-                                <span className="journey-sr">{`${lightLabel[c.light]}: `}</span>
-                              </span>
-                              {c.text}
-                            </>
-                          ) : null}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-            </tbody>
-          ))}
+        {groups.map((g) => (
+          <tbody key={g}>
+            <tr>
+              <th scope="colgroup" colSpan={columns.length + 1} className="page-label">
+                {g}
+              </th>
+            </tr>
+            {shown
+              .filter((r) => r.group === g)
+              .map((r) => (
+                <tr key={r.label}>
+                  <th scope="row">{r.label}</th>
+                  {columns.map((c) => {
+                    const cell = r.cells[c.id];
+                    return (
+                      <td key={c.id} data-light={cell?.light}>
+                        {cell ? (
+                          <>
+                            <span className="journey-row-icon">
+                              <LightIcon light={cell.light} />
+                              <span className="journey-sr">{`${lightLabel[cell.light]}: `}</span>
+                            </span>
+                            {cell.text}
+                          </>
+                        ) : null}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+          </tbody>
+        ))}
       </table>
     </section>
   );

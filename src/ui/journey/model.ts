@@ -228,7 +228,7 @@ export type StageView = {
   /** Checks that passed; folded away, since Check shows problems first. */
   passed?: Row[];
   ship?: ShipSummary;
-  /** Review's attempts line by line, and which one Bezl leans to. */
+  /** Review's lines before and after the attempt. */
   compare?: Comparison;
   /** How the stage's problems can go back; the first fixer is the writer. */
   sendBack?: SendBackOptions;
@@ -254,10 +254,15 @@ export function estimate(
 
 export type CompareCell = { light: Light; text: string };
 
-/** One line of a comparison: a cell per attempt, keyed by its letter. */
+/** One line of a comparison: a cell per column, keyed by the column's id. */
 export type CompareRow = { group: string; label: string; cells: Record<string, CompareCell> };
 
-export type Comparison = { lean: { take: string; why: string }; rows: CompareRow[] };
+/** Review's lines as they are on main and after the attempt; summary says why it's ready. */
+export type Comparison = {
+  summary: string;
+  columns: { id: string; name: string }[];
+  rows: CompareRow[];
+};
 
 export type JourneyTask = {
   id: string;
@@ -314,11 +319,10 @@ export type TaskContext = {
 const files = (n: number) => (n === 1 ? "1 file" : `${n} files`);
 
 /** One set of changes: its files, then lines added and removed. */
-export function sizeLabel(set: FileChange[]): string {
+function sizeLabel(set: FileChange[]): string {
   const [added, removed] = set.reduce(([a, r], f) => [a + f.added, r + f.removed], [0, 0]);
   return `${files(new Set(set.map((f) => f.path)).size)} · ${diffLabel({ path: "", added, removed })}`;
 }
-export const screenCount = (n: number) => (n === 1 ? "1 screen" : `${n} screens`);
 
 /** Ship's kept attempt wins; otherwise the latest stage with attempts. */
 function changed(task: JourneyTask): string {
@@ -331,7 +335,7 @@ function changed(task: JourneyTask): string {
   return sizeLabel(sets[0] ?? []);
 }
 
-/** The tiles under the stages: what it's for, how big, how sure. */
+/** The summary under the stages: what it's for, how big, how sure. */
 export function contextOf(task: JourneyTask): TaskContext {
   const lines = task.doneWhen ?? [];
   const proven = lines.filter((l) => l.light === "done").length;

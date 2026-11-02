@@ -15,7 +15,7 @@ describe("HistoryPage", () => {
     open();
     const items = within(screen.getByRole("list", { name: "Timeline" })).getAllByRole("listitem");
     expect(items[0]).toHaveTextContent(/10:02.*You.*Started the task/);
-    expect(items.at(-1)).toHaveTextContent(/You.*Kept attempt A/);
+    expect(items.at(-1)).toHaveTextContent(/You.*Approved it to ship/);
   });
 
   test("your minutes sit beside the agents' time and tokens", () => {
@@ -28,8 +28,8 @@ describe("HistoryPage", () => {
 
   test("each worker's changes are listed", () => {
     open();
-    expect(screen.getByRole("list", { name: "Files attempt A changed" })).toBeVisible();
-    expect(screen.getByRole("list", { name: "Files attempt B changed" })).toBeVisible();
+    expect(screen.getByRole("list", { name: "Files Claude Code changed" })).toBeVisible();
+    expect(screen.queryByRole("list", { name: /attempt B/ })).toBeNull();
   });
 
   test("a terminal snapshot opens in the viewer", async () => {
@@ -37,7 +37,7 @@ describe("HistoryPage", () => {
     await userEvent.click(
       screen.getAllByRole("button", { name: /Open snapshot/ })[0] as HTMLElement,
     );
-    const viewer = await screen.findByRole("dialog", { name: /Snapshot · attempt A/ });
+    const viewer = await screen.findByRole("dialog", { name: /Snapshot · Claude Code/ });
     expect(within(viewer).getByText(/48 passed/)).toBeVisible();
   });
 

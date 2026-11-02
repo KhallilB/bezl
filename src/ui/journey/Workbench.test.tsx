@@ -48,9 +48,7 @@ describe("summary", () => {
     render(<Harness id="empty-state" stage="review" />);
     const summary = screen.getByRole("list", { name: "This task" });
     expect(within(summary).getByRole("button", { name: "3 of 4 done" })).toBeVisible();
-    expect(
-      within(summary).getByRole("button", { name: "4 files across 2 attempts" }),
-    ).toBeVisible();
+    expect(within(summary).getByRole("button", { name: "3 files · +86 −4" })).toBeVisible();
     expect(within(summary).getByText("Low risk")).toBeVisible();
     expect(within(summary).getByText("Projects page only")).toBeVisible();
     expect(
@@ -89,7 +87,7 @@ describe("questions", () => {
     const [first, second] = screen.getAllByRole("button", { expanded: true });
     expect(first).toHaveAccessibleName(/edits you haven't committed/);
     expect(second).toBeUndefined();
-    expect(screen.getByText("Holds up attempt A")).toBeVisible();
+    expect(screen.getByText("Holds up the attempt")).toBeVisible();
     expect(screen.getByRole("button", { name: "Work around them" })).toHaveAccessibleDescription(
       "Recommended",
     );
@@ -156,18 +154,12 @@ describe("Preview", () => {
   test("shows the stage's screenshots at either size, with where each came from", async () => {
     render(<Harness id="empty-state" stage="review" />);
     expect(preview()).toHaveAttribute("aria-selected", "true");
-    expect(
-      within(side()).getByRole("img", { name: "Projects, Attempt A, at 375 px" }),
-    ).toBeVisible();
+    expect(within(side()).getByRole("img", { name: "Projects, After, at 375 px" })).toBeVisible();
     expect(within(side()).getByText("375 px · Claude Code · 4e1c2b9")).toBeVisible();
     await userEvent.click(within(side()).getByRole("button", { name: "Desktop" }));
-    expect(
-      within(side()).getByRole("img", { name: "Projects, Attempt A, at 1280 px" }),
-    ).toBeVisible();
-    await userEvent.click(within(side()).getByRole("button", { name: "Attempt B" }));
-    expect(
-      within(side()).getByRole("img", { name: "Projects, Attempt B, at 1280 px" }),
-    ).toBeVisible();
+    expect(within(side()).getByRole("img", { name: "Projects, After, at 1280 px" })).toBeVisible();
+    await userEvent.click(within(side()).getByRole("button", { name: "Before" }));
+    expect(within(side()).getByRole("img", { name: "Projects, Before, at 1280 px" })).toBeVisible();
   });
 
   test("screenshot and size are toolbars, like the rest of the app", () => {
@@ -199,9 +191,7 @@ describe("Preview", () => {
     await userEvent.click(within(side()).getByRole("button", { name: "Add note" }));
     await userEvent.click(within(side()).getByRole("button", { name: "Expand" }));
     const review = screen.getByRole("dialog", { name: "Design review · Projects" });
-    expect(
-      within(review).getByRole("img", { name: "Projects, Attempt A, at 375 px" }),
-    ).toBeVisible();
+    expect(within(review).getByRole("img", { name: "Projects, After, at 375 px" })).toBeVisible();
     expect(within(review).getByText("Bigger button")).toBeVisible();
     expect(within(review).getByText("The Import from GitHub link does nothing yet")).toBeVisible();
     await userEvent.keyboard("{Escape}");
@@ -218,17 +208,11 @@ describe("Preview", () => {
       "aria-pressed",
       "true",
     );
-    await userEvent.click(within(beside).getByRole("button", { name: "Attempt B" }));
-    expect(
-      within(review).getByRole("img", { name: "Projects, Attempt A, at 375 px" }),
-    ).toBeVisible();
-    expect(
-      within(review).getByRole("img", { name: "Projects, Attempt B, at 375 px" }),
-    ).toBeVisible();
+    await userEvent.click(within(beside).getByRole("button", { name: "Before" }));
+    expect(within(review).getByRole("img", { name: "Projects, After, at 375 px" })).toBeVisible();
+    expect(within(review).getByRole("img", { name: "Projects, Before, at 375 px" })).toBeVisible();
     await userEvent.click(within(review).getByRole("button", { name: "Desktop" }));
-    expect(
-      within(review).getByRole("img", { name: "Projects, Attempt B, at 1280 px" }),
-    ).toBeVisible();
+    expect(within(review).getByRole("img", { name: "Projects, Before, at 1280 px" })).toBeVisible();
   });
 
   test("pins Bezl's findings where they are", () => {
@@ -254,7 +238,7 @@ describe("Preview", () => {
   test("what the change touches opens Preview", async () => {
     render(<Harness id="empty-state" stage="review" />);
     await userEvent.click(screen.getByRole("tab", { name: "Intent" }));
-    await userEvent.click(screen.getByRole("button", { name: "4 files across 2 attempts" }));
+    await userEvent.click(screen.getByRole("button", { name: "3 files · +86 −4" }));
     expect(preview()).toHaveAttribute("aria-selected", "true");
   });
 

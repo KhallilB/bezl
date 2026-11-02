@@ -95,17 +95,16 @@ function StagePane({
   stage,
   view,
   onStage,
-  onKeep,
+  onShip,
   onNewTask,
   onWhy,
   asking,
 }: PaneProps & { onWhy?: ((id: string) => void) | undefined; asking: number }) {
-  // Keeping is the decision Review waits on; once made, the buttons go.
-  const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
+  // Approving is the decision Review waits on; once made, the button goes.
+  const approve = stage === "review" && task.stages.review === "needsYou" ? onShip : undefined;
   const [opened, setOpened] = useState(
     task.stages.ship === "working" || task.stages.ship === "done",
   );
-  const lean = keep && view.compare ? view.compare.lean : undefined;
   const next = () => {
     if (view.problems?.length) {
       return (
@@ -116,14 +115,16 @@ function StagePane({
         />
       );
     }
-    if (lean && keep) {
+    if (approve && !asking) {
       return (
         <>
-          <p className="journey-next-text">
-            <strong>{`Bezl leans to ${lean.take}:`}</strong> {lean.why}
-          </p>
-          <Button variant="primary" onClick={() => keep(lean.take)}>
-            {`Keep attempt ${lean.take}`}
+          {view.compare ? (
+            <p className="journey-next-text">
+              <strong>Ready to ship:</strong> {view.compare.summary}
+            </p>
+          ) : null}
+          <Button variant="primary" onClick={approve}>
+            Ship it
           </Button>
         </>
       );
@@ -157,7 +158,6 @@ function StagePane({
         </>
       );
     }
-    if (keep) return <p className="journey-next-text">Keep one of the attempts above.</p>;
     if (asking)
       return (
         <p className="journey-next-text">{`Answer ${questionCount(asking)} above to go on.`}</p>
@@ -168,11 +168,8 @@ function StagePane({
     <>
       {view.quote ? <blockquote className="journey-quote">{view.quote}</blockquote> : null}
       {view.problems?.length ? <Problems problems={view.problems} onWhy={onWhy} /> : null}
-      {view.takes && view.compare ? (
-        <Compare takes={view.takes} compare={view.compare} onKeep={keep} />
-      ) : view.takes ? (
-        <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} />
-      ) : null}
+      {view.takes ? <Takes takes={view.takes} steer={stage === "build"} /> : null}
+      {view.compare ? <Compare compare={view.compare} /> : null}
       {view.ship ? <Ship ship={view.ship} opened={opened} /> : null}
       {view.sections.map((section) => (
         <SectionList key={section.title} section={section} />
@@ -185,8 +182,8 @@ function StagePane({
 }
 
 export type TaskPageProps = StageStripProps & {
-  /** Keeps a take on Review, which hands it to Ship. */
-  onKeep?: (takeId: string) => void;
+  /** Approves the attempt on Review, which hands it to Ship. */
+  onShip?: () => void;
   /** The whole queue; this task's items for the open stage show inline. */
   needsYou?: NeedsYouItem[];
   onNeedsYou?: (items: NeedsYouItem[]) => void;
