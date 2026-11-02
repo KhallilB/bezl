@@ -256,9 +256,19 @@
   line-height: 1.45;
 }
 
-.newtask-suggestion > span::before {
-  content: "Suggested: ";
-  color: var(--kb-color-muted);
+.newtask-read {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--kb-space-1) var(--kb-space-2);
+  color: var(--newtask-soft);
+  font-size: var(--kb-size-xs);
+  line-height: 1.45;
+}
+
+.newtask-from cite {
+  color: var(--kb-color-fg);
+  font-style: normal;
 }
 
 .newtask-done li {

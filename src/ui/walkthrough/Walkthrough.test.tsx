@@ -214,7 +214,7 @@ describe("Walkthrough start a task", () => {
     await userEvent.click(screen.getByRole("button", { name: "Deny" }));
     expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Edit the goal" }));
-    expect(within(dock()).getByText(position("define-ready"))).toBeVisible();
+    expect(within(dock()).getByText(position("bezl-read"))).toBeVisible();
   });
 
   test("after the pull request opens, New task starts the next one", async () => {
@@ -254,8 +254,9 @@ describe("Walkthrough start a task", () => {
     const blank = render(<Walkthrough />);
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     blank.unmount();
-    at("?screen=walkthrough&step=define-ready");
+    at("?screen=walkthrough&step=bezl-read");
     const done = render(<Walkthrough />);
+    expect(screen.getByRole("textbox", { name: "Who it's for" })).not.toHaveValue("");
     expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
     done.unmount();
     at("?screen=walkthrough&step=crew");

@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { crew, issues, suggestions } from "./fixtures";
+import { crew, issues, read } from "./fixtures";
 import { NewTask, type NewTaskProps } from "./NewTask";
 import { SetupConfirm } from "./SetupConfirm";
 
@@ -19,7 +19,7 @@ function setup(props: Partial<NewTaskProps> = {}) {
       repo="studio-web"
       branch="main"
       initial={{ text: "", doneWhen: [] }}
-      suggestions={suggestions}
+      read={read}
       providers={crew}
       paths={["src/pages/Projects.tsx"]}
       onStart={onStart}
@@ -30,12 +30,12 @@ function setup(props: Partial<NewTaskProps> = {}) {
 }
 
 describe("NewTask steps", () => {
-  test("walks Goal, Done when, then Who works on it, and Back keeps what you wrote", async () => {
+  test("walks Goal, Bezl's read, then Who works on it, and Back keeps what you wrote", async () => {
     setup();
     expect(stepNow()).toHaveTextContent("Goal");
     await userEvent.type(screen.getByRole("textbox", { name: "Goal" }), text);
     await next();
-    expect(stepNow()).toHaveTextContent("Done when");
+    expect(stepNow()).toHaveTextContent("Bezl's read");
     expect(screen.queryByRole("textbox", { name: "Goal" })).toBeNull();
     await next();
     expect(stepNow()).toHaveTextContent("Who works on it");
@@ -52,37 +52,43 @@ describe("NewTask steps", () => {
 });
 
 describe("NewTask goal", () => {
-  test("a short goal says why a sentence helps", async () => {
+  test("asks only for the goal, and says why a sentence helps", async () => {
     setup();
+    expect(screen.queryByRole("textbox", { name: "Who it's for" })).toBeNull();
     expect(screen.getByText(/full sentence rather than a title/)).toBeVisible();
     await userEvent.type(screen.getByRole("textbox", { name: "Goal" }), text);
     expect(screen.queryByText(/full sentence rather than a title/)).toBeNull();
   });
-
-  test("the optional parts are fields, each with its suggestion one click away", async () => {
-    setup({ initial: { text, doneWhen: [] } });
-    const who = screen.getByRole("textbox", { name: "Who it's for" });
-    expect(screen.getByText(/whose problem/)).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Use suggestion for Who it's for" }));
-    expect(who).toHaveValue(suggestions.who?.who);
-    await userEvent.clear(screen.getByRole("textbox", { name: "Example" }));
-    await userEvent.type(screen.getByRole("textbox", { name: "Example" }), "The Inbox page");
-    expect(screen.getByRole("textbox", { name: "Example" })).toHaveValue("The Inbox page");
-  });
 });
 
-describe("NewTask done when", () => {
-  test("each line says who checks it, and suggested lines add in one click", async () => {
-    setup({ initial: { text, doneWhen: [] }, step: "done" });
-    expect(screen.getByText(/take the agent's word/)).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: /Add 3 suggested lines/ }));
-    const list = screen.getByRole("list", { name: "It's done when" });
-    expect(within(list).getAllByText("Bezl checks").length).toBeGreaterThan(0);
-    expect(within(list).getAllByText("You check").length).toBeGreaterThan(0);
+describe("NewTask Bezl's read", () => {
+  test("fills each part from the goal and the code, and says where it came from", async () => {
+    setup({ initial: { text, doneWhen: [] } });
+    await next();
+    expect(screen.getByRole("textbox", { name: "Who it's for" })).toHaveValue(read.who?.text);
+    expect(screen.getByText(read.avoid?.from ?? "")).toBeVisible();
+    const lines = screen.getByRole("list", { name: "It's done when" });
+    expect(within(lines).getAllByText("Bezl checks").length).toBeGreaterThan(0);
   });
 
-  test("a line you type is yours to check, and you can remove it", async () => {
-    setup({ initial: { text, doneWhen: [] }, step: "done" });
+  test("you change, drop or bring back any part, and your change sticks", async () => {
+    setup({ initial: { text, doneWhen: [] } });
+    await next();
+    const who = () => screen.getByRole("textbox", { name: "Who it's for" });
+    await userEvent.clear(who());
+    await userEvent.type(who(), "Admins");
+    await userEvent.click(screen.getByRole("button", { name: "Drop Example" }));
+    expect(screen.getByRole("textbox", { name: "Example" })).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await next();
+    expect(who()).toHaveValue("Admins");
+    expect(screen.getByRole("textbox", { name: "Example" })).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: "Use Bezl's read for Example" }));
+    expect(screen.getByRole("textbox", { name: "Example" })).toHaveValue(read.example?.text);
+  });
+
+  test("a line you type is yours to check, and you can remove any line", async () => {
+    setup({ initial: { text, doneWhen: [] }, read: {}, step: "read" });
     await userEvent.type(
       screen.getByRole("textbox", { name: "Add a line" }),
       "It feels calm{Enter}",
@@ -93,11 +99,16 @@ describe("NewTask done when", () => {
     await userEvent.click(within(list).getByRole("button", { name: "Remove It feels calm" }));
     expect(screen.queryByRole("list", { name: "It's done when" })).toBeNull();
   });
+
+  test("where Bezl couldn't tell, it says so and leaves the part to you", () => {
+    setup({ initial: { text, doneWhen: [] }, read: {}, step: "read" });
+    expect(screen.getAllByText(/Bezl couldn't tell from the goal or the code/).length).toBe(3);
+  });
 });
 
 describe("NewTask start", () => {
   test("the last step sums up the task and names any gaps; you can start anyway", async () => {
-    const { onStart } = setup({ initial: { text, doneWhen: [] }, step: "who" });
+    const { onStart } = setup({ initial: { text, doneWhen: [] }, read: {}, step: "who" });
     const summary = screen.getByRole("region", { name: "Your task" });
     expect(within(summary).getByText(text)).toBeVisible();
     expect(within(summary).getByText(/Not filled in: who it's for/)).toBeVisible();
@@ -188,12 +199,12 @@ describe("NewTask from a GitHub issue", () => {
     await next();
     expect(
       within(screen.getByRole("list", { name: "It's done when" })).getAllByRole("listitem"),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   test("the issue travels with the task, and you can start from scratch", async () => {
     const { onStart } = setup({ issues, pickedIssue: 128, step: "who" });
-    await userEvent.click(screen.getByRole("button", { name: "Start anyway" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start/ }));
     expect(onStart.mock.calls[0]?.[0].draft.issue).toEqual({
       number: 128,
       url: "https://github.com/acme/studio-web/issues/128",
@@ -206,26 +217,17 @@ describe("NewTask from a GitHub issue", () => {
   });
 
   test("picking and clearing an issue keep what you wrote yourself", async () => {
-    setup({ issues, step: "done" });
-    await userEvent.type(
-      screen.getByRole("textbox", { name: "Add a line" }),
-      "It feels calm{Enter}",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    await userEvent.type(screen.getByRole("textbox", { name: "Who it's for" }), "Ops");
+    setup({ issues });
     await userEvent.click(screen.getByRole("button", { name: "Start from a GitHub issue" }));
     await userEvent.click(screen.getByRole("button", { name: /#128/ }));
-    expect(screen.getByRole("textbox", { name: "Who it's for" })).toHaveValue("Ops");
     await next();
-    const lines = () =>
-      within(screen.getByRole("list", { name: "It's done when" })).getAllByRole("listitem");
-    expect(lines()).toHaveLength(3);
+    await userEvent.clear(screen.getByRole("textbox", { name: "Who it's for" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Who it's for" }), "Ops");
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     await userEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
-    expect(screen.getByRole("textbox", { name: "Who it's for" })).toHaveValue("Ops");
     await next();
-    expect(lines()).toHaveLength(1);
+    expect(screen.getByRole("textbox", { name: "Who it's for" })).toHaveValue("Ops");
   });
 
   test("without GitHub issues, the goal starts empty and nothing offers them", () => {

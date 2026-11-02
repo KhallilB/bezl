@@ -16,7 +16,7 @@ import { interruptedTasks, keptTasks, shippedTasks, tasks, usage } from "../jour
 import type { JourneyTask, StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
 import type { SideTab } from "../journey/Workbench";
-import { crew, drafts, issues, paths, startedTask, suggestions } from "../newtask/fixtures";
+import { crew, drafts, issues, paths, read, startedTask } from "../newtask/fixtures";
 import { NewTask } from "../newtask/NewTask";
 import { SetupConfirm } from "../newtask/SetupConfirm";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
@@ -360,7 +360,7 @@ function View({
             repo="studio-web"
             branch="main"
             initial={drafts[view.draft]}
-            suggestions={suggestions}
+            read={read}
             providers={crew}
             paths={paths}
             onStart={() => onGoTo("setup")}
@@ -380,7 +380,7 @@ function View({
             command="bun install"
             onAllow={() => onGoTo("preparing")}
             onDeny={() => {}}
-            onEditGoal={() => onGoTo("define-ready")}
+            onEditGoal={() => onGoTo("bezl-read")}
           />
         </AppShell>
       );

@@ -65,14 +65,32 @@ export function readiness(draft: BriefDraft): ReadinessCheck[] {
   ];
 }
 
-export type Suggestion = Partial<Omit<BriefDraft, "text">>;
+/** One thing Bezl took from the goal and the code; `from` says where, so you can judge it. */
+export type Read = { text: string; from: string };
 
-/** One-click addition: fills what the suggestion names; done-when items append. */
-export function suggest(draft: BriefDraft, addition: Suggestion): BriefDraft {
+export type BezlRead = {
+  who?: Read;
+  avoid?: Read;
+  example?: Read;
+  done?: { lines: DoneWhen[]; from: string };
+};
+
+/** Fills what you left empty and adds lines you don't have; never overwrites yours. */
+export function applyRead(draft: BriefDraft, read: BezlRead): BriefDraft {
+  const fill = (mine: string | undefined, theirs: Read | undefined) =>
+    mine?.trim() ? mine : theirs?.text;
+  const lines = (read.done?.lines ?? []).filter(
+    (l) => !draft.doneWhen.some((d) => d.text === l.text),
+  );
+  const parts = {
+    who: fill(draft.who, read.who),
+    avoid: fill(draft.avoid, read.avoid),
+    example: fill(draft.example, read.example),
+  };
   return {
     ...draft,
-    ...addition,
-    doneWhen: [...draft.doneWhen, ...(addition.doneWhen ?? [])],
+    ...Object.fromEntries(Object.entries(parts).filter(([, v]) => v !== undefined)),
+    doneWhen: [...draft.doneWhen, ...lines],
   };
 }
 
