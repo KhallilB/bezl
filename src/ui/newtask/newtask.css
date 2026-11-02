@@ -17,8 +17,8 @@
   list-style: none;
 }
 
-/* Brief beside its readiness; stacked when the page is narrow. */
-.newtask-brief {
+/* Goal beside its readiness; stacked when the page is narrow. */
+.newtask-define {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 18rem;
   align-items: start;
@@ -26,7 +26,7 @@
 }
 
 @container (max-width: 44rem) {
-  .newtask-brief {
+  .newtask-define {
     grid-template-columns: minmax(0, 1fr);
   }
 }

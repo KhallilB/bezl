@@ -24,14 +24,14 @@ function setup(props: Partial<NewTaskProps> = {}) {
   return { onStart };
 }
 
-const readinessList = () => screen.getByRole("list", { name: "Is the brief ready?" });
+const readinessList = () => screen.getByRole("list", { name: "Is the task ready?" });
 const check = (name: RegExp) => within(readinessList()).getByRole("listitem", { name });
 
-describe("NewTask brief", () => {
+describe("NewTask goal", () => {
   test("is checked as you type", async () => {
     setup();
     expect(check(/What you want/)).toHaveAccessibleDescription(/missing/);
-    await userEvent.type(screen.getByRole("textbox", { name: "Brief" }), text);
+    await userEvent.type(screen.getByRole("textbox", { name: "Goal" }), text);
     expect(check(/What you want/)).toHaveAccessibleDescription(/present/);
   });
 
@@ -103,34 +103,34 @@ describe("SetupConfirm", () => {
 
   test("Deny stops with the reason and what you can do next", async () => {
     const onAllow = vi.fn();
-    const onEditBrief = vi.fn();
+    const onEditGoal = vi.fn();
     render(
       <SetupConfirm
         repo="studio-web"
         command="bun install"
         onAllow={onAllow}
         onDeny={() => {}}
-        onEditBrief={onEditBrief}
+        onEditGoal={onEditGoal}
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Deny" }));
     expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
     expect(screen.getByText(/Nothing ran in the task's copy/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Deny" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Edit the brief" }));
-    expect(onEditBrief).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole("button", { name: "Edit the goal" }));
+    expect(onEditGoal).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByRole("button", { name: "Allow setup" }));
     expect(onAllow).toHaveBeenCalledWith(false);
   });
 });
 
 describe("NewTask from a GitHub issue", () => {
-  test("picking an issue fills the brief, which is checked like any other", async () => {
+  test("picking an issue fills the goal, which is checked like any other", async () => {
     setup({ issues });
     await userEvent.click(screen.getByRole("button", { name: "Start from a GitHub issue" }));
     const list = screen.getByRole("list", { name: "Open issues in studio-web" });
     await userEvent.click(within(list).getByRole("button", { name: /#128/ }));
-    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveDisplayValue(
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveDisplayValue(
       /^Projects page shows an empty table/,
     );
     expect(
@@ -144,19 +144,19 @@ describe("NewTask from a GitHub issue", () => {
     );
   });
 
-  test("the issue travels with the task, and you can go back to an empty brief", async () => {
+  test("the issue travels with the task, and you can start from scratch", async () => {
     const { onStart } = setup({ issues, pickedIssue: 128 });
     await userEvent.click(screen.getByRole("button", { name: "Start anyway" }));
     expect(onStart.mock.calls[0]?.[0].draft.issue).toEqual({
       number: 128,
       url: "https://github.com/acme/studio-web/issues/128",
     });
-    await userEvent.click(screen.getByRole("button", { name: "Start from an empty brief" }));
-    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     expect(screen.queryByRole("link", { name: "View issue #128" })).toBeNull();
   });
 
-  test("without GitHub issues, the brief starts empty and nothing offers them", () => {
+  test("without GitHub issues, the goal starts empty and nothing offers them", () => {
     setup();
     expect(screen.queryByRole("button", { name: "Start from a GitHub issue" })).toBeNull();
   });

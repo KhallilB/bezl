@@ -59,7 +59,7 @@ export const needsYou: NeedsYouItem[] = [
     kind: "dispute",
     from: "Claude Code",
     prompt:
-      "Claude Code disagrees with an issue Codex raised. It says the brief asks for one clear action, so the import link isn't part of this task.",
+      "Claude Code disagrees with an issue Codex raised. It says the goal asks for one clear action, so the import link isn't part of this task.",
     context: "Codex: The Import from GitHub link does nothing yet · Projects.tsx:41",
     waited: "12 min",
     choices: [

@@ -1,4 +1,4 @@
-// A new task's brief and crew; M5 turns a started draft into the task's first events.
+// A new task's goal and crew, which the writer gets as its brief; M5 turns a started draft into events.
 
 export type Checker = "bezl" | "you";
 export type DoneWhen = { text: string; checker: Checker };
@@ -29,7 +29,7 @@ const filled = (value: string | undefined) => (value?.trim().length ?? 0) > 0;
 // Five words reads as a sentence of intent, not a title.
 const intent = (text: string) => text.trim().split(/\s+/).filter(Boolean).length >= 5;
 
-/** The five things a brief is checked against as it is typed; none blocks starting. */
+/** The five things a goal is checked against as it is typed; none blocks starting. */
 export function readiness(draft: BriefDraft): ReadinessCheck[] {
   return [
     {
@@ -110,7 +110,7 @@ export function reviewerChoices(providers: CrewProvider[], writerId: string): Ch
 
 const checklistItem = /^\s*[-*] \[[ xX]\] (.+)$/;
 
-/** Issue prose fills the brief; its checklist becomes done checks only you can judge. */
+/** Issue prose fills the goal; its checklist becomes done checks only you can judge. */
 export function briefFromIssue({ number, title, body, url }: GitHubIssue): BriefDraft {
   const lines = body.split(/\r?\n/);
   const doneWhen = lines.flatMap((l) => {

@@ -70,7 +70,7 @@ function Readiness({
   return (
     <aside className="newtask-readiness" aria-labelledby={`${id}-title`}>
       <div className="newtask-readiness-head">
-        <h2 id={`${id}-title`}>Is the brief ready?</h2>
+        <h2 id={`${id}-title`}>Is the task ready?</h2>
         <span>{gaps === 0 ? "Ready" : `${checks.length - gaps} of ${checks.length}`}</span>
       </div>
       <ul aria-labelledby={`${id}-title`}>
@@ -208,7 +208,7 @@ function IssuePicker({
           </a>
         </p>
         <Button size="sm" variant="ghost" onClick={onClear}>
-          Start from an empty brief
+          Start from scratch
         </Button>
       </div>
     );
@@ -229,7 +229,7 @@ function IssuePicker({
             {`Open issues in ${repo}`}
           </h2>
           <p>
-            Pick one and Bezl fills in the brief from it. You can still change anything before you
+            Pick one and Bezl fills in the goal from it. You can still change anything before you
             start.
           </p>
           <ul aria-labelledby={`${id}-title`}>
@@ -258,7 +258,7 @@ function IssuePicker({
   );
 }
 
-/** New task: the brief in your words, checked as you type, then who writes and who reviews. */
+/** New task: the goal in your words, checked as you type, then who writes and who reviews. */
 export function NewTask({
   repo,
   branch,
@@ -299,7 +299,7 @@ export function NewTask({
         <span className="page-tag">{`${repo} · ${branch}`}</span>
       </header>
 
-      <div className="newtask-brief">
+      <div className="newtask-define">
         <div className="newtask-main">
           {issues?.length ? (
             <IssuePicker
@@ -312,7 +312,7 @@ export function NewTask({
             />
           ) : null}
           <Textarea
-            label="Brief"
+            label="Goal"
             description="Write it in your own words, and Bezl keeps it exactly as you wrote it."
             rows={4}
             value={draft.text}

@@ -122,7 +122,7 @@ describe("briefFromIssue", () => {
     url: "https://github.com/acme/studio-web/issues/128",
   };
 
-  test("the title and prose become the brief, and checklist items become done checks", () => {
+  test("the title and prose become the goal, and checklist items become done checks", () => {
     const draft = briefFromIssue(issue);
     expect(draft.text).toBe(
       "Projects page shows an empty table for new users\n\nNew users land here right after sign-up and see nothing to do.",

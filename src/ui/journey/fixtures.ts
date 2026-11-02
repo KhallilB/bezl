@@ -2,9 +2,9 @@ import type { CiCheck, CiStatus, JourneyTask, ProviderUsage, StageView, Take } f
 
 // Sample data only; shapes match what M5 projects from the task log.
 
-const brief = (quote: string, done: [string, string][]): StageView => ({
+const define = (quote: string, done: [string, string][]): StageView => ({
   lead: "Ready to start.",
-  rest: "The brief covers everything a coding agent needs.",
+  rest: "The goal covers everything a coding agent needs.",
   quote,
   sections: [
     {
@@ -75,7 +75,7 @@ const emptyState: JourneyTask = {
   repo: "studio-web",
   current: "review",
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "done",
     check: "done",
@@ -83,7 +83,7 @@ const emptyState: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief(
+    define: define(
       "When someone has no projects yet, the Projects page should help them start one instead of showing an empty table.",
       [
         ["The empty state shows when there are no projects", "Tests check"],
@@ -154,7 +154,7 @@ const denyScopes: JourneyTask = {
   repo: "bezl",
   current: "build",
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "needsYou",
     check: "waiting",
@@ -162,7 +162,7 @@ const denyScopes: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief("A token request with no scopes should be refused, not granted everything.", [
+    define: define("A token request with no scopes should be refused, not granted everything.", [
       ["An empty scope list is refused with a reason", "Tests check"],
       ["Existing grants keep working", "Bezl checks"],
     ]),
@@ -219,7 +219,7 @@ const debounce: JourneyTask = {
   repo: "bezl",
   current: "build",
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "working",
     check: "waiting",
@@ -227,7 +227,7 @@ const debounce: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief("Dragging the window should not resize every terminal on every frame.", [
+    define: define("Dragging the window should not resize every terminal on every frame.", [
       ["Each pane resizes at most once every 100 ms", "Tests check"],
       ["The final size is always applied", "Tests check"],
     ]),
@@ -284,7 +284,7 @@ const snapshot: JourneyTask = {
   repo: "bezl",
   current: "check",
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "done",
     check: "failed",
@@ -292,7 +292,7 @@ const snapshot: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief("Save a terminal's screen so it opens again after the pane closes.", [
+    define: define("Save a terminal's screen so it opens again after the pane closes.", [
       ["A snapshot restores the colours and the cursor position", "Tests check"],
       ["Snapshots stay in .git/bezl", "Bezl checks"],
     ]),
@@ -419,7 +419,7 @@ const kept: JourneyTask = {
         files: takeA.files ?? [],
         history: [
           {
-            stage: "brief",
+            stage: "define",
             text: "Help new users start a project by reusing EmptyState with one clear action",
           },
           { stage: "plan", text: "Claude Code planned 4 steps and Codex planned 3" },

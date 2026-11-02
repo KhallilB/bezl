@@ -99,8 +99,8 @@ export const steps: Step[] = [
   {
     id: "new-task",
     chapter: "Start a task",
-    title: "Write the brief",
-    note: "Describe the change in your own words. As you type, Bezl looks for five things a good brief usually covers, but you can start without them.",
+    title: "Define the task",
+    note: "Describe the change in your own words. As you type, Bezl looks for five things a good goal usually covers, but you can start without them.",
     view: { kind: "newTask", draft: "blank" },
   },
   {
@@ -113,8 +113,8 @@ export const steps: Step[] = [
   {
     id: "issue-filled",
     chapter: "Start a task",
-    title: "The issue fills in the brief",
-    note: "The issue's title and description become the brief, and its checklist becomes the list of things to be done. Bezl checks it like any brief you wrote yourself, so the gaps still show.",
+    title: "The issue fills in the goal",
+    note: "The issue's title and description become the goal, and its checklist becomes the list of things to be done. Bezl checks it like any goal you wrote yourself, so the gaps still show.",
     view: { kind: "newTask", draft: "blank", issues: "picked" },
   },
   {
@@ -125,7 +125,7 @@ export const steps: Step[] = [
     view: { kind: "newTask", draft: "partial" },
   },
   {
-    id: "brief-ready",
+    id: "define-ready",
     chapter: "Start a task",
     title: "It's done when, and who checks",
     note: "Bezl checks each of these after every step, and the ones marked for you wait until Review.",
@@ -162,9 +162,9 @@ export const steps: Step[] = [
   {
     id: "stages",
     chapter: "Your tasks",
-    title: "Brief to Ship",
-    note: "Each stage has a light that shows how it's going, and you can click any stage to open it. Brief holds your own words and the list of things to be done.",
-    view: { kind: "task", taskId: "empty-state", stage: "brief" },
+    title: "Define to Ship",
+    note: "Each stage has a light that shows how it's going, and you can click any stage to open it. Define holds your goal in your own words and the list of things to be done.",
+    view: { kind: "task", taskId: "empty-state", stage: "define" },
   },
   {
     id: "working",

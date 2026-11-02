@@ -460,7 +460,7 @@ function View({
             command="bun install"
             onAllow={() => onGoTo("preparing")}
             onDeny={() => {}}
-            onEditBrief={() => onGoTo("brief-ready")}
+            onEditGoal={() => onGoTo("define-ready")}
           />
         </AppShell>
       );

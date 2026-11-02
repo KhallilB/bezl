@@ -1,10 +1,10 @@
 // View models for the task journey; M5 fills them from the task's event log.
 
-export const stageIds = ["brief", "plan", "build", "check", "review", "ship"] as const;
+export const stageIds = ["define", "plan", "build", "check", "review", "ship"] as const;
 export type StageId = (typeof stageIds)[number];
 
 export const stageLabel: Record<StageId, string> = {
-  brief: "Brief",
+  define: "Define",
   plan: "Plan",
   build: "Build",
   check: "Check",

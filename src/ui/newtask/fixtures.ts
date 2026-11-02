@@ -60,8 +60,8 @@ export const issues: GitHubIssue[] = [
 
 export const paths = ["src/pages/Projects.tsx", "src/pages/Projects.test.tsx"];
 
-const briefView: StageView = {
-  lead: "Your brief is saved exactly as you wrote it.",
+const defineView: StageView = {
+  lead: "Your goal is saved exactly as you wrote it.",
   quote: text,
   sections: [
     {
@@ -84,7 +84,7 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
     repo: "studio-web",
     current: "plan",
     stages: {
-      brief: "done",
+      define: "done",
       plan: asking ? "needsYou" : "working",
       build: "waiting",
       check: "waiting",
@@ -92,7 +92,7 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
       ship: "waiting",
     },
     views: {
-      brief: briefView,
+      define: defineView,
       plan: {
         lead: asking ? "Setup needs your go-ahead." : "Getting things ready.",
         rest: asking
