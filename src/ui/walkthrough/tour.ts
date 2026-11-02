@@ -69,7 +69,7 @@ export const steps: Step[] = [
     id: "providers",
     chapter: "Getting started",
     title: "Coding agents",
-    note: "Each coding agent gets a card showing its version, whether it's signed in, how it did on the safety tests and how much usage it has left.",
+    note: "One row per coding agent and GitHub: whether Bezl can use it, and one line on why. Anything to fix stays in view; Details holds the path, the safety tests and usage.",
     view: { kind: "providers", result: "ready" },
   },
   {

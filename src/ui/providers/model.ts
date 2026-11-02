@@ -254,6 +254,26 @@ export function canWrite({ discovery, signin }: ProviderCheck): boolean {
   return false;
 }
 
+/** One row's verdict and its one line; fixes and details sit below it. */
+export function agentSummary(check: ProviderCheck): { shown: Shown; reason: string } {
+  const { provider, found: bin, rejected } = check.discovery;
+  if (bin === null)
+    return {
+      shown: notFound,
+      reason:
+        rejected.length > 0
+          ? `The ${binName[provider]} at ${rejected[0]?.path} isn't ${providerName[provider]}`
+          : "Not found on your path",
+    };
+  const writes = canWrite(check);
+  const safety = readOnlyShown(check)?.shown.label;
+  const version = `Version ${bin.version}${check.pinned ? "" : ", untested"}`;
+  return {
+    shown: writes ? good("Ready to write") : needsYou("Can't write yet"),
+    reason: [writes ? "Signed in" : "Not signed in", safety, version].filter(Boolean).join(" · "),
+  };
+}
+
 /** `null` when nothing can write; the screen then says so. */
 export function readyShown(checks: ProviderCheck[]): Shown | null {
   const names = checks.filter(canWrite).map((c) => providerName[c.discovery.provider]);
@@ -530,6 +550,13 @@ export function githubShown(check: GitHubCheck): Shown {
     case "failed":
       return failed(runErrorText(signin.detail));
   }
+}
+
+/** Visible on the GitHub row; without a sign-in, what that costs. */
+export function githubReason(check: GitHubCheck | null): string {
+  return check && githubShown(check).tone === "success"
+    ? "Reads issues and opens pull requests"
+    : githubNote;
 }
 
 export const githubChecking: Shown = { label: "Checking", tone: "running", icon: "running" };

@@ -11,6 +11,7 @@ import {
   thisMachine,
 } from "./fixtures";
 import {
+  agentSummary,
   type CodexSignIn,
   canWrite,
   capabilityRows,
@@ -457,5 +458,38 @@ describe("GitHub sign-in", () => {
     expect(githubFixes(hung)).toEqual([
       { problem: "`gh auth status`: Timed out", action: "Run `gh auth status` to see why." },
     ]);
+  });
+});
+
+describe("one row per coding agent", () => {
+  test("a writer says Ready to write, then sign-in, safety tests and version in one line", () => {
+    expect(agentSummary(claudeFound)).toEqual({
+      shown: { label: "Ready to write", tone: "success", icon: "finished" },
+      reason: "Signed in · All 5 safety tests passed · Version 2.1.312",
+    });
+    expect(agentSummary(codexProbed).reason).toBe(
+      "Signed in · A safety test failed · Version 0.163.0",
+    );
+  });
+
+  test("an agent that can't write yet says so; the fixes below say why", () => {
+    expect(agentSummary(claudeSignedOut)).toEqual({
+      shown: { label: "Can't write yet", tone: "warning", icon: "blocked" },
+      reason: "Not signed in · Sign in to test · Version 2.1.312",
+    });
+  });
+
+  test("a missing agent, or one that isn't what it says, is Not installed", () => {
+    const impostor = thisMachine[1] as ProviderCheck;
+    expect(agentSummary(impostor)).toEqual({
+      shown: { label: "Not installed", tone: "blocked", icon: "blocked" },
+      reason: `The codex at ${impostor.discovery.rejected[0]?.path} isn't Codex`,
+    });
+  });
+
+  test("an untested version says so in the line", () => {
+    expect(agentSummary({ ...claudeFound, pinned: false }).reason).toBe(
+      "Signed in · All 5 safety tests passed · Version 2.1.312, untested",
+    );
   });
 });
