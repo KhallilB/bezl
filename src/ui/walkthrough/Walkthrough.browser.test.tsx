@@ -102,12 +102,21 @@ test("every screen in the shell puts its title on one edge, one line and one siz
   expect(distinct(seen), JSON.stringify(seen)).toHaveLength(1);
 });
 
-test("every screen in the shell is one width", async () => {
+// A task page holds its side pane too, so it gets the one wider frame.
+const isTask = (s: (typeof steps)[number]) => ["task", "started"].includes(s.view.kind);
+
+test("every screen in the shell is one width, and every task page one wider width", async () => {
   await page.viewport(1440, 900);
-  const seen = await each(inShell, (el) =>
-    Math.round(el.querySelector(".shell-main > *")?.getBoundingClientRect().width ?? 0),
+  const width = (el: HTMLElement) =>
+    Math.round(el.querySelector(".shell-main > *")?.getBoundingClientRect().width ?? 0);
+  const narrow = await each(
+    inShell.filter((s) => !isTask(s)),
+    width,
   );
-  expect(distinct(seen), JSON.stringify(seen)).toHaveLength(1);
+  const wide = await each(inShell.filter(isTask), width);
+  expect(distinct(narrow), JSON.stringify(narrow)).toHaveLength(1);
+  expect(distinct(wide), JSON.stringify(wide)).toHaveLength(1);
+  expect(Object.values(wide)[0]).toBeGreaterThan(Object.values(narrow)[0] ?? 0);
 });
 
 test("a header action sits at the end of the title row", async () => {

@@ -50,10 +50,13 @@ describe("Check", () => {
     expect(screen.getByText(/No test reaches it/)).toBeVisible();
   });
 
-  test("a problem goes to the writer with its evidence", async () => {
+  test("every problem goes to the writer together, with its evidence", async () => {
     open(tasks, "snapshot", "check");
-    await userEvent.click(screen.getByRole("button", { name: "Send to Codex" }));
-    expect(screen.getByText(/Sent to Codex/)).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /^Send/ })).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Send 2 problems to Codex" }));
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Sent 2 problems to Codex with what Bezl saw.",
+    );
   });
 
   test("passed checks stay folded until asked for", async () => {

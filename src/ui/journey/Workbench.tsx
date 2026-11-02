@@ -1,0 +1,354 @@
+import { Button } from "@kb.ui/react";
+import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import { kindLabel, type NeedsYouChoice, type NeedsYouItem } from "../approvals/model";
+import { LightIcon } from "./icons";
+import {
+  type Assumption,
+  type Decision,
+  type DoneWhen,
+  type Handled,
+  lightLabel,
+  stageLabel,
+  type TaskContext,
+} from "./model";
+
+export type SideTab = "intent";
+
+const tabs: { id: SideTab; name: string }[] = [{ id: "intent", name: "Intent" }];
+
+/** One line under the stages: the goal, what changed, how much is proven. */
+export function ContextBar({
+  context,
+  onOpen,
+}: {
+  context: TaskContext;
+  onOpen: (tab: SideTab) => void;
+}) {
+  return (
+    <ul className="journey-context" aria-label="This task">
+      <li>
+        <span className="journey-context-label">Goal</span>
+        <button
+          type="button"
+          className="journey-context-link"
+          data-goal=""
+          title={context.goal}
+          onClick={() => onOpen("intent")}
+        >
+          {context.goal}
+        </button>
+      </li>
+      <li>
+        <span className="journey-context-label">Changes</span>
+        <span>{context.touches}</span>
+      </li>
+      <li>
+        <span className="journey-context-label">Evidence</span>
+        <button type="button" className="journey-context-link" onClick={() => onOpen("intent")}>
+          {context.evidence}
+        </button>
+      </li>
+    </ul>
+  );
+}
+
+export type Answer = { item: NeedsYouItem; choice: NeedsYouChoice };
+
+function Choices({
+  item,
+  onAnswer,
+}: {
+  item: NeedsYouItem;
+  onAnswer: (c: NeedsYouChoice) => void;
+}) {
+  const rec = useId();
+  const [hint, setHint] = useState<string | null>(null);
+  const shown = item.choices.find((c) => c.id === (hint ?? item.recommended));
+  return (
+    <>
+      <div className="journey-choices">
+        {item.choices.map((c) => (
+          <Button
+            key={c.id}
+            size="sm"
+            variant={c.id === item.recommended ? "secondary" : "ghost"}
+            aria-describedby={c.id === item.recommended ? rec : undefined}
+            onPointerEnter={() => setHint(c.id)}
+            onPointerLeave={() => setHint(null)}
+            onFocus={() => setHint(c.id)}
+            onBlur={() => setHint(null)}
+            onClick={() => onAnswer(c)}
+          >
+            {c.label}
+            {c.id === item.recommended ? (
+              <span id={rec} className="journey-rec" aria-hidden="true">
+                Recommended
+              </span>
+            ) : null}
+          </Button>
+        ))}
+      </div>
+      {shown ? (
+        <p className="journey-then">
+          <strong>{`${hint ? shown.label : `Recommended: ${shown.label}`}.`}</strong> {shown.next}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/** This stage's questions, one open at a time; answers fold and the next opens. */
+export function Questions({
+  items,
+  answered,
+  prefer,
+  onAnswer,
+}: {
+  items: NeedsYouItem[];
+  answered: Answer[];
+  /** Opens first while still unanswered: a question you just raised. */
+  prefer?: string | null;
+  onAnswer: (item: NeedsYouItem, choice: NeedsYouChoice) => void;
+}) {
+  const id = useId();
+  const [picked, setPicked] = useState<string | null>(null);
+  const [last, setLast] = useState<Answer | null>(null);
+  const rows = [
+    ...answered.map((a) => ({ item: a.item, choice: a.choice })),
+    ...items.map((item) => ({ item, choice: undefined })),
+  ];
+  const fallback = items.find((i) => i.id === prefer) ?? items[0];
+  const open = rows.some((r) => r.item.id === picked) ? picked : (fallback?.id ?? null);
+  // The answered choice unmounts; focus moves to whatever opened next.
+  useEffect(() => {
+    if (last) document.getElementById(`${id}-head-${open}`)?.focus();
+  }, [last, open, id]);
+  return (
+    <section className="journey-section" aria-labelledby={id}>
+      <h2 id={id} className="page-label">
+        Needs you
+      </h2>
+      <ul className="journey-problems" aria-labelledby={id}>
+        {rows.map(({ item, choice }) => {
+          const expanded = open === item.id;
+          const light = choice ? "done" : "needsYou";
+          return (
+            <li key={item.id} className="journey-problem" data-light={light}>
+              <button
+                id={`${id}-head-${item.id}`}
+                type="button"
+                className="journey-problem-head"
+                aria-expanded={expanded}
+                aria-controls={`${id}-${item.id}`}
+                onClick={() => setPicked(expanded ? "" : item.id)}
+              >
+                <span className="journey-row-icon">
+                  <LightIcon light={light} />
+                  <span className="journey-sr">{`${lightLabel[light]}: `}</span>
+                </span>
+                <span className="journey-row-text">{item.prompt}</span>
+                <span className="journey-row-meta">
+                  {choice ? choice.label : kindLabel[item.kind]}
+                </span>
+              </button>
+              {expanded ? (
+                <div id={`${id}-${item.id}`} className="journey-problem-body">
+                  <p className="journey-question-from">
+                    {`${kindLabel[item.kind]} from ${item.from} · waiting ${item.waited}`}
+                  </p>
+                  {item.context ? (
+                    <p className="journey-mono journey-problem-where">{item.context}</p>
+                  ) : null}
+                  {item.blocks ? (
+                    <p className="journey-blocks">{`Holds up ${item.blocks}`}</p>
+                  ) : null}
+                  {choice ? (
+                    <p className="journey-then">
+                      <strong>{`You chose ${choice.label}.`}</strong> {choice.next}
+                    </p>
+                  ) : (
+                    <Choices
+                      item={item}
+                      onAnswer={(c) => {
+                        setPicked(null);
+                        setLast({ item, choice: c });
+                        onAnswer(item, c);
+                      }}
+                    />
+                  )}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="journey-sr" role="status">
+        {last ? `You chose ${last.choice.label}. ${last.choice.next}` : null}
+      </p>
+    </section>
+  );
+}
+
+/** What Bezl's filter did with questions that never reached you; folded. */
+export function HandledList({ handled }: { handled: Handled[] }) {
+  return (
+    <details className="journey-passed journey-handled">
+      <summary>{`Bezl handled ${handled.length} without you`}</summary>
+      <ul>
+        {handled.map((h) => (
+          <li key={h.text} className="journey-row" data-light="done">
+            <span className="journey-row-icon">
+              <LightIcon light="done" />
+            </span>
+            <span className="journey-row-text">
+              {h.text}
+              <small>{h.outcome}</small>
+            </span>
+            <span className="journey-row-meta">{h.by}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+type IntentProps = {
+  goal: string;
+  doneWhen: DoneWhen[];
+  decisions: Decision[];
+  assumptions: Assumption[];
+  /** Assumptions already turned into questions. */
+  raised: ReadonlySet<string>;
+  onChange?: ((a: Assumption) => void) | undefined;
+};
+
+function Intent({ goal, doneWhen, decisions, assumptions, raised, onChange }: IntentProps) {
+  const id = useId();
+  return (
+    <div className="journey-intent">
+      <blockquote className="journey-quote">{goal}</blockquote>
+      {doneWhen.length ? (
+        <section className="journey-section">
+          <h3 id={`${id}-done`} className="page-label">
+            Done when
+          </h3>
+          <ul aria-labelledby={`${id}-done`}>
+            {doneWhen.map((l) => (
+              <li key={l.text} className="journey-row" data-light={l.light}>
+                <span className="journey-row-icon">
+                  <LightIcon light={l.light} />
+                  <span className="journey-sr">{`${lightLabel[l.light]}: `}</span>
+                </span>
+                <span className="journey-row-text">{l.text}</span>
+                <span className="journey-row-meta">{l.status}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      <section className="journey-section">
+        <h3 id={`${id}-decided`} className="page-label">
+          Decided
+        </h3>
+        {decisions.length ? (
+          <ul aria-labelledby={`${id}-decided`}>
+            {decisions.map((d) => (
+              <li key={d.text} className="journey-row" data-light="done">
+                <span className="journey-row-icon">
+                  <LightIcon light="done" />
+                </span>
+                <span className="journey-row-text">{d.text}</span>
+                <span className="journey-row-meta">{stageLabel[d.stage]}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="journey-steer-note">Nothing yet. Your answers collect here.</p>
+        )}
+      </section>
+      {assumptions.length ? (
+        <section className="journey-section">
+          <h3 id={`${id}-assumed`} className="page-label">
+            Assumed
+          </h3>
+          <ul aria-labelledby={`${id}-assumed`}>
+            {assumptions.map((a) => (
+              <li key={a.id} className="journey-row" data-light="waiting">
+                <span className="journey-row-icon">
+                  <LightIcon light="waiting" />
+                </span>
+                <span className="journey-row-text">{a.text}</span>
+                <span className="journey-row-meta">
+                  {raised.has(a.id) ? (
+                    "Now a question"
+                  ) : onChange ? (
+                    <button type="button" className="journey-link" onClick={() => onChange(a)}>
+                      Change
+                    </button>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+/** Beside every stage: what the task is for, kept in view while you decide. */
+export function Side({
+  tab,
+  onTab,
+  ...intent
+}: IntentProps & { tab: SideTab; onTab: (t: SideTab) => void }) {
+  const id = useId();
+  const move = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const i = tabs.findIndex((t) => t.id === tab);
+    const to =
+      e.key === "ArrowRight"
+        ? i + 1
+        : e.key === "ArrowLeft"
+          ? i - 1
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? tabs.length - 1
+              : null;
+    if (to === null) return;
+    e.preventDefault();
+    const next = tabs[(to + tabs.length) % tabs.length];
+    if (!next) return;
+    onTab(next.id);
+    document.getElementById(`${id}-${next.id}`)?.focus();
+  };
+  return (
+    <aside className="journey-side" aria-label="Beside this stage">
+      <div className="journey-tabs" role="tablist" aria-label="Show">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            id={`${id}-${t.id}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            aria-controls={`${id}-panel`}
+            tabIndex={tab === t.id ? 0 : -1}
+            onClick={() => onTab(t.id)}
+            onKeyDown={move}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+      <div
+        id={`${id}-panel`}
+        role="tabpanel"
+        aria-labelledby={`${id}-${tab}`}
+        className="journey-side-panel"
+      >
+        <Intent {...intent} />
+      </div>
+    </aside>
+  );
+}
