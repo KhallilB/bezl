@@ -1,3 +1,4 @@
+import { Button, Progress } from "@kb.ui/react";
 import { LightIcon } from "./icons";
 import {
   type Coverage,
@@ -36,24 +37,17 @@ function NodeButton({
   );
 }
 
-const buckets: { id: keyof Coverage; word: string }[] = [
-  { id: "covered", word: "run" },
-  { id: "uncovered", word: "never run" },
-  { id: "unknown", word: "can't measure" },
-  { id: "excluded", word: "excluded" },
-];
-
 function CoverageBar({ coverage }: { coverage: Coverage }) {
+  const { covered, uncovered, unknown, excluded } = coverage;
+  const total = covered + uncovered + unknown + excluded;
   return (
     <div className="journey-coverage">
+      <Progress
+        label="Run in a test"
+        value={total ? Math.round((covered / total) * 100) : 0}
+        valueText={`${covered} of ${total} lines`}
+      />
       <p>{coverageText(coverage)}</p>
-      <div className="journey-coverage-bar" aria-hidden="true">
-        {buckets
-          .filter((b) => coverage[b.id] > 0)
-          .map((b) => (
-            <span key={b.id} data-bucket={b.id} style={{ flexGrow: coverage[b.id] }} />
-          ))}
-      </div>
     </div>
   );
 }
@@ -91,9 +85,9 @@ export function TraceView({
             })}
           </ol>
           <span>
-            <button type="button" className="journey-link" onClick={() => onFocus(null)}>
+            <Button size="sm" variant="ghost" onClick={() => onFocus(null)}>
               Back to what needs you
-            </button>
+            </Button>
           </span>
         </>
       ) : (
