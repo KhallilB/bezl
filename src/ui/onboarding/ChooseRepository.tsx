@@ -1,6 +1,7 @@
 import { Button, Callout } from "@kb.ui/react";
 import "../shell/page.css";
 import "./onboarding.css";
+import { OnboardingSteps } from "./OnboardingSteps";
 
 export type Refusal = { path: string; reason: string };
 
@@ -28,6 +29,7 @@ export function ChooseRepository({ onChoose, refused }: ChooseRepositoryProps) {
             <code>.git/bezl</code> folder, on this machine.
           </p>
         </header>
+        <OnboardingSteps current="repository" />
         {refused ? (
           <Callout tone="warning" role="alert" title={refused.reason}>
             <code>{refused.path}</code> has no git history. Choose the folder you cloned.

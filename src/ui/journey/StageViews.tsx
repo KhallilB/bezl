@@ -217,7 +217,16 @@ export function Passed({ rows }: { rows: Row[] }) {
   );
 }
 
-export function Ship({ ship, onBack }: { ship: ShipSummary; onBack: () => void }) {
+export function Ship({
+  ship,
+  onBack,
+  onNewTask,
+}: {
+  ship: ShipSummary;
+  onBack: () => void;
+  /** Offered once the pull request is open. */
+  onNewTask?: (() => void) | undefined;
+}) {
   const id = useId();
   const [opened, setOpened] = useState(false);
   return (
@@ -257,17 +266,34 @@ export function Ship({ ship, onBack }: { ship: ShipSummary; onBack: () => void }
       </section>
       <div className="journey-ship-actions">
         {opened ? (
-          <p className="journey-steer-note" role="status">
-            Opened pull request #42 on GitHub.
-          </p>
+          <>
+            <p className="journey-steer-note" role="status">
+              {`Opened pull request #${ship.pullRequest.number} on GitHub.`}
+            </p>
+            {onNewTask ? (
+              <Button variant="secondary" onClick={onNewTask}>
+                New task
+              </Button>
+            ) : null}
+            <a
+              className="journey-link"
+              href={ship.pullRequest.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View on GitHub
+            </a>
+          </>
         ) : (
-          <Button variant="secondary" onClick={() => setOpened(true)}>
-            Open pull request
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => setOpened(true)}>
+              Open pull request
+            </Button>
+            <Button variant="ghost" onClick={onBack}>
+              Back to review
+            </Button>
+          </>
         )}
-        <Button variant="ghost" onClick={onBack}>
-          Back to review
-        </Button>
       </div>
     </section>
   );

@@ -10,6 +10,7 @@
 
 /* Room under the content so the dock never covers the last row. */
 .walkthrough-view {
+  --page-sticky-bottom: var(--walkthrough-dock-space);
   padding-block-end: var(--walkthrough-dock-space);
 }
 

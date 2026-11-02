@@ -95,4 +95,19 @@ describe("Ship", () => {
     await userEvent.click(screen.getByRole("button", { name: "Open pull request" }));
     expect(screen.getByText(/Opened pull request #42/)).toBeVisible();
   });
+
+  test("once opened, Ship links the pull request and offers the next task", async () => {
+    const task = keptTasks.find((t) => t.id === "empty-state");
+    if (!task) throw new Error("no fixture empty-state");
+    const onNewTask = vi.fn();
+    render(<TaskPage task={task} stage="ship" onStage={vi.fn()} onNewTask={onNewTask} />);
+    await userEvent.click(screen.getByRole("button", { name: "Open pull request" }));
+    expect(screen.getByRole("link", { name: "View on GitHub" })).toHaveAttribute(
+      "href",
+      "https://github.com/acme/studio-web/pull/42",
+    );
+    expect(screen.queryByRole("button", { name: "Back to review" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "New task" }));
+    expect(onNewTask).toHaveBeenCalledOnce();
+  });
 });

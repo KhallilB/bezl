@@ -337,6 +337,7 @@ function TaskView({ place, kept, shared }: { place: Place; kept: boolean; shared
         stage={place.stage}
         onStage={(stage) => shared.onPlace({ ...place, stage })}
         onKeep={() => shared.onGoTo("ship")}
+        onNewTask={() => shared.onGoTo("new-task")}
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}
         {...(kept && open.id === history.taskId
@@ -390,9 +391,14 @@ function View({
       );
     case "providers":
       return view.result === "checking" ? (
-        <Providers checks={null} checking />
+        <Providers checks={null} checking firstRun />
       ) : (
-        <Providers checks={preflight[view.result]} onCheckAgain={() => onGoTo("preflight")} />
+        <Providers
+          checks={preflight[view.result]}
+          onCheckAgain={() => onGoTo("preflight")}
+          firstRun
+          onContinue={() => onGoTo("empty-list")}
+        />
       );
     case "empty":
       return (
@@ -402,7 +408,7 @@ function View({
           onOpenTask={() => {}}
           onNewTask={() => onGoTo("new-task")}
         >
-          <EmptyTasks onNewTask={() => onGoTo("new-task")} />
+          <EmptyTasks firstRun onNewTask={() => onGoTo("new-task")} />
         </AppShell>
       );
     case "newTask":
@@ -430,6 +436,7 @@ function View({
             command="bun install"
             onAllow={() => onGoTo("preparing")}
             onDeny={() => {}}
+            onEditBrief={() => onGoTo("brief-ready")}
           />
         </AppShell>
       );

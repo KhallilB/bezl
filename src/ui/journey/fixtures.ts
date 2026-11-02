@@ -376,6 +376,7 @@ const kept: JourneyTask = {
           { stage: "check", text: "Take B had 2 problems, fixed; take A passed all 12" },
           { stage: "review", text: "Codex: “Clear, reuses EmptyState”" },
         ],
+        pullRequest: { number: 42, url: "https://github.com/acme/studio-web/pull/42" },
       },
     },
   },

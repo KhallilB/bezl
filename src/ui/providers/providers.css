@@ -81,3 +81,12 @@
     padding: var(--kb-space-6) var(--kb-space-4);
   }
 }
+
+/* Readiness and the way on share one row. */
+.providers-ready {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kb-space-3);
+}

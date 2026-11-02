@@ -501,6 +501,17 @@
   gap: var(--kb-space-3);
 }
 
+/* The opened line sits above what comes next. */
+.journey-ship-actions > [role="status"] {
+  flex-basis: 100%;
+}
+
+.journey-link {
+  color: var(--kb-color-info);
+  font-size: var(--kb-size-sm);
+  text-underline-offset: 0.2em;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .journey-pane {
     animation: journey-in 320ms var(--kb-motion-easing-enter) backwards;
