@@ -162,6 +162,15 @@ describe("Walkthrough getting started", () => {
     expect(screen.getByText("No writer available")).toBeVisible();
   });
 
+  test("a missing GitHub sign-in shows on Providers without blocking a writer", () => {
+    at("?screen=walkthrough&step=github");
+    render(<Walkthrough />);
+    const github = screen.getByRole("region", { name: "GitHub" });
+    expect(within(github).getByText("Not signed in")).toBeVisible();
+    expect(within(github).getByText("gh auth login")).toBeVisible();
+    expect(screen.getByText("Ready: Claude Code and Codex can write.")).toBeVisible();
+  });
+
   test("the empty task list offers one action, which opens New task", async () => {
     at("?screen=walkthrough&step=empty-list");
     render(<Walkthrough />);
