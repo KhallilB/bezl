@@ -205,6 +205,29 @@ describe("NewTask from a GitHub issue", () => {
     expect(screen.queryByRole("link", { name: "View issue #128" })).toBeNull();
   });
 
+  test("picking and clearing an issue keep what you wrote yourself", async () => {
+    setup({ issues, step: "done" });
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Add a line" }),
+      "It feels calm{Enter}",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Who it's for" }), "Ops");
+    await userEvent.click(screen.getByRole("button", { name: "Start from a GitHub issue" }));
+    await userEvent.click(screen.getByRole("button", { name: /#128/ }));
+    expect(screen.getByRole("textbox", { name: "Who it's for" })).toHaveValue("Ops");
+    await next();
+    const lines = () =>
+      within(screen.getByRole("list", { name: "It's done when" })).getAllByRole("listitem");
+    expect(lines()).toHaveLength(3);
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Who it's for" })).toHaveValue("Ops");
+    await next();
+    expect(lines()).toHaveLength(1);
+  });
+
   test("without GitHub issues, the goal starts empty and nothing offers them", () => {
     setup();
     expect(screen.queryByRole("button", { name: "Start from a GitHub issue" })).toBeNull();

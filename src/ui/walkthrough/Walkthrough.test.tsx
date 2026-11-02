@@ -163,6 +163,11 @@ describe("Walkthrough getting started", () => {
     at("?screen=walkthrough&step=providers");
     const { unmount } = render(<Walkthrough />);
     expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
+    // New task offers Codex as a reviewer, so its safety tests must pass here.
+    expect(
+      screen.getByText(/Signed in · All 5 safety tests passed · Version 0\.163\.0/),
+    ).toBeVisible();
+    expect(screen.queryAllByText(/A safety test failed/)).toHaveLength(0);
     unmount();
     at("?screen=walkthrough&step=impostor");
     const impostor = render(<Walkthrough />);
