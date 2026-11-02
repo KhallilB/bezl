@@ -1,5 +1,5 @@
 import { Button, Fieldset, Input, RadioGroup, Switch, Textarea } from "@kb.ui/react";
-import { useId, useRef, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import {
   applyRead,
   type BezlRead,
@@ -24,9 +24,11 @@ export type StartedTask = {
   paths: string[];
   /** Off by default: Ship warns about open problems but lets you go ahead. */
   blockShip: boolean;
+  /** Runs the repository's setup command in the task's copy before planning. */
+  setup: boolean;
 };
 
-const stepLabel = { goal: "Goal", read: "Bezl's read", who: "Who works on it" } as const;
+const stepLabel = { goal: "Goal", review: "Review and start" } as const;
 export type NewTaskStep = keyof typeof stepLabel;
 const order = Object.keys(stepLabel) as NewTaskStep[];
 
@@ -38,7 +40,8 @@ export type NewTaskProps = {
   read: BezlRead;
   /** Agents that passed the agent check; greyed where they can't take the role. */
   providers: CrewProvider[];
-  paths: string[];
+  /** The repository's setup command, if it has one; shown beside Start. */
+  setup?: string | undefined;
   onStart: (task: StartedTask) => void;
   /** The step it opens on, for the walkthrough. */
   step?: NewTaskStep;
@@ -100,11 +103,6 @@ function PartField({
     <div className="newtask-part">
       <Input label={label} value={value} onValueChange={onChange} />
       <div className="newtask-read">
-        {!empty && read && value === read.text ? (
-          <span className="newtask-from">
-            From <cite>{read.from}</cite>
-          </span>
-        ) : null}
         {empty && read ? (
           <>
             <span>{`Bezl read: ${read.text}`}</span>
@@ -118,9 +116,7 @@ function PartField({
             </Button>
           </>
         ) : null}
-        {empty && !read ? (
-          <span>{`Bezl couldn't tell from the goal or the code. ${why}`}</span>
-        ) : null}
+        {empty && !read ? <span>{why}</span> : null}
         {empty ? null : (
           <Button
             size="sm"
@@ -137,52 +133,54 @@ function PartField({
 }
 
 const lower = (label: string) => label.charAt(0).toLowerCase() + label.slice(1);
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** The last step's recap: what was written, who works on it, and what's still empty. */
-function Summary({
-  draft,
-  writer,
-  reviewer,
-  files,
+/** One part of the task: what it holds and where from; Change opens it in place. */
+function Row({
+  label,
+  value,
+  from,
+  open,
+  onChange,
+  children,
 }: {
-  draft: BriefDraft;
-  writer: string;
-  reviewer: string;
-  files: number;
+  label: string;
+  value: ReactNode;
+  from?: string | undefined;
+  open: boolean;
+  onChange: () => void;
+  children?: ReactNode;
 }) {
-  const gaps = readiness(draft).filter((c) => !c.met);
-  const byBezl = draft.doneWhen.filter((d) => d.checker === "bezl").length;
-  const done = draft.doneWhen.length;
+  const id = useId();
   return (
-    <section className="newtask-summary" aria-labelledby="newtask-summary">
-      <h2 id="newtask-summary" className="page-label">
-        Your task
-      </h2>
-      {draft.text.trim() ? <p className="newtask-summary-goal">{draft.text}</p> : null}
-      <dl className="newtask-parts">
-        <div>
-          <dt>Done when</dt>
-          <dd>
-            {done === 0
-              ? "Nothing yet"
-              : `${done} ${done === 1 ? "line" : "lines"}, ${byBezl} checked by Bezl`}
-          </dd>
+    <li className="newtask-row" aria-labelledby={`${id}-label`}>
+      <span id={`${id}-label`} className="newtask-row-label">
+        {label}
+      </span>
+      <div className="newtask-row-value">
+        {value}
+        {from ? (
+          <span className="newtask-from">
+            From <cite>{from}</cite>
+          </span>
+        ) : null}
+      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label={`Change ${label}`}
+        aria-expanded={children ? open : undefined}
+        aria-controls={children && open ? `${id}-edit` : undefined}
+        onClick={onChange}
+      >
+        {open ? "Done" : "Change"}
+      </Button>
+      {children && open ? (
+        <div id={`${id}-edit`} className="newtask-row-edit">
+          {children}
         </div>
-        <div>
-          <dt>Crew</dt>
-          <dd>{`${writer} writes, ${reviewer} reviews`}</dd>
-        </div>
-        <div>
-          <dt>Files</dt>
-          <dd>{files === 0 ? "Any" : `${files} ${files === 1 ? "path" : "paths"}`}</dd>
-        </div>
-      </dl>
-      {gaps.length > 0 ? (
-        <p className="newtask-summary-gaps">
-          {`Not filled in: ${gaps.map((g) => lower(g.label)).join(", ")}. You can start anyway; Bezl checks the work against what you wrote.`}
-        </p>
       ) : null}
-    </section>
+    </li>
   );
 }
 
@@ -293,14 +291,14 @@ function IssuePicker({
   );
 }
 
-/** New task in three steps: your goal, what Bezl read from it and the code, then who and within what limits. */
+/** New task in two steps: your goal, then Bezl's read of the whole task to change or start as it is. */
 export function NewTask({
   repo,
   branch,
   initial,
   read,
   providers,
-  paths,
+  setup,
   onStart,
   step: first = "goal",
   issues,
@@ -315,13 +313,15 @@ export function NewTask({
     return applied.current ? applyRead(start, read) : start;
   });
   const [step, setStep] = useState(first);
+  const [open, setOpen] = useState<string | null>(null);
   const moved = useRef(false);
   const writers = writerChoices(providers);
   const [writer, setWriter] = useState(() => firstOpen(writers));
   const reviewers = reviewerChoices(providers, writer);
   const [reviewer, setReviewer] = useState(() => defaultReviewer(reviewers));
   const [blockShip, setBlockShip] = useState(false);
-  const [allowed, setAllowed] = useState(paths);
+  const [runSetup, setRunSetup] = useState(Boolean(setup));
+  const [allowed, setAllowed] = useState(read.files?.paths ?? []);
   const [adding, setAdding] = useState("");
   const [line, setLine] = useState("");
   const add = () => {
@@ -339,16 +339,18 @@ export function NewTask({
   const checks = readiness(draft);
   const gap = (id: CheckId) => checks.find((c) => c.id === id && !c.met);
   const why = (id: CheckId) => checks.find((c) => c.id === id)?.why ?? "";
-  const ready = checks.every((c) => c.met);
+  const gaps = checks.filter((c) => !c.met);
   const at = order.indexOf(step);
   const go = (to: NewTaskStep) => {
-    if (to === "read" && !applied.current) {
+    if (to === "review" && !applied.current) {
       applied.current = true;
       setDraft((d) => applyRead(d, read));
     }
     moved.current = true;
+    setOpen(null);
     setStep(to);
   };
+  const toggle = (row: string) => setOpen(open === row ? null : row);
 
   // Each move lands on the new step's question, for keyboard and screen reader alike.
   const land = (el: HTMLHeadingElement | null) => {
@@ -361,6 +363,9 @@ export function NewTask({
 
   const nameOf = (id: string) => providers.find((p) => p.id === id)?.name ?? id;
   const bezlLines = read.done?.lines ?? [];
+  const byBezl = draft.doneWhen.filter((d) => d.checker === "bezl").length;
+  const sameVendor = reviewers.find((c) => c.id === reviewer)?.note;
+  const willSetup = Boolean(setup) && runSetup;
 
   return (
     <form
@@ -370,7 +375,7 @@ export function NewTask({
         e.preventDefault();
         const to = order[at + 1];
         if (to) go(to);
-        else onStart({ draft, writer, reviewer, paths: allowed, blockShip });
+        else onStart({ draft, writer, reviewer, paths: allowed, blockShip, setup: willSetup });
       }}
     >
       <header className="page-title-row">
@@ -399,7 +404,8 @@ export function NewTask({
           <Textarea
             label="Goal"
             description={
-              gap("what")?.why ?? "In your own words; Bezl keeps it exactly as you wrote it."
+              gap("what")?.why ??
+              "In your own words. Bezl reads the rest from it and the code, for you to check next."
             }
             rows={4}
             value={draft.text}
@@ -409,161 +415,240 @@ export function NewTask({
         </section>
       ) : null}
 
-      {step === "read" ? (
+      {step === "review" ? (
         <section className="newtask-step" aria-labelledby="newtask-step">
           <h2 id="newtask-step" ref={land} tabIndex={-1} className="newtask-question">
-            Here's what Bezl took from it
+            Here's the task Bezl read
           </h2>
           <p className="newtask-hint">
-            {`From your goal and the code in ${repo}. Change anything that's wrong, or write your own for tighter rails; none of it is required.`}
+            {`From your goal and the code in ${repo}. Start it as it is, or change any part to keep the work on tighter rails.`}
           </p>
-          <div className="newtask-optional">
-            {(["who", "avoid", "example"] as const).map((part) => (
-              <PartField
-                key={part}
-                part={part}
-                draft={draft}
-                why={why(part)}
-                read={read[part]}
-                onChange={(value) => setDraft((d) => ({ ...d, [part]: value }))}
-              />
-            ))}
-          </div>
-          <p className="newtask-hint newtask-done-why">
-            {read.done ? `How you'll know it's done, from ${read.done.from}. ` : null}
-            {why("done")}
-          </p>
-          {draft.doneWhen.length > 0 ? (
-            <section className="newtask-section" aria-labelledby="newtask-done">
-              <h3 id="newtask-done" className="page-label">
-                It's done when
-              </h3>
-              <ul className="newtask-done" aria-labelledby="newtask-done">
-                {draft.doneWhen.map((d) => (
-                  <li key={d.text} data-checker={d.checker}>
-                    <span>{d.text}</span>
-                    <span className="newtask-checker">
-                      {d.checker === "bezl" ? "Bezl checks" : "You check"}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Remove ${d.text}`}
-                      onClick={() =>
-                        setDraft((x) => ({
-                          ...x,
-                          doneWhen: x.doneWhen.filter((y) => y.text !== d.text),
-                        }))
-                      }
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-          {gap("done") && bezlLines.length ? (
-            <div className="newtask-suggestion">
-              <span>{`Bezl read ${bezlLines.length} lines from your goal`}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  setDraft((d) => applyRead(d, { done: { lines: bezlLines, from: "" } }))
-                }
-              >
-                Use them
-              </Button>
-            </div>
-          ) : null}
-          <div className="newtask-path-add">
-            <Input
-              label="Add a line"
-              visuallyHidden
-              className="newtask-path-field"
-              value={line}
-              onValueChange={setLine}
-              placeholder="Add a line you'll check yourself"
-              onKeyDown={(e) => {
-                // Enter adds the line instead of moving on.
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                addLine();
-              }}
+          <ul className="newtask-rows" aria-label="Your task">
+            <Row
+              label="Goal"
+              value={<span className="newtask-row-goal">{draft.text || "Not written yet"}</span>}
+              open={false}
+              onChange={() => go("goal")}
             />
-            <Button size="sm" variant="secondary" onClick={addLine} disabled={!line.trim()}>
-              Add line
-            </Button>
-          </div>
-        </section>
-      ) : null}
-
-      {step === "who" ? (
-        <section className="newtask-step" aria-labelledby="newtask-step">
-          <h2 id="newtask-step" ref={land} tabIndex={-1} className="newtask-question">
-            Who works on it?
-          </h2>
-          <p className="newtask-hint">
-            Only coding agents that passed the agent check, each in its own copy of your code.
-          </p>
-          <div className="newtask-crew">
-            <Choices label="Writes" choices={writers} value={writer} onChange={setWriter} />
-            <Choices label="Reviews" choices={reviewers} value={reviewer} onChange={setReviewer} />
-          </div>
-          <Fieldset legend="Limits" className="newtask-scope">
-            <section className="newtask-section" aria-labelledby="newtask-paths">
-              <h3 id="newtask-paths" className="newtask-field">
-                Files it may change
-              </h3>
-              <ul className="newtask-paths" aria-labelledby="newtask-paths">
-                {allowed.map((p) => (
-                  <li key={p}>
-                    {p}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Remove ${p}`}
-                      onClick={() => setAllowed(allowed.filter((a) => a !== p))}
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+            {(["who", "avoid", "example"] as const).map((part) => {
+              const value = draft[part]?.trim();
+              const bezl = read[part];
+              return (
+                <Row
+                  key={part}
+                  label={partLabel[part]}
+                  value={
+                    value ? (
+                      <span>{value}</span>
+                    ) : (
+                      <span className="newtask-row-empty">
+                        {bezl ? "Dropped" : "Bezl couldn't tell from the goal or the code."}
+                      </span>
+                    )
+                  }
+                  from={value && bezl && value === bezl.text ? bezl.from : undefined}
+                  open={open === part}
+                  onChange={() => toggle(part)}
+                >
+                  <PartField
+                    part={part}
+                    draft={draft}
+                    why={why(part)}
+                    read={bezl}
+                    onChange={(v) => setDraft((d) => ({ ...d, [part]: v }))}
+                  />
+                </Row>
+              );
+            })}
+            <Row
+              label="It's done when"
+              value={
+                <span>
+                  {draft.doneWhen.length === 0
+                    ? "Nothing yet"
+                    : `${count(draft.doneWhen.length, "line", "lines")}, ${byBezl} checked by Bezl`}
+                </span>
+              }
+              from={read.done && byBezl > 0 ? read.done.from : undefined}
+              open={open === "done"}
+              onChange={() => toggle("done")}
+            >
+              <p className="newtask-hint">{why("done")}</p>
+              {draft.doneWhen.length > 0 ? (
+                <ul className="newtask-done" aria-label="Done-when lines">
+                  {draft.doneWhen.map((d) => (
+                    <li key={d.text} data-checker={d.checker}>
+                      <span>{d.text}</span>
+                      <span className="newtask-checker">
+                        {d.checker === "bezl" ? "Bezl checks" : "You check"}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Remove ${d.text}`}
+                        onClick={() =>
+                          setDraft((x) => ({
+                            ...x,
+                            doneWhen: x.doneWhen.filter((y) => y.text !== d.text),
+                          }))
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {gap("done") && bezlLines.length ? (
+                <div className="newtask-suggestion">
+                  <span>{`Bezl read ${count(bezlLines.length, "line", "lines")} from your goal`}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setDraft((d) => applyRead(d, { done: { lines: bezlLines, from: "" } }))
+                    }
+                  >
+                    Use them
+                  </Button>
+                </div>
+              ) : null}
               <div className="newtask-path-add">
                 <Input
-                  label="Add a path"
+                  label="Add a line"
                   visuallyHidden
                   className="newtask-path-field"
-                  value={adding}
-                  onValueChange={setAdding}
-                  placeholder="src/components/**"
+                  value={line}
+                  onValueChange={setLine}
+                  placeholder="Add a line you'll check yourself"
                   onKeyDown={(e) => {
-                    // Enter adds the path instead of starting the task.
+                    // Enter adds the line instead of moving on.
                     if (e.key !== "Enter") return;
                     e.preventDefault();
-                    add();
+                    addLine();
                   }}
                 />
-                <Button size="sm" variant="secondary" onClick={add} disabled={!adding.trim()}>
-                  Add path
+                <Button size="sm" variant="secondary" onClick={addLine} disabled={!line.trim()}>
+                  Add line
                 </Button>
               </div>
-            </section>
-            <Switch
-              label="Don't ship with open problems"
-              description="While this is off, Ship lists any open problems but still lets you go ahead."
-              checked={blockShip}
-              onCheckedChange={setBlockShip}
-            />
-          </Fieldset>
-          <Summary
-            draft={draft}
-            writer={nameOf(writer)}
-            reviewer={nameOf(reviewer)}
-            files={allowed.length}
-          />
+            </Row>
+            <Row
+              label="Crew"
+              value={<span>{`${nameOf(writer)} writes, ${nameOf(reviewer)} reviews`}</span>}
+              from={
+                sameVendor
+                  ? undefined
+                  : "the agents that passed the agent check, with a reviewer from another company"
+              }
+              open={open === "crew"}
+              onChange={() => toggle("crew")}
+            >
+              <div className="newtask-crew">
+                <Choices label="Writes" choices={writers} value={writer} onChange={setWriter} />
+                <Choices
+                  label="Reviews"
+                  choices={reviewers}
+                  value={reviewer}
+                  onChange={setReviewer}
+                />
+              </div>
+            </Row>
+            <Row
+              label="Files"
+              value={
+                <span>
+                  {`${allowed.length === 0 ? "Any file" : count(allowed.length, "path", "paths")} · ${blockShip ? "Ship waits for open problems" : "Ship isn't held"}`}
+                </span>
+              }
+              from={
+                read.files && allowed.join() === read.files.paths.join()
+                  ? read.files.from
+                  : undefined
+              }
+              open={open === "files"}
+              onChange={() => toggle("files")}
+            >
+              <Fieldset legend="Limits" className="newtask-scope">
+                <section className="newtask-section" aria-labelledby="newtask-paths">
+                  <h3 id="newtask-paths" className="newtask-field">
+                    Files it may change
+                  </h3>
+                  <ul className="newtask-paths" aria-labelledby="newtask-paths">
+                    {allowed.map((p) => (
+                      <li key={p}>
+                        {p}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Remove ${p}`}
+                          onClick={() => setAllowed(allowed.filter((a) => a !== p))}
+                        >
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="newtask-path-add">
+                    <Input
+                      label="Add a path"
+                      visuallyHidden
+                      className="newtask-path-field"
+                      value={adding}
+                      onValueChange={setAdding}
+                      placeholder="src/components/**"
+                      onKeyDown={(e) => {
+                        // Enter adds the path instead of starting the task.
+                        if (e.key !== "Enter") return;
+                        e.preventDefault();
+                        add();
+                      }}
+                    />
+                    <Button size="sm" variant="secondary" onClick={add} disabled={!adding.trim()}>
+                      Add path
+                    </Button>
+                  </div>
+                </section>
+                <Switch
+                  label="Don't ship with open problems"
+                  description="While this is off, Ship lists any open problems but still lets you go ahead."
+                  checked={blockShip}
+                  onCheckedChange={setBlockShip}
+                />
+              </Fieldset>
+            </Row>
+            {setup ? (
+              <Row
+                label="Setup"
+                value={
+                  runSetup ? (
+                    <>
+                      <code>{setup}</code>
+                      <span className="newtask-from">
+                        Runs only in the task's copy of your code, never in yours
+                      </span>
+                    </>
+                  ) : (
+                    <span className="newtask-row-empty">Skipped</span>
+                  )
+                }
+                open={open === "setup"}
+                onChange={() => toggle("setup")}
+              >
+                <Switch
+                  label="Run setup when the task starts"
+                  description="Off, the task starts without installing anything, and checks that need dependencies may fail."
+                  checked={runSetup}
+                  onCheckedChange={setRunSetup}
+                />
+              </Row>
+            ) : null}
+          </ul>
+          {gaps.length > 0 ? (
+            <p className="newtask-summary-gaps">
+              {`Not filled in: ${gaps.map((g) => lower(g.label)).join(", ")}. You can start anyway; Bezl checks the work against what's here.`}
+            </p>
+          ) : null}
         </section>
       ) : null}
 
@@ -576,14 +661,16 @@ export function NewTask({
         <Button type="submit" variant="primary">
           {order[at + 1]
             ? `Next: ${stepLabel[order[at + 1] as NewTaskStep]}`
-            : ready
+            : gaps.length === 0
               ? "Start task"
               : "Start anyway"}
         </Button>
         <span>
           {order[at + 1]
             ? `Step ${at + 1} of ${order.length}`
-            : "Bezl will set up the task's own copy of your code and then make a plan."}
+            : willSetup
+              ? `Starting runs ${setup} in the task's copy of your code, then Bezl makes a plan.`
+              : "Bezl will set up the task's own copy of your code and then make a plan."}
         </span>
       </footer>
     </form>

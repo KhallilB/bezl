@@ -73,6 +73,8 @@ export type BezlRead = {
   avoid?: Read;
   example?: Read;
   done?: { lines: DoneWhen[]; from: string };
+  /** The files the attempt may change. */
+  files?: { paths: string[]; from: string };
 };
 
 /** Fills what you left empty and adds lines you don't have; never overwrites yours. */

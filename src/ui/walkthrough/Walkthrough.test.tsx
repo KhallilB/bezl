@@ -213,15 +213,6 @@ describe("Walkthrough getting started", () => {
 });
 
 describe("Walkthrough start a task", () => {
-  test("denying setup stops, and Edit the goal goes back to it", async () => {
-    at("?screen=walkthrough&step=setup");
-    render(<Walkthrough />);
-    await userEvent.click(screen.getByRole("button", { name: "Deny" }));
-    expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Edit the goal" }));
-    expect(within(dock()).getByText(position("bezl-read"))).toBeVisible();
-  });
-
   test("after the pull request opens, New task starts the next one", async () => {
     at("?screen=walkthrough&step=ship");
     render(<Walkthrough />);
@@ -232,16 +223,15 @@ describe("Walkthrough start a task", () => {
 
   test("a task can start from a GitHub issue", async () => {
     at("?screen=walkthrough&step=from-issue");
-    const picker = render(<Walkthrough />);
-    const list = screen.getByRole("list", { name: "Open issues in studio-web" });
-    await userEvent.click(within(list).getByRole("button", { name: /#128/ }));
-    expect(screen.getByRole("link", { name: "View issue #128" })).toBeVisible();
-    picker.unmount();
-    at("?screen=walkthrough&step=issue-filled");
     render(<Walkthrough />);
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveDisplayValue(
       /^Projects page shows an empty table/,
     );
+    await userEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
+    await userEvent.click(screen.getByRole("button", { name: "Start from a GitHub issue" }));
+    const list = screen.getByRole("list", { name: "Open issues in studio-web" });
+    await userEvent.click(within(list).getByRole("button", { name: /#128/ }));
+    expect(screen.getByRole("link", { name: "View issue #128" })).toBeVisible();
   });
 
   test("after Ship, the pull request's checks and then the merged commit's", () => {
@@ -259,26 +249,19 @@ describe("Walkthrough start a task", () => {
     const blank = render(<Walkthrough />);
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     blank.unmount();
-    at("?screen=walkthrough&step=bezl-read");
-    const done = render(<Walkthrough />);
-    expect(screen.getByRole("textbox", { name: "Who it's for" })).not.toHaveValue("");
-    expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
-    done.unmount();
-    at("?screen=walkthrough&step=crew");
+    at("?screen=walkthrough&step=task-read");
     render(<Walkthrough />);
+    expect(screen.getByRole("list", { name: "Your task" })).toHaveTextContent(
+      "New users right after sign-up",
+    );
     expect(screen.getByRole("button", { name: "Start task" })).toBeVisible();
   });
 
-  test("starting asks about setup, and Allow prepares the first task", async () => {
-    at("?screen=walkthrough&step=crew");
+  test("Start names the setup it runs, then prepares the first task", async () => {
+    at("?screen=walkthrough&step=task-read");
     render(<Walkthrough />);
+    expect(screen.getByText(/Starting runs bun install in the task's copy/)).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Start task" }));
-    expect(within(dock()).getByText(position("setup"))).toBeVisible();
-    expect(screen.getByText("bun install")).toBeVisible();
-    expect(
-      within(tasks()).getByRole("link", { name: /Empty state for Projects, needs you/ }),
-    ).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Allow" }));
     expect(within(dock()).getByText(position("preparing"))).toBeVisible();
     expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(
       /Plan, working/,

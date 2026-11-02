@@ -16,9 +16,8 @@ import { interruptedTasks, keptTasks, shippedTasks, tasks, usage } from "../jour
 import type { JourneyTask, StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
 import type { SideTab } from "../journey/Workbench";
-import { crew, drafts, issues, paths, read, startedTask } from "../newtask/fixtures";
+import { crew, drafts, issues, read, startedTask } from "../newtask/fixtures";
 import { NewTask } from "../newtask/NewTask";
-import { SetupConfirm } from "../newtask/SetupConfirm";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
 import {
   claudeFound,
@@ -362,8 +361,8 @@ function View({
             initial={drafts[view.draft]}
             read={read}
             providers={crew}
-            paths={paths}
-            onStart={() => onGoTo("setup")}
+            setup="bun install"
+            onStart={() => onGoTo("preparing")}
             {...(view.step ? { step: view.step } : {})}
             issues={issues}
             issuesOpen={view.issues === "open"}
@@ -371,22 +370,8 @@ function View({
           />
         </AppShell>
       );
-    case "setup": {
-      const asking = startedTask("asking");
-      return (
-        <AppShell tasks={[asking]} usage={usage} currentTaskId={asking.id} onOpenTask={() => {}}>
-          <SetupConfirm
-            repo={asking.repo}
-            command="bun install"
-            onAllow={() => onGoTo("preparing")}
-            onDeny={() => {}}
-            onEditGoal={() => onGoTo("bezl-read")}
-          />
-        </AppShell>
-      );
-    }
     case "started": {
-      const started = startedTask("allowed");
+      const started = startedTask();
       return (
         <AppShell tasks={[started]} usage={usage} currentTaskId={started.id} onOpenTask={() => {}}>
           <TaskPage
