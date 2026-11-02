@@ -7,12 +7,12 @@ import { LightIcon } from "./icons";
 import {
   contextOf,
   type JourneyTask,
-  lightLabel,
   type Section,
   type StageId,
   type StageView,
   stageIds,
   stageLabel,
+  stageLightLabel,
   stageMarker,
 } from "./model";
 import { useDesign } from "./Preview";
@@ -72,7 +72,7 @@ function StageStrip({ task, stage, onStage }: StageStripProps) {
                     {light === "waiting" ? stageMarker(light, i) : <LightIcon light={light} />}
                   </span>
                   {stageLabel[id]}
-                  <span className="journey-sr">{`, ${lightLabel[light]}`}</span>
+                  <span className="journey-sr">{`, ${stageLightLabel[light]}`}</span>
                 </button>
               </Tooltip>
             </li>

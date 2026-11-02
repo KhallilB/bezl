@@ -22,7 +22,7 @@ import { SetupConfirm } from "../newtask/SetupConfirm";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
 import {
   claudeFound,
-  codexProbed,
+  codexReady,
   githubSignedIn,
   githubSignedOut,
   noWriter,
@@ -291,8 +291,8 @@ const preflight: Record<
   Exclude<Preflight, "checking">,
   { checks: ProviderCheck[]; github: GitHubCheck }
 > = {
-  ready: { checks: [claudeFound, codexProbed], github: githubSignedIn },
-  noGitHub: { checks: [claudeFound, codexProbed], github: githubSignedOut },
+  ready: { checks: [claudeFound, codexReady], github: githubSignedIn },
+  noGitHub: { checks: [claudeFound, codexReady], github: githubSignedOut },
   impostor: { checks: thisMachine, github: githubSignedIn },
   noWriter: { checks: noWriter, github: githubSignedIn },
 };
@@ -356,7 +356,7 @@ function View({
       return (
         <AppShell tasks={[]} usage={usage} onOpenTask={() => {}}>
           <NewTask
-            key={`${view.draft}-${view.focus}-${view.issues}`}
+            key={`${view.draft}-${view.step}-${view.issues}`}
             repo="studio-web"
             branch="main"
             initial={drafts[view.draft]}
@@ -364,7 +364,7 @@ function View({
             providers={crew}
             paths={paths}
             onStart={() => onGoTo("setup")}
-            {...(view.focus ? { focus: view.focus } : {})}
+            {...(view.step ? { step: view.step } : {})}
             issues={issues}
             issuesOpen={view.issues === "open"}
             {...(view.issues === "picked" ? { pickedIssue: 128 } : {})}

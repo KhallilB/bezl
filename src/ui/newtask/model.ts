@@ -123,3 +123,27 @@ export function briefFromIssue({ number, title, body, url }: GitHubIssue): Brief
     .trim();
   return { text: prose ? `${title}\n\n${prose}` : title, doneWhen, issue: { number, url } };
 }
+
+/** Drops what an issue filled in: its goal, its link and its checklist lines. */
+export function withoutIssue(draft: BriefDraft, issue: GitHubIssue | undefined): BriefDraft {
+  const from = issue ? briefFromIssue(issue).doneWhen.map((d) => d.text) : [];
+  const { issue: _, ...rest } = draft;
+  return { ...rest, text: "", doneWhen: draft.doneWhen.filter((d) => !from.includes(d.text)) };
+}
+
+/** An issue fills the goal and adds its lines; what you wrote yourself stays. */
+export function withIssue(
+  draft: BriefDraft,
+  issue: GitHubIssue,
+  before: GitHubIssue | undefined,
+): BriefDraft {
+  const kept = withoutIssue(draft, before);
+  const from = briefFromIssue(issue);
+  const lines = from.doneWhen.filter((d) => !kept.doneWhen.some((k) => k.text === d.text));
+  return {
+    ...kept,
+    text: from.text,
+    doneWhen: [...lines, ...kept.doneWhen],
+    ...(from.issue ? { issue: from.issue } : {}),
+  };
+}

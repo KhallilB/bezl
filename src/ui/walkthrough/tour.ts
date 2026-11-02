@@ -1,6 +1,7 @@
 import type { StageId } from "../journey/model";
 import type { SideTab } from "../journey/Workbench";
 import type { drafts } from "../newtask/fixtures";
+import type { NewTaskStep } from "../newtask/NewTask";
 import { oneOf, type Theme, themes } from "./states";
 
 export const chapters = [
@@ -21,7 +22,7 @@ export type TourView =
   | { kind: "providers"; result: Preflight }
   | { kind: "empty" }
   /** `issues`: the GitHub issue list starts open, or with #128 picked. */
-  | { kind: "newTask"; draft: Draft; focus?: "crew"; issues?: "open" | "picked" }
+  | { kind: "newTask"; draft: Draft; step?: NewTaskStep; issues?: "open" | "picked" }
   | { kind: "setup" }
   | { kind: "started" }
   /** `kept`: the list after the attempt was approved on Review; `shipped`, after its pull request opened. */
@@ -104,7 +105,7 @@ export const steps: Step[] = [
     id: "new-task",
     chapter: "Start a task",
     title: "Define the task",
-    note: "Describe the change in your own words. As you type, Bezl looks for five things a good goal usually covers, but you can start without them.",
+    note: "New task takes three short steps: the goal, how you'll know it's done, and who works on it. First, describe the change in your own words. Nothing is required beyond the goal.",
     view: { kind: "newTask", draft: "blank" },
   },
   {
@@ -118,29 +119,29 @@ export const steps: Step[] = [
     id: "issue-filled",
     chapter: "Start a task",
     title: "The issue fills in the goal",
-    note: "The issue's title and description become the goal, and its checklist becomes the list of things to be done. Bezl checks it like any goal you wrote yourself, so the gaps still show.",
+    note: "The issue's title and description become the goal, and its checklist waits on the next step as the lines of done when. You can change any of it.",
     view: { kind: "newTask", draft: "blank", issues: "picked" },
   },
   {
     id: "readiness",
     chapter: "Start a task",
     title: "Fill the gaps",
-    note: "For each gap, Bezl explains why it matters and suggests something you can add with one click.",
+    note: "Under each empty part, Bezl says why it helps and offers a suggestion you can use with one click.",
     view: { kind: "newTask", draft: "partial" },
   },
   {
     id: "define-ready",
     chapter: "Start a task",
     title: "It's done when, and who checks",
-    note: "Bezl checks each of these after every step, and the ones marked for you wait until Review.",
-    view: { kind: "newTask", draft: "ready" },
+    note: "Step two: each line says who checks it. Bezl checks its lines after every step, and yours wait until Review. Lines you type are yours to check.",
+    view: { kind: "newTask", draft: "ready", step: "done" },
   },
   {
     id: "crew",
     chapter: "Start a task",
     title: "Choose who works on it",
-    note: "You can only pick coding agents that passed the agent check. A reviewer from the same company as the writer is allowed, but Bezl labels it so you know. Limits lists the paths the attempt may change, and can hold Ship while problems are open.",
-    view: { kind: "newTask", draft: "ready", focus: "crew" },
+    note: "Step three: pick from coding agents that passed the agent check. A reviewer from the same company as the writer is allowed, but Bezl labels it so you know. Limits lists the paths the attempt may change, and can hold Ship while problems are open. Your task sums it all up before you start.",
+    view: { kind: "newTask", draft: "ready", step: "who" },
   },
   {
     id: "setup",

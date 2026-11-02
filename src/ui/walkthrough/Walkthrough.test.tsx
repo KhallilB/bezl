@@ -163,6 +163,11 @@ describe("Walkthrough getting started", () => {
     at("?screen=walkthrough&step=providers");
     const { unmount } = render(<Walkthrough />);
     expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
+    // New task offers Codex as a reviewer, so its safety tests must pass here.
+    expect(
+      screen.getByText(/Signed in · All 5 safety tests passed · Version 0\.163\.0/),
+    ).toBeVisible();
+    expect(screen.queryAllByText(/A safety test failed/)).toHaveLength(0);
     unmount();
     at("?screen=walkthrough&step=impostor");
     const impostor = render(<Walkthrough />);
@@ -255,13 +260,16 @@ describe("Walkthrough start a task", () => {
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     blank.unmount();
     at("?screen=walkthrough&step=define-ready");
+    const done = render(<Walkthrough />);
+    expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
+    done.unmount();
+    at("?screen=walkthrough&step=crew");
     render(<Walkthrough />);
     expect(screen.getByRole("button", { name: "Start task" })).toBeVisible();
-    expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
   });
 
   test("starting asks about setup, and Allow prepares the first task", async () => {
-    at("?screen=walkthrough&step=define-ready");
+    at("?screen=walkthrough&step=crew");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Start task" }));
     expect(within(dock()).getByText(position("setup"))).toBeVisible();

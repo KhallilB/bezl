@@ -6,12 +6,14 @@ import {
   coverageText,
   diffLabel,
   estimate,
+  lightLabel,
   lineage,
   pathOf,
   planClaim,
   type StageLights,
   stageIds,
   stageLabel,
+  stageLightLabel,
   stageMarker,
   taskLight,
 } from "./model";
@@ -115,6 +117,21 @@ test("the journey runs Define to Ship", () => {
   ]);
 });
 
+describe("ciText with nothing reported", () => {
+  test("says no checks have reported, not that all 0 passed", () => {
+    expect(ciText({ on: "pullRequest", checks: [] })).toBe(
+      "No checks have reported on the pull request yet.",
+    );
+  });
+});
+
+describe("light labels", () => {
+  test("only a stage reads not started; anything else waiting reads waiting", () => {
+    expect(stageLightLabel.waiting).toBe("not started");
+    expect(lightLabel.waiting).toBe("waiting");
+  });
+});
+
 describe("contextOf", () => {
   const view = { lead: "", sections: [] };
   const task = {
@@ -163,6 +180,14 @@ describe("contextOf", () => {
     };
     expect(contextOf({ ...task, views: { ...task.views, build } }).touches).toBe(
       "2 files · +43 −4",
+    );
+  });
+
+  test("a Review with no attempts yet falls back to Build's", () => {
+    const build = { ...view, takes: [take("A", [["a.ts", 2, 1]])] };
+    const review = { ...view, takes: [] };
+    expect(contextOf({ ...task, views: { ...task.views, build, review } }).touches).toBe(
+      "1 file · +2 −1",
     );
   });
 

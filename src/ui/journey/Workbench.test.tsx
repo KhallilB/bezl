@@ -148,6 +148,21 @@ describe("questions", () => {
     ).toBeVisible();
   });
 
+  test("closing the open question folds it", async () => {
+    render(<Harness id="deny-scopes" stage="build" />);
+    const head = screen.getByRole("button", { name: /edits you haven't committed/ });
+    await userEvent.click(head);
+    expect(head).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { expanded: true })).toBeNull();
+  });
+
+  test("after the last answer, focus stays on the question you answered", async () => {
+    render(<Harness id="deny-scopes" stage="build" />);
+    await userEvent.click(screen.getByRole("button", { name: "Work around them" }));
+    await userEvent.click(screen.getByRole("button", { name: "Deny" }));
+    expect(document.activeElement).toHaveAccessibleName(/internet access/);
+  });
+
   test("what Bezl handled without you stays folded", async () => {
     render(<Harness id="deny-scopes" stage="build" />);
     const handled = screen.getByText(/Codex asked which error type to use/);
