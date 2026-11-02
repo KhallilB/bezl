@@ -34,6 +34,10 @@ export type TourView =
       shipped?: "checking" | "merged";
       /** The side tab it opens on. */
       side?: SideTab;
+      /** Opens with the workspace full screen. */
+      full?: boolean;
+      /** The list after Bezl quit mid-Build. */
+      interrupted?: boolean;
     }
   | { kind: "approvals"; cleared?: boolean }
   | { kind: "history" }
@@ -191,6 +195,13 @@ export const steps: Step[] = [
     view: { kind: "task", taskId: "debounce", stage: "build" },
   },
   {
+    id: "come-back",
+    chapter: "Your tasks",
+    title: "Coming back after a restart",
+    note: "If Bezl quits mid-step, after a crash or a restart, the task comes back amber as Interrupted, with its copy of your code as it was left and the last terminal snapshot. Bezl never picks the step back up on its own: you run it again with a fresh coding agent, or stop.",
+    view: { kind: "task", taskId: "debounce", stage: "build", interrupted: true },
+  },
+  {
     id: "question",
     chapter: "Your tasks",
     title: "A question waits on you",
@@ -217,6 +228,13 @@ export const steps: Step[] = [
     title: "Reviewed, before and after",
     note: "Another coding agent reviews the attempt. Each done-when line shows how it is on main and after the change. Once you have answered the review's question, the bar at the bottom says why it's ready and ships it.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
+  },
+  {
+    id: "full-screen",
+    chapter: "Your tasks",
+    title: "Decide in full screen",
+    note: "Full screen gives the review the window. Your path down the left lists each step that needs you and what it blocks. The middle shows the screenshots or the evidence map, where dotted links are the plan's claim and solid ones Bezl measured. The question and what you picked sit on the right, and the bar comes along, so whatever you decide stays when you close.",
+    view: { kind: "task", taskId: "empty-state", stage: "review", full: true },
   },
   {
     id: "ship",

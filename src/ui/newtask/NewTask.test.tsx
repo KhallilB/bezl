@@ -161,3 +161,19 @@ describe("NewTask from a GitHub issue", () => {
     expect(screen.queryByRole("button", { name: "Start from a GitHub issue" })).toBeNull();
   });
 });
+
+describe("NewTask limits", () => {
+  test("you add and remove the files it may change, and the task starts with yours", async () => {
+    const { onStart } = setup({ initial: { text, doneWhen: [] } });
+    const paths = () => screen.getByRole("list", { name: "Files it may change" });
+    await userEvent.type(screen.getByRole("textbox", { name: "Add a path" }), "src/components/**");
+    await userEvent.click(screen.getByRole("button", { name: "Add path" }));
+    expect(within(paths()).getByText("src/components/**")).toBeVisible();
+    await userEvent.click(
+      within(paths()).getByRole("button", { name: "Remove src/pages/Projects.tsx" }),
+    );
+    expect(within(paths()).queryByText("src/pages/Projects.tsx")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /Start/ }));
+    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ paths: ["src/components/**"] }));
+  });
+});

@@ -5,6 +5,7 @@ import {
   Handle,
   type Node,
   type NodeProps,
+  Panel,
   Position,
   ReactFlow,
   useReactFlow,
@@ -12,7 +13,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useEffect } from "react";
 import { LightIcon } from "./icons";
-import { lightLabel, lineage, type Trace, type TraceNode, traceColumns } from "./model";
+import { lightLabel, lineage, planClaim, type Trace, type TraceNode, traceColumns } from "./model";
 
 type Card = Node<{ node: TraceNode }, "card">;
 type Head = Node<{ name: string }, "head">;
@@ -91,12 +92,12 @@ export function EvidenceMap({
   );
   const edges: Edge[] = trace.links.map((l) => {
     const on = lit.has(l.from) && lit.has(l.to);
+    const kind = planClaim(trace, l) ? "journey-map-claim" : "";
     return {
       id: `${l.from}-${l.to}`,
       source: l.from,
       target: l.to,
-      animated: on,
-      className: focus && !on ? "journey-map-dim" : "",
+      className: [kind, focus ? (on ? "journey-map-lit" : "journey-map-dim") : ""].join(" "),
     };
   });
   return (
@@ -118,6 +119,9 @@ export function EvidenceMap({
         <Follow chain={[...lit].sort().join(" ")} />
         <Background gap={24} />
         <Controls showInteractive={false} />
+        <Panel position="bottom-center" className="journey-map-key">
+          Dotted: the plan's claim. Solid: measured by Bezl.
+        </Panel>
       </ReactFlow>
     </div>
   );

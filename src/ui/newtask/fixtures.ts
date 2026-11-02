@@ -126,7 +126,7 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
       },
       ship: {
         lead: "Nothing to ship yet.",
-        rest: "Ship opens once you choose which attempt to keep.",
+        rest: "Ship opens once you approve the attempt on Review.",
         sections: [],
       },
     },

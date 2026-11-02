@@ -47,3 +47,11 @@ describe("HistoryPage", () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 });
+
+test("Export is the one way the record leaves the repository", async () => {
+  open();
+  await userEvent.click(screen.getByRole("button", { name: "Export the record" }));
+  expect(screen.getByRole("status")).toHaveTextContent(
+    /Exported the record of Empty state for Projects/,
+  );
+});

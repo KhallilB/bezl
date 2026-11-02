@@ -136,3 +136,13 @@
   font-size: var(--kb-size-xs);
   line-height: 1.6;
 }
+
+.history-exported {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
+}
+
+.history-exported:empty {
+  display: none;
+}

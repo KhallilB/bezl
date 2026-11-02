@@ -1,4 +1,4 @@
-import { Button, Fieldset, RadioGroup, Switch, Textarea } from "@kb.ui/react";
+import { Button, Fieldset, Input, RadioGroup, Switch, Textarea } from "@kb.ui/react";
 import { useId, useState } from "react";
 import { LightIcon } from "../journey/icons";
 import {
@@ -281,6 +281,13 @@ export function NewTask({
   const reviewers = reviewerChoices(providers, writer);
   const [reviewer, setReviewer] = useState(() => defaultReviewer(reviewers));
   const [blockShip, setBlockShip] = useState(false);
+  const [allowed, setAllowed] = useState(paths);
+  const [adding, setAdding] = useState("");
+  const add = () => {
+    const path = adding.trim();
+    if (path && !allowed.includes(path)) setAllowed([...allowed, path]);
+    setAdding("");
+  };
   const ready = readiness(draft).every((c) => c.met);
 
   return (
@@ -289,7 +296,7 @@ export function NewTask({
       aria-labelledby="newtask-title"
       onSubmit={(e) => {
         e.preventDefault();
-        onStart({ draft, writer, reviewer, paths, blockShip });
+        onStart({ draft, writer, reviewer, paths: allowed, blockShip });
       }}
     >
       <header className="page-title-row">
@@ -344,10 +351,39 @@ export function NewTask({
             Files it may change
           </h2>
           <ul className="newtask-paths" aria-labelledby="newtask-paths">
-            {paths.map((p) => (
-              <li key={p}>{p}</li>
+            {allowed.map((p) => (
+              <li key={p}>
+                {p}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Remove ${p}`}
+                  onClick={() => setAllowed(allowed.filter((a) => a !== p))}
+                >
+                  Remove
+                </Button>
+              </li>
             ))}
           </ul>
+          <div className="newtask-path-add">
+            <Input
+              label="Add a path"
+              visuallyHidden
+              className="newtask-path-field"
+              value={adding}
+              onValueChange={setAdding}
+              placeholder="src/components/**"
+              onKeyDown={(e) => {
+                // Enter adds the path instead of starting the task.
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                add();
+              }}
+            />
+            <Button size="sm" variant="secondary" onClick={add} disabled={!adding.trim()}>
+              Add path
+            </Button>
+          </div>
         </section>
         <Switch
           label="Don't ship with open problems"

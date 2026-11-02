@@ -168,6 +168,11 @@ export function pathOf(trace: Trace): Step[] {
     });
 }
 
+/** A link out of the goal is the plan's claim about which code meets it; Bezl measures the rest. */
+export function planClaim({ nodes }: Trace, link: TraceLink): boolean {
+  return nodes.find((n) => n.id === link.from)?.column === "intent";
+}
+
 /** Everything upstream and downstream of one node. */
 export function lineage({ links }: Trace, start: string): Set<string> {
   const lit = new Set([start]);
@@ -253,6 +258,8 @@ export type StageView = {
   compare?: Comparison;
   /** How the stage's problems can go back; the first fixer is the writer. */
   sendBack?: SendBackOptions;
+  /** Bezl quit mid-step; the step waits for you, never resuming on its own. */
+  interrupted?: boolean;
 };
 
 export type Fixer = { id: string; name: string; minutes: number; usage: string };
@@ -307,7 +314,8 @@ export type JourneyTask = {
 export type Risk = "low" | "medium" | "high";
 
 /** How far the change reaches, as Bezl judged it from what changed. */
-export type Impact = { risk: Risk; reach: string };
+/** `from` names what the risk was measured from; a label without one is not shown. */
+export type Impact = { risk: Risk; reach: string; from: string };
 
 export type DoneWhen = { text: string; checker: string; light: Light; status: string };
 

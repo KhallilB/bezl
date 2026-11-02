@@ -30,6 +30,7 @@ function SnapshotViewer({ snapshot, onClose }: { snapshot: Snapshot | null; onCl
 /** A task's full history: timeline, snapshots, what changed. */
 export function HistoryPage({ history, onBack }: { history: TaskHistory; onBack: () => void }) {
   const [open, setOpen] = useState<Snapshot | null>(null);
+  const [exported, setExported] = useState(false);
   return (
     <article className="history page" aria-labelledby="history-title">
       <header className="page-title-row">
@@ -38,11 +39,19 @@ export function HistoryPage({ history, onBack }: { history: TaskHistory; onBack:
         </h1>
         <span className="page-tag">{`${history.title} · ${history.repo}`}</span>
         <span className="page-action">
+          <Button variant="ghost" size="sm" onClick={() => setExported(true)}>
+            Export the record
+          </Button>
           <Button variant="ghost" size="sm" onClick={onBack}>
             Back to task
           </Button>
         </span>
       </header>
+      <p className="history-exported" role="status">
+        {exported
+          ? `Exported the record of ${history.title}. It is the only copy that leaves the repository; the original stays in .git/bezl.`
+          : null}
+      </p>
 
       <ul className="history-spent" aria-label="Time spent">
         {history.spent.map((s) => (

@@ -77,7 +77,14 @@ export function Summary({
         {open("design", context.touches, preview)}
         {impact ? (
           <>
-            <Badge tone={riskTone[impact.risk]}>{`${capital(impact.risk)} risk`}</Badge>
+            <Tooltip
+              content={`Measured from ${impact.from}`}
+              {...(portal ? { container: portal } : {})}
+            >
+              <Button size="sm" variant="ghost" onClick={() => onOpen("intent")}>
+                <Badge tone={riskTone[impact.risk]}>{`${capital(impact.risk)} risk`}</Badge>
+              </Button>
+            </Tooltip>
             <span className="journey-summary-note">{impact.reach}</span>
           </>
         ) : null}
@@ -289,6 +296,7 @@ export function HandledList({ handled }: { handled: Handled[] }) {
 
 type IntentProps = {
   goal: string;
+  impact?: Impact | undefined;
   doneWhen: DoneWhen[];
   decisions: Decision[];
   assumptions: Assumption[];
@@ -297,11 +305,22 @@ type IntentProps = {
   onChange?: ((a: Assumption) => void) | undefined;
 };
 
-function Intent({ goal, doneWhen, decisions, assumptions, raised, onChange }: IntentProps) {
+function Intent({ goal, impact, doneWhen, decisions, assumptions, raised, onChange }: IntentProps) {
   const id = useId();
   return (
     <div className="journey-intent">
       <blockquote className="journey-quote">{goal}</blockquote>
+      {impact ? (
+        <section className="journey-section" aria-labelledby={`${id}-reach`}>
+          <h3 id={`${id}-reach`} className="page-label">
+            How far it reaches
+          </h3>
+          <p className="journey-reach">
+            <Badge tone={riskTone[impact.risk]}>{`${capital(impact.risk)} risk`}</Badge>{" "}
+            {`${impact.reach}. Measured from ${impact.from}.`}
+          </p>
+        </section>
+      ) : null}
       {doneWhen.length ? (
         <section className="journey-section">
           <h3 id={`${id}-done`} className="page-label">
@@ -374,6 +393,7 @@ function Intent({ goal, doneWhen, decisions, assumptions, raised, onChange }: In
 type WorkspaceProps = IntentProps & {
   /** Names the full-screen view: the task's title. */
   title: string;
+  startFull?: boolean | undefined;
   tab: SideTab;
   onTab: (t: SideTab) => void;
   trace?: Trace | undefined;
@@ -556,6 +576,7 @@ function Inspector({
 /** Beside every stage: what it looks like, how it's proven and what it's for; full screen on request. */
 export function Workspace({
   title,
+  startFull = false,
   tab,
   onTab,
   shots,
@@ -570,7 +591,7 @@ export function Workspace({
 }: WorkspaceProps) {
   const id = useId();
   const portal = usePortalRoot();
-  const [full, setFull] = useState(false);
+  const [full, setFull] = useState(startFull);
   const tabs: { id: SideTab; name: string }[] = [
     ...(shots.length || example ? [{ id: "design" as const, name: "Design" }] : []),
     ...(trace ? [{ id: "evidence" as const, name: "Evidence" }] : []),
