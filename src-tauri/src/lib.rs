@@ -10,6 +10,7 @@ pub fn run() {
         .manage(terminal::TerminalPort::default())
         .invoke_handler(tauri::generate_handler![
             providers::preflight::providers_preflight,
+            providers::github::github_preflight,
             terminal::port::terminal_open,
             terminal::port::terminal_write,
             terminal::port::terminal_drawn,
