@@ -90,3 +90,19 @@
   justify-content: space-between;
   gap: var(--kb-space-3);
 }
+
+/* Paths, flags and test rows: there on request, not in the way. */
+.providers-details summary {
+  width: fit-content;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
+  cursor: pointer;
+}
+
+.providers-details summary:hover {
+  color: var(--kb-color-fg);
+}
+
+.providers-details[open] summary {
+  margin-block-end: var(--kb-space-3);
+}

@@ -166,7 +166,7 @@ describe("Walkthrough getting started", () => {
     unmount();
     at("?screen=walkthrough&step=impostor");
     const impostor = render(<Walkthrough />);
-    expect(screen.getByText(/\/Users\/me\/\.bun\/bin\/codex/)).toBeVisible();
+    expect(screen.getByText("The codex at /Users/me/.bun/bin/codex isn't Codex")).toBeVisible();
     impostor.unmount();
     at("?screen=walkthrough&step=no-writer");
     render(<Walkthrough />);

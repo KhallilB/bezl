@@ -1,22 +1,22 @@
 import { Badge, Button, Callout, Code, Inline, Panel, Status, Text } from "@kb.ui/react";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { OnboardingSteps } from "../onboarding/OnboardingSteps";
 import "../shell/page.css";
 import { StateIcon } from "../task/icons";
 import {
+  agentSummary,
   canaryShown,
   capabilityRows,
   type Fix,
   fixes,
-  found,
   type GitHubCheck,
   githubChecking,
   githubFixes,
   githubNote,
+  githubReason,
   githubShown,
   homeName,
   limitHit,
-  notFound,
   type ProviderCheck,
   providerName,
   readOnlyShown,
@@ -257,80 +257,114 @@ function Fixes({ list }: { list: Fix[] }) {
   );
 }
 
-function ProviderPanel({ check }: { check: ProviderCheck }) {
-  const { provider, found: bin, rejected } = check.discovery;
-  const headingId = `provider-${provider}-title`;
+/** A verdict and one line up top; fixes stay in view, the rest folds into Details. */
+function AgentRow({
+  id,
+  name,
+  shown,
+  reason,
+  fix,
+  children,
+}: {
+  id: string;
+  name: string;
+  shown: Shown;
+  reason: string;
+  fix: Fix[];
+  children: ReactNode;
+}) {
   return (
-    <Panel className="providers-panel" aria-labelledby={headingId}>
+    <Panel className="providers-panel" aria-labelledby={id}>
       <Panel.Header>
-        <h2 id={headingId} className="providers-title">
-          {providerName[provider]}
+        <h2 id={id} className="providers-title">
+          {name}
         </h2>
-        <Shows shown={bin ? found : notFound} />
+        <Shows shown={shown} />
       </Panel.Header>
       <Panel.Body className="providers-body">
-        {/* Not found: the first fix says so. */}
-        {bin ? (
-          <Inline gap="sm">
-            <Code>{bin.path}</Code>
-            <Badge mono preserveCase>
-              {bin.version}
-            </Badge>
-            {check.pinned ? null : <Badge tone="warning">Untested version</Badge>}
-          </Inline>
-        ) : null}
-        <Fixes list={fixes(check)} />
-        <SignIn check={check} />
-        <ReadOnly check={check} />
-        <Tiers check={check} />
-        <UsageList check={check} />
-        {rejected.length > 0 ? (
-          <section>
-            <h3 className="page-label">Rejected</h3>
-            <ul className="providers-list" aria-label="Rejected binaries">
-              {rejected.map((r) => (
-                <li key={r.path}>
-                  <Inline gap="sm">
-                    <Code>{r.path}</Code>
-                    <Text as="span" size="sm">
-                      {rejectionText(r.reason)}
-                    </Text>
-                  </Inline>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+        <Text size="sm" tone="muted">
+          {reason}
+        </Text>
+        <Fixes list={fix} />
+        <details className="providers-details">
+          <summary>Details</summary>
+          <div className="providers-body">{children}</div>
+        </details>
       </Panel.Body>
     </Panel>
+  );
+}
+
+function Where({
+  path,
+  version,
+  pinned = true,
+}: {
+  path: string;
+  version: string;
+  pinned?: boolean;
+}) {
+  return (
+    <Inline gap="sm">
+      <Code>{path}</Code>
+      <Badge mono preserveCase>
+        {version}
+      </Badge>
+      {pinned ? null : <Badge tone="warning">Untested version</Badge>}
+    </Inline>
+  );
+}
+
+function ProviderPanel({ check }: { check: ProviderCheck }) {
+  const { provider, found: bin, rejected } = check.discovery;
+  return (
+    <AgentRow
+      id={`provider-${provider}-title`}
+      name={providerName[provider]}
+      {...agentSummary(check)}
+      fix={fixes(check)}
+    >
+      {bin ? <Where path={bin.path} version={bin.version} pinned={check.pinned} /> : null}
+      <SignIn check={check} />
+      <ReadOnly check={check} />
+      <Tiers check={check} />
+      <UsageList check={check} />
+      {rejected.length > 0 ? (
+        <section>
+          <h3 className="page-label">Rejected</h3>
+          <ul className="providers-list" aria-label="Rejected binaries">
+            {rejected.map((r) => (
+              <li key={r.path}>
+                <Inline gap="sm">
+                  <Code>{r.path}</Code>
+                  <Text as="span" size="sm">
+                    {rejectionText(r.reason)}
+                  </Text>
+                </Inline>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </AgentRow>
   );
 }
 
 function GitHubPanel({ check }: { check: GitHubCheck | null }) {
   const gh = check?.kind === "found" ? check.detail : null;
   return (
-    <Panel className="providers-panel" aria-labelledby="github-title">
-      <Panel.Header>
-        <h2 id="github-title" className="providers-title">
-          GitHub
-        </h2>
-        <Shows shown={check ? githubShown(check) : githubChecking} />
-      </Panel.Header>
-      <Panel.Body className="providers-body">
-        {gh ? (
-          <Inline gap="sm">
-            <Code>{gh.path}</Code>
-            <Badge mono preserveCase>
-              {gh.version}
-            </Badge>
-          </Inline>
-        ) : null}
-        <Text size="sm" tone="muted">
-          {githubNote}
-        </Text>
-        {check ? <Fixes list={githubFixes(check)} /> : null}
-      </Panel.Body>
-    </Panel>
+    <AgentRow
+      id="github-title"
+      name="GitHub"
+      shown={check ? githubShown(check) : githubChecking}
+      reason={githubReason(check)}
+      fix={check ? githubFixes(check) : []}
+    >
+      {gh ? <Where path={gh.path} version={gh.version} /> : null}
+      <Text size="sm" tone="muted">
+        {githubNote}
+      </Text>
+    </AgentRow>
   );
 }
 
@@ -399,7 +433,7 @@ export function Providers({
             ) : null}
           </div>
           <p className="page-lead">
-            Bezl found these coding agents on this computer and checked whether it can use each one.
+            Bezl checked each coding agent on this computer, and your GitHub sign-in.
           </p>
         </header>
         {firstRun ? <OnboardingSteps current="agents" /> : null}

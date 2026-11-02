@@ -16,11 +16,54 @@ import {
 import type { ClaudeSignIn, ProviderCheck } from "./model";
 import { Providers } from "./Providers";
 
+/** Opens every row's Details, for tests about what is inside. */
+function showAll() {
+  for (const d of document.querySelectorAll("details")) d.open = true;
+}
+
+describe("Providers at a glance", () => {
+  test("each agent row shows a status and one line, with its details folded away", () => {
+    render(<Providers checks={[claudeFound, codexProbed]} github={githubSignedIn} />);
+    const claude = screen.getByRole("region", { name: "Claude Code" });
+    expect(within(claude).getByText("Ready to write")).toBeVisible();
+    expect(
+      within(claude).getByText("Signed in · All 5 safety tests passed · Version 2.1.312"),
+    ).toBeVisible();
+    expect(within(claude).getByText("/Users/me/.local/bin/claude")).not.toBeVisible();
+    expect(within(claude).queryByText("Writing files")).not.toBeVisible();
+  });
+
+  test("Details opens the path, the safety tests and usage", async () => {
+    render(<Providers checks={[claudeFound]} />);
+    const claude = screen.getByRole("region", { name: "Claude Code" });
+    await userEvent.click(within(claude).getByText("Details"));
+    expect(within(claude).getByText("/Users/me/.local/bin/claude")).toBeVisible();
+    expect(within(claude).getByRole("list", { name: "Safety tests" })).toBeVisible();
+    expect(within(claude).getByRole("list", { name: "Usage" })).toBeVisible();
+  });
+
+  test("what to fix stays in view, outside Details", () => {
+    render(<Providers checks={noWriter} />);
+    const claude = screen.getByRole("region", { name: "Claude Code" });
+    expect(within(claude).getByText("Can't write yet")).toBeVisible();
+    expect(within(claude).getByRole("list", { name: "To fix" })).toBeVisible();
+  });
+
+  test("GitHub says what Bezl uses it for, and folds its path away", () => {
+    render(<Providers checks={[claudeFound]} github={githubSignedIn} />);
+    const github = screen.getByRole("region", { name: "GitHub" });
+    expect(within(github).getByText("Signed in as octocat")).toBeVisible();
+    expect(within(github).getByText("Reads issues and opens pull requests")).toBeVisible();
+    expect(within(github).getByText("/opt/homebrew/bin/gh")).not.toBeVisible();
+  });
+});
+
 describe("Providers", () => {
   test("shows an installed agent's path, version and the model that answered its test message", () => {
     render(<Providers checks={thisMachine} />);
+    showAll();
     const claude = screen.getByRole("region", { name: "Claude Code" });
-    expect(within(claude).getByText("Installed")).toBeVisible();
+    expect(within(claude).getByText("Ready to write")).toBeVisible();
     expect(within(claude).getByText("/Users/me/.local/bin/claude")).toBeVisible();
     expect(within(claude).getByText("2.1.312")).toBeVisible();
     const signin = within(claude).getByRole("list", { name: "Sign-in" });
@@ -38,6 +81,7 @@ describe("Providers", () => {
       pinned: false,
     };
     render(<Providers checks={[claudeFound, unpinned]} />);
+    showAll();
     const codex = screen.getByRole("region", { name: "Codex" });
     const untested = within(codex).getByText("Untested version");
     expect(untested).toBeVisible();
@@ -75,6 +119,7 @@ describe("Providers", () => {
     ];
     for (const [canary, label, tone, says] of cases) {
       const { unmount } = render(<Providers checks={[claudeWith(canary)]} />);
+      showAll();
       const signin = screen.getByRole("list", { name: "Sign-in" });
       expect(within(signin).getByText(label).closest(".kb-status")).toHaveAttribute(
         "data-tone",
@@ -87,6 +132,7 @@ describe("Providers", () => {
 
   test("keeps one heading outline: screen, provider, rejected", () => {
     render(<Providers checks={[codexFound]} />);
+    showAll();
     expect(screen.getByRole("heading", { level: 1, name: "Coding agents" })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Codex" })).toBeVisible();
     expect(screen.getByRole("heading", { level: 3, name: "Rejected" })).toBeVisible();
@@ -94,6 +140,7 @@ describe("Providers", () => {
 
   test("shows a rejected binary with what it printed for its version", () => {
     render(<Providers checks={thisMachine} />);
+    showAll();
     const codex = screen.getByRole("region", { name: "Codex" });
     expect(within(codex).getByText("Not installed")).toBeVisible();
     const rejected = within(codex).getByRole("list", { name: "Rejected binaries" });
@@ -105,6 +152,7 @@ describe("Providers", () => {
 
   test("shows Codex sign-in for each home", () => {
     render(<Providers checks={[codexFound]} />);
+    showAll();
     const signin = screen.getByRole("list", { name: "Sign-in" });
     const items = within(signin).getAllByRole("listitem");
     expect(items).toHaveLength(2);
@@ -118,6 +166,7 @@ describe("Providers", () => {
 
   test("says why each rejected binary was rejected", () => {
     render(<Providers checks={[codexFound]} />);
+    showAll();
     const items = within(screen.getByRole("list", { name: "Rejected binaries" })).getAllByRole(
       "listitem",
     );
@@ -129,6 +178,7 @@ describe("Providers", () => {
 
   test("shows the test message's tokens, and limits as unknown when Claude reports none", () => {
     render(<Providers checks={[claudeFound]} />);
+    showAll();
     const usage = screen.getByRole("list", { name: "Usage" });
     const [tokens, limits] = within(usage).getAllByRole("listitem") as [HTMLElement, HTMLElement];
     expect(tokens).toHaveTextContent("Test message tokens");
@@ -138,12 +188,14 @@ describe("Providers", () => {
 
   test("says unknown for usage a CLI does not report", () => {
     render(<Providers checks={[codexFound]} />);
+    showAll();
     const items = within(screen.getByRole("list", { name: "Usage" })).getAllByRole("listitem");
     expect(items.map((i) => i.textContent)).toEqual(["Tokensunknown", "Limitsunknown"]);
   });
 
   test("shows each limit window and a limit hit in the CLI's own words", () => {
     render(<Providers checks={[claudeLimited]} />);
+    showAll();
     const resets = (s: number) =>
       new Date(s * 1000).toLocaleString("en-US", {
         weekday: "short",
@@ -183,6 +235,7 @@ describe("Providers", () => {
       },
     };
     render(<Providers checks={[codexLimits]} />);
+    showAll();
     const windows = within(screen.getByRole("list", { name: "Usage limits" })).getAllByRole(
       "listitem",
     );
@@ -194,12 +247,14 @@ describe("Providers", () => {
 
   test("shows no usage for a CLI that was not found", () => {
     render(<Providers checks={thisMachine} />);
+    showAll();
     const codex = screen.getByRole("region", { name: "Codex" });
     expect(within(codex).queryByRole("list", { name: "Usage" })).toBeNull();
   });
 
   test("shows a failed preflight as an error, and a pending one as checking", () => {
     const { rerender } = render(<Providers checks={null} />);
+    showAll();
     expect(screen.getByRole("status")).toHaveTextContent("Checking your coding agents…");
     rerender(<Providers checks={null} error="spawn failed" />);
     expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
@@ -207,6 +262,7 @@ describe("Providers", () => {
 
   test("lists each capability with how it is turned off and its safety test, failures in the test's words", () => {
     render(<Providers checks={[codexProbed]} />);
+    showAll();
     const codex = screen.getByRole("region", { name: "Codex" });
     expect(within(codex).getByText("A safety test failed")).toBeVisible();
     expect(codex).toHaveTextContent(/Tested version 0\.163\.0 on /);
@@ -228,6 +284,7 @@ describe("Providers", () => {
 
   test("lists each working-alongside test with its result, a missing one in the test's words", () => {
     render(<Providers checks={[codexProbed]} />);
+    showAll();
     const codex = screen.getByRole("region", { name: "Codex" });
     const section = within(codex).getByRole("heading", { name: "Working alongside other tasks" })
       .parentElement?.parentElement as HTMLElement;
@@ -250,11 +307,13 @@ describe("Providers", () => {
 
   test("shows no tiers for a CLI not found", () => {
     render(<Providers checks={[thisMachine[1] as ProviderCheck]} />);
+    showAll();
     expect(screen.queryByRole("heading", { name: "Working alongside other tasks" })).toBeNull();
   });
 
   test("shows enforcement before a probe, and nothing for a CLI not found", () => {
     render(<Providers checks={[codexFound, thisMachine[1] as ProviderCheck]} />);
+    showAll();
     const [found, missing] = screen.getAllByRole("region") as [HTMLElement, HTMLElement];
     // Read-only and tiers both wait on sign-in.
     expect(within(found).getAllByText("Sign in to test")).toHaveLength(2);
@@ -266,6 +325,7 @@ describe("Providers", () => {
 
   test("names the command for every failing check", () => {
     render(<Providers checks={noWriter} />);
+    showAll();
     const claude = within(screen.getByRole("region", { name: "Claude Code" })).getByRole("list", {
       name: "To fix",
     });
@@ -287,17 +347,20 @@ describe("Providers", () => {
 
   test("a passing CLI has nothing to fix", () => {
     render(<Providers checks={[claudeFound]} />);
+    showAll();
     expect(screen.queryByRole("list", { name: "To fix" })).toBeNull();
   });
 
   test("says no coding agent can write code yet, and offers no New task", () => {
     render(<Providers checks={noWriter} />);
+    showAll();
     expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
     expect(screen.queryByRole("button", { name: /new task/i })).toBeNull();
   });
 
   test("says which CLIs can write when one can", () => {
     const { rerender } = render(<Providers checks={[claudeSignedOut, codexProbed]} />);
+    showAll();
     expect(screen.getByText("Codex is ready to write code")).toBeVisible();
     expect(screen.queryByText("No coding agent can write code yet")).toBeNull();
     rerender(<Providers checks={[claudeFound, codexProbed]} />);
@@ -307,6 +370,7 @@ describe("Providers", () => {
   test("Check again keeps the old results on screen while it runs", async () => {
     const onCheckAgain = vi.fn();
     const { rerender } = render(<Providers checks={noWriter} onCheckAgain={onCheckAgain} />);
+    showAll();
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));
     expect(onCheckAgain).toHaveBeenCalledOnce();
     rerender(<Providers checks={noWriter} checking onCheckAgain={onCheckAgain} />);
@@ -317,12 +381,14 @@ describe("Providers", () => {
 
   test("a failed rerun shows its error above the last results", () => {
     render(<Providers checks={noWriter} error="spawn failed" />);
+    showAll();
     expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
     expect(screen.getByRole("region", { name: "Codex" })).toBeVisible();
   });
 
   test("the GitHub row names the account and says it is needed only for Ship", () => {
     render(<Providers checks={[claudeFound, codexProbed]} github={githubSignedIn} />);
+    showAll();
     const github = screen.getByRole("region", { name: "GitHub" });
     expect(within(github).getByText("Signed in as octocat")).toBeVisible();
     expect(within(github).getByText("/opt/homebrew/bin/gh")).toBeVisible();
@@ -334,6 +400,7 @@ describe("Providers", () => {
 
   test("no GitHub sign-in names `gh auth login` and never blocks a writer", () => {
     render(<Providers checks={[claudeFound, codexProbed]} github={githubSignedOut} />);
+    showAll();
     const github = screen.getByRole("region", { name: "GitHub" });
     expect(within(github).getByText("Not signed in")).toBeVisible();
     const fix = within(github).getByRole("list", { name: "To fix" });
@@ -343,6 +410,7 @@ describe("Providers", () => {
 
   test("no gh says Not installed and how to install it", () => {
     render(<Providers checks={noWriter} github={githubMissing} />);
+    showAll();
     const github = screen.getByRole("region", { name: "GitHub" });
     expect(within(github).getByText("Not installed")).toBeVisible();
     expect(within(github).getByText("brew install gh")).toBeVisible();
@@ -350,6 +418,7 @@ describe("Providers", () => {
 
   test("the GitHub row shows its own check in flight", () => {
     render(<Providers checks={[claudeFound, codexProbed]} github={null} />);
+    showAll();
     const github = screen.getByRole("region", { name: "GitHub" });
     expect(within(github).getByText("Checking")).toBeVisible();
   });
@@ -361,6 +430,7 @@ describe("Providers on first run", () => {
   test("Agents is the current step, and a writer unlocks Start your first task", async () => {
     const onContinue = vi.fn();
     render(<Providers checks={[claudeFound, codexProbed]} firstRun onContinue={onContinue} />);
+    showAll();
     const steps = screen.getByRole("list", { name: "Getting started" });
     expect(within(steps).getByText("Agents").closest("li")).toHaveAttribute("aria-current", "step");
     await userEvent.click(start() as HTMLElement);
@@ -369,17 +439,20 @@ describe("Providers on first run", () => {
 
   test("with no writer the action stays, disabled, and says why", () => {
     render(<Providers checks={noWriter} firstRun onContinue={() => {}} />);
+    showAll();
     expect(start()).toBeDisabled();
     expect(start()).toHaveAccessibleDescription(/No coding agent can write code yet/);
   });
 
   test("no action until preflight returns", () => {
     render(<Providers checks={null} checking firstRun onContinue={() => {}} />);
+    showAll();
     expect(start()).toBeNull();
   });
 
   test("outside first run there are no steps and no action", () => {
     render(<Providers checks={[claudeFound, codexProbed]} />);
+    showAll();
     expect(screen.queryByRole("list", { name: "Getting started" })).toBeNull();
     expect(start()).toBeNull();
   });
