@@ -1,13 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
-import { claudeFound, codexProbed, noWriter } from "./fixtures";
-import type { ProviderCheck } from "./model";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { claudeFound, codexProbed, githubSignedIn, githubSignedOut, noWriter } from "./fixtures";
+import type { GitHubCheck, ProviderCheck } from "./model";
 import { ProvidersScreen } from "./ProvidersScreen";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const preflight = vi.mocked(invoke);
+const runs: Promise<ProviderCheck[]>[] = [];
+let github: () => Promise<GitHubCheck> = async () => githubSignedIn;
+
+beforeEach(() => {
+  preflight.mockImplementation((cmd: string) =>
+    cmd === "github_preflight" ? github() : (runs.shift() ?? new Promise(() => {})),
+  );
+});
 
 /** A preflight run the test finishes by hand. */
 function pending() {
@@ -17,11 +25,17 @@ function pending() {
     finish = res;
     fail = rej;
   });
-  preflight.mockReturnValueOnce(run);
+  runs.push(run);
   return { finish: (c: ProviderCheck[]) => act(async () => finish(c)), fail };
 }
 
-afterEach(() => preflight.mockReset());
+const calls = (cmd: string) => preflight.mock.calls.filter(([c]) => c === cmd).length;
+
+afterEach(() => {
+  preflight.mockReset();
+  runs.length = 0;
+  github = async () => githubSignedIn;
+});
 
 describe("ProvidersScreen", () => {
   test("Check again reruns preflight, keeps old results while checking, then shows the new", async () => {
@@ -32,8 +46,7 @@ describe("ProvidersScreen", () => {
 
     const again = pending();
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));
-    expect(preflight).toHaveBeenCalledTimes(2);
-    expect(preflight).toHaveBeenLastCalledWith("providers_preflight");
+    expect(calls("providers_preflight")).toBe(2);
     expect(screen.getByRole("status")).toHaveTextContent("Checking your coding agents…");
     expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
 
@@ -51,7 +64,7 @@ describe("ProvidersScreen", () => {
     await userEvent.click(button);
     // A second click before the disabled state renders must not start a run either.
     await act(async () => button.click());
-    expect(preflight).toHaveBeenCalledTimes(2);
+    expect(calls("providers_preflight")).toBe(2);
   });
 
   test("a failed rerun keeps the last results and says why", async () => {
@@ -64,5 +77,29 @@ describe("ProvidersScreen", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
     expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
     expect(screen.getByRole("button", { name: "Check again" })).toBeEnabled();
+  });
+
+  test("checks GitHub sign-in beside the agent CLIs, and again on Check again", async () => {
+    const first = pending();
+    render(<ProvidersScreen />);
+    await first.finish(noWriter);
+    const row = screen.getByRole("region", { name: "GitHub" });
+    expect(within(row).getByText("Signed in as octocat")).toBeVisible();
+
+    github = async () => githubSignedOut;
+    const again = pending();
+    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await again.finish(noWriter);
+    expect(calls("github_preflight")).toBe(2);
+    expect(within(row).getByText("Not signed in")).toBeVisible();
+  });
+
+  test("the GitHub row shows before the slower agent CLI preflight returns", async () => {
+    pending();
+    render(<ProvidersScreen />);
+    await act(async () => {});
+    expect(
+      within(screen.getByRole("region", { name: "GitHub" })).getByText("Signed in as octocat"),
+    ).toBeVisible();
   });
 });
