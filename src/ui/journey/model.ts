@@ -144,6 +144,8 @@ export type TraceNode = {
   title: string;
   meta: string;
   light: Light;
+  /** The screenshot it can be seen on. */
+  shot?: string;
 };
 
 /** `via` is the code a finding is about, so tracing it skips the rest of that run. */
@@ -153,6 +155,18 @@ export type Coverage = { covered: number; uncovered: number; unknown: number; ex
 
 /** How each done-when line reaches what Bezl measured and what needs you. */
 export type Trace = { nodes: TraceNode[]; links: TraceLink[]; coverage?: Coverage };
+
+/** A step toward the goal: something that needs you, and the done-when lines it blocks. */
+export type Step = { node: TraceNode; blocks: TraceNode[] };
+
+export function pathOf(trace: Trace): Step[] {
+  return trace.nodes
+    .filter((n) => n.column === "decide")
+    .map((node) => {
+      const lit = lineage(trace, node.id);
+      return { node, blocks: trace.nodes.filter((n) => n.column === "intent" && lit.has(n.id)) };
+    });
+}
 
 /** Everything upstream and downstream of one node. */
 export function lineage({ links }: Trace, start: string): Set<string> {
@@ -196,7 +210,14 @@ export type ShotSize = "phone" | "desktop";
 export const shotWidth: Record<ShotSize, number> = { phone: 375, desktop: 1280 };
 
 /** A finding Bezl placed on a screenshot; x and y are percentages of it. */
-export type ShotPin = { size: ShotSize; x: number; y: number; text: string };
+export type ShotPin = {
+  size: ShotSize;
+  x: number;
+  y: number;
+  text: string;
+  /** The trace node it is about, so the map can show where it comes from. */
+  node?: string;
+};
 
 /** One state of a screen Bezl captured at both sizes; an example is a choice not built yet. */
 export type Shot = {

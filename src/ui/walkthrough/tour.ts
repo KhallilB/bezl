@@ -166,14 +166,14 @@ export const steps: Step[] = [
     id: "context",
     chapter: "Your tasks",
     title: "What it's for, how big, how sure",
-    note: "One line under the stages: how much of the goal is done, how far the change reaches and how risky it is, and how much of it ran in a test. Each opens its evidence beside the stage. Point at a stage to see what happened there and who acted.",
+    note: "One line under the stages: how much of the goal is done, how far the change reaches and how risky it is, and how much of it ran in a test. Each opens in the workspace beside the stage. Point at a stage to see what happened there and who acted.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
     id: "preview",
     chapter: "Your tasks",
     title: "See it before you decide",
-    note: "Preview takes half the page, so a phone screenshot shows at its own width, with each finding pinned where it is. Click a spot to leave a note. Expand opens a design review the size of the window, with another screenshot beside it to compare.",
+    note: "Design takes half the page, so a phone screenshot shows at its own width, with each finding pinned where it is. Click a spot to leave a note. Full screen gives the screenshots the window, another beside it to compare, and your path to the goal down the side.",
     view: { kind: "task", taskId: "empty-state", stage: "check" },
   },
   {
@@ -201,8 +201,8 @@ export const steps: Step[] = [
     id: "trace",
     chapter: "Your tasks",
     title: "Follow the evidence",
-    note: "Trace follows a problem back through the code it's about to the line of your goal it puts at risk, with every changed line accounted for. Why Bezl asks, beside a question, opens it at that question.",
-    view: { kind: "task", taskId: "snapshot", stage: "check", side: "trace" },
+    note: "Evidence follows a problem back through the code it's about to the line of your goal it puts at risk, with every changed line accounted for. Why Bezl asks, beside a question, opens it at that question. Full screen draws it as a map; a finding pinned on a screenshot traces back to it, and See it goes the other way.",
+    view: { kind: "task", taskId: "snapshot", stage: "check", side: "evidence" },
   },
   {
     id: "review-takes",

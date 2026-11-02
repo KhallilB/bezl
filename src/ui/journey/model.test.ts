@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { tasks } from "./fixtures";
 import {
   ciText,
   contextOf,
@@ -6,6 +7,7 @@ import {
   diffLabel,
   estimate,
   lineage,
+  pathOf,
   type StageLights,
   stageIds,
   stageLabel,
@@ -317,4 +319,15 @@ test("coverageText accounts for every changed line", () => {
   expect(coverageText({ covered: 12, uncovered: 0, unknown: 0, excluded: 0 })).toBe(
     "12 changed lines: 12 run in a test",
   );
+});
+
+describe("pathOf", () => {
+  test("each step that needs you, with the done-when lines it blocks", () => {
+    const trace = tasks.find((t) => t.id === "empty-state")?.trace;
+    if (!trace) throw new Error("no trace");
+    const path = pathOf(trace);
+    expect(path.map((s) => s.node.id)).toEqual(["import", "look"]);
+    expect(path[0]?.blocks.map((n) => n.id)).toEqual(["i2"]);
+    expect(path[1]?.blocks.map((n) => n.id)).toEqual(["i1", "i2", "i3"]);
+  });
 });

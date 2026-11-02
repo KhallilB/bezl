@@ -1,5 +1,5 @@
 import { Button, Tooltip } from "@kb.ui/react";
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { answer, itemsFor, type NeedsYouItem, raise } from "../approvals/model";
 import { usePortalRoot } from "../theme/AppTheme";
 import "./journey.css";
@@ -15,8 +15,21 @@ import {
   stageLabel,
   stageMarker,
 } from "./model";
-import { Compare, NextStep, Passed, Problems, RowItem, SendBack, Ship, Takes } from "./StageViews";
-import { type Answer, HandledList, Questions, Side, type SideTab, Summary } from "./Workbench";
+import { useDesign } from "./Preview";
+import {
+  Compare,
+  FullSlots,
+  NextStep,
+  Passed,
+  Problems,
+  RowItem,
+  SendBack,
+  Ship,
+  Takes,
+  ToFull,
+  useSendBack,
+} from "./StageViews";
+import { type Answer, HandledList, Questions, type SideTab, Summary, Workspace } from "./Workbench";
 
 /** What happened at a stage and who acted, for the strip's tooltip. */
 function StageHint({ view }: { view: StageView }) {
@@ -102,6 +115,7 @@ function StagePane({
 }: PaneProps & { onWhy?: ((id: string) => void) | undefined; asking: number }) {
   // Approving is the decision Review waits on; once made, the button goes.
   const approve = stage === "review" && task.stages.review === "needsYou" ? onShip : undefined;
+  const send = useSendBack(view.sendBack);
   const [opened, setOpened] = useState(
     task.stages.ship === "working" || task.stages.ship === "done",
   );
@@ -112,6 +126,7 @@ function StagePane({
           problems={view.problems}
           options={view.sendBack}
           shots={Boolean(view.shots?.length)}
+          state={send}
         />
       );
     }
@@ -159,9 +174,7 @@ function StagePane({
       );
     }
     if (asking)
-      return (
-        <p className="journey-next-text">{`Answer ${questionCount(asking)} above to go on.`}</p>
-      );
+      return <p className="journey-next-text">{`Answer ${questionCount(asking)} to go on.`}</p>;
     return <p className="journey-next-text">{`Nothing needs you at ${stageLabel[stage]}.`}</p>;
   };
   return (
@@ -191,7 +204,7 @@ export type TaskPageProps = StageStripProps & {
   onHistory?: () => void;
   /** Ship offers it once the pull request is open. */
   onNewTask?: () => void;
-  /** The side tab to open on; Preview when the stage has screenshots. */
+  /** The workspace tab to open on; Design when the stage has screenshots. */
   side?: SideTab;
 };
 
@@ -199,20 +212,24 @@ export type TaskPageProps = StageStripProps & {
 export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest }: TaskPageProps) {
   const view = task.views[stage];
   const { needsYou, onNeedsYou } = rest;
-  const [tab, setTab] = useState<SideTab>(first ?? "preview");
+  const [tab, setTab] = useState<SideTab>(first ?? "design");
   const [focus, setFocus] = useState<string | null>(
-    first === "trace" ? (view.problems?.[0]?.why ?? null) : null,
+    first === "evidence" ? (view.problems?.[0]?.why ?? null) : null,
   );
   const [example, setExample] = useState<string | null>(null);
   const [answered, setAnswered] = useState<Answer[]>([]);
   const [raised, setRaised] = useState<string | null>(null);
   const side = useRef<HTMLDivElement>(null);
+  const [ask, setAsk] = useState<HTMLElement | null>(null);
+  const [bar, setBar] = useState<HTMLElement | null>(null);
+  const slots = useMemo(() => ({ ask, bar }), [ask, bar]);
   const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
   const mine = answered.filter((a) => a.item.taskId === task.id);
   const asked = new Set([...(needsYou ?? []), ...mine.map((a) => a.item)].map((i) => i.id));
   const assumptions = task.assumptions ?? [];
   const shots = view.shots ?? [];
   const shown = [...shots, ...(task.examples ?? [])].find((s) => s.id === example) ?? null;
+  const design = useDesign(shots);
   const open = (t: SideTab) => {
     setTab(t);
     side.current?.scrollIntoView?.({ block: "nearest" });
@@ -220,7 +237,7 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
   const why = task.trace
     ? (id: string) => {
         setFocus(id);
-        open("trace");
+        open("evidence");
       }
     : undefined;
   return (
@@ -253,77 +270,85 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
           {view.rest ? ` ${view.rest}` : null}
         </p>
       </header>
-      <div
-        className="journey-bench"
-        data-wide={tab === "preview" && (shots.length || shown) ? "" : undefined}
-      >
-        <div className="journey-pane">
-          {needsYou &&
-          onNeedsYou &&
-          (here.length > 0 || mine.some((a) => a.item.stage === stage)) ? (
-            <Questions
-              key={`questions-${stage}`}
-              items={here}
-              answered={mine.filter((a) => a.item.stage === stage)}
-              prefer={raised}
+      <FullSlots.Provider value={slots}>
+        <div
+          className="journey-bench"
+          data-wide={tab === "design" && (shots.length || shown) ? "" : undefined}
+        >
+          <div className="journey-pane">
+            {needsYou &&
+            onNeedsYou &&
+            (here.length > 0 || mine.some((a) => a.item.stage === stage)) ? (
+              <ToFull to="ask">
+                <Questions
+                  key={`questions-${stage}`}
+                  items={here}
+                  answered={mine.filter((a) => a.item.stage === stage)}
+                  prefer={raised}
+                  onWhy={why}
+                  onExample={(id) => {
+                    setExample(id);
+                    if (id) setTab("design");
+                  }}
+                  onAnswer={(item, choice) => {
+                    const result = answer(needsYou, item.id, choice.id);
+                    if (!result) return;
+                    setAnswered((a) => [...a, { item, choice }]);
+                    onNeedsYou(result.items);
+                  }}
+                />
+              </ToFull>
+            ) : null}
+            <StagePane
+              key={stage}
+              task={task}
+              stage={stage}
+              view={view}
+              onStage={onStage}
               onWhy={why}
-              onExample={(id) => {
-                setExample(id);
-                if (id) setTab("preview");
-              }}
-              onAnswer={(item, choice) => {
-                const result = answer(needsYou, item.id, choice.id);
-                if (!result) return;
-                setAnswered((a) => [...a, { item, choice }]);
-                onNeedsYou(result.items);
-              }}
+              asking={here.length}
+              {...rest}
             />
-          ) : null}
-          <StagePane
-            key={stage}
-            task={task}
-            stage={stage}
-            view={view}
-            onStage={onStage}
-            onWhy={why}
-            asking={here.length}
-            {...rest}
-          />
+          </div>
+          <div ref={side} className="journey-side-wrap">
+            <Workspace
+              title={task.title}
+              design={design}
+              onAsk={setAsk}
+              onBar={setBar}
+              tab={tab}
+              onTab={setTab}
+              shots={shots}
+              example={shown}
+              trace={task.trace}
+              focus={focus}
+              onFocus={setFocus}
+              goal={contextOf(task).goal}
+              doneWhen={task.doneWhen ?? []}
+              decisions={[
+                ...(task.decisions ?? []),
+                ...mine.map((a) => ({
+                  stage: a.item.stage,
+                  text: `${a.choice.label}. ${a.choice.next}`,
+                })),
+              ]}
+              assumptions={assumptions}
+              raised={
+                new Set(assumptions.filter((a) => asked.has(`${task.id}-${a.id}`)).map((a) => a.id))
+              }
+              onChange={
+                needsYou && onNeedsYou
+                  ? (a) => {
+                      const item = raise(task, stage, a);
+                      setRaised(item.id);
+                      onNeedsYou([...needsYou, item]);
+                    }
+                  : undefined
+              }
+            />
+          </div>
         </div>
-        <div ref={side} className="journey-side-wrap">
-          <Side
-            tab={tab}
-            onTab={setTab}
-            shots={shots}
-            example={shown}
-            trace={task.trace}
-            focus={focus}
-            onFocus={setFocus}
-            goal={contextOf(task).goal}
-            doneWhen={task.doneWhen ?? []}
-            decisions={[
-              ...(task.decisions ?? []),
-              ...mine.map((a) => ({
-                stage: a.item.stage,
-                text: `${a.choice.label}. ${a.choice.next}`,
-              })),
-            ]}
-            assumptions={assumptions}
-            raised={
-              new Set(assumptions.filter((a) => asked.has(`${task.id}-${a.id}`)).map((a) => a.id))
-            }
-            onChange={
-              needsYou && onNeedsYou
-                ? (a) => {
-                    const item = raise(task, stage, a);
-                    setRaised(item.id);
-                    onNeedsYou([...needsYou, item]);
-                  }
-                : undefined
-            }
-          />
-        </div>
-      </div>
+      </FullSlots.Provider>
     </article>
   );
 }
