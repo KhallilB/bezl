@@ -1,8 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { ciText, diffLabel, type StageLights, stageMarker, taskLight } from "./model";
+import {
+  ciText,
+  diffLabel,
+  type StageLights,
+  stageIds,
+  stageLabel,
+  stageMarker,
+  taskLight,
+} from "./model";
 
 const quiet: StageLights = {
-  brief: "done",
+  define: "done",
   plan: "done",
   build: "done",
   check: "waiting",
@@ -28,7 +36,7 @@ describe("taskLight", () => {
   test("every stage done means passed", () => {
     expect(
       taskLight({
-        brief: "done",
+        define: "done",
         plan: "done",
         build: "done",
         check: "done",
@@ -87,4 +95,15 @@ describe("ciText", () => {
       }),
     ).toBe("All 2 checks passed on the merged commit 3f9c2ab.");
   });
+});
+
+test("the journey runs Define to Ship", () => {
+  expect(stageIds.map((id) => stageLabel[id])).toEqual([
+    "Define",
+    "Plan",
+    "Build",
+    "Check",
+    "Review",
+    "Ship",
+  ]);
 });

@@ -49,7 +49,7 @@ describe("Walkthrough tour", () => {
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(within(dock()).getByText(position("stages"))).toBeVisible();
     expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(
-      "Brief, done",
+      "Define, done",
     );
     expect(window.location.search).toBe("?screen=walkthrough&step=stages&theme=dark");
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
@@ -188,13 +188,13 @@ describe("Walkthrough getting started", () => {
 });
 
 describe("Walkthrough start a task", () => {
-  test("denying setup stops, and Edit the brief goes back to it", async () => {
+  test("denying setup stops, and Edit the goal goes back to it", async () => {
     at("?screen=walkthrough&step=setup");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Deny" }));
     expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Edit the brief" }));
-    expect(within(dock()).getByText(position("brief-ready"))).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Edit the goal" }));
+    expect(within(dock()).getByText(position("define-ready"))).toBeVisible();
   });
 
   test("after the pull request opens, New task starts the next one", async () => {
@@ -205,7 +205,7 @@ describe("Walkthrough start a task", () => {
     expect(within(dock()).getByText(position("new-task"))).toBeVisible();
   });
 
-  test("a brief can start from a GitHub issue", async () => {
+  test("a task can start from a GitHub issue", async () => {
     at("?screen=walkthrough&step=from-issue");
     const picker = render(<Walkthrough />);
     const list = screen.getByRole("list", { name: "Open issues in studio-web" });
@@ -214,7 +214,7 @@ describe("Walkthrough start a task", () => {
     picker.unmount();
     at("?screen=walkthrough&step=issue-filled");
     render(<Walkthrough />);
-    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveDisplayValue(
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveDisplayValue(
       /^Projects page shows an empty table/,
     );
   });
@@ -229,19 +229,19 @@ describe("Walkthrough start a task", () => {
     expect(screen.getByRole("list", { name: "Checks on the merged commit" })).toBeVisible();
   });
 
-  test("each brief step shows the form further filled in", () => {
+  test("each Define step shows the form further filled in", () => {
     at("?screen=walkthrough&step=new-task");
     const blank = render(<Walkthrough />);
-    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     blank.unmount();
-    at("?screen=walkthrough&step=brief-ready");
+    at("?screen=walkthrough&step=define-ready");
     render(<Walkthrough />);
     expect(screen.getByRole("button", { name: "Start task" })).toBeVisible();
     expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
   });
 
   test("starting asks about setup, and Allow prepares the first task", async () => {
-    at("?screen=walkthrough&step=brief-ready");
+    at("?screen=walkthrough&step=define-ready");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Start task" }));
     expect(within(dock()).getByText(position("setup"))).toBeVisible();

@@ -10,11 +10,11 @@ export type SetupConfirmProps = {
   onAllow: (remember: boolean) => void;
   onDeny: () => void;
   /** Offered once setup is denied, to change what the task asks for. */
-  onEditBrief?: () => void;
+  onEditGoal?: () => void;
 };
 
 /** A setup command is a needs-you item: Bezl runs nothing in your repository unasked. */
-export function SetupConfirm({ repo, command, onAllow, onDeny, onEditBrief }: SetupConfirmProps) {
+export function SetupConfirm({ repo, command, onAllow, onDeny, onEditGoal }: SetupConfirmProps) {
   const [denied, setDenied] = useState(false);
   return (
     <section className="newtask-setup page" aria-labelledby="newtask-setup-title">
@@ -32,7 +32,7 @@ export function SetupConfirm({ repo, command, onAllow, onDeny, onEditBrief }: Se
           {denied ? (
             <span>
               <strong>Stopped.</strong> Nothing ran in the task's copy of your code. You can allow
-              setup to carry on, or change the brief instead.
+              setup to carry on, or change the goal instead.
             </span>
           ) : (
             <span>
@@ -52,9 +52,9 @@ export function SetupConfirm({ repo, command, onAllow, onDeny, onEditBrief }: Se
             <Button variant="secondary" onClick={() => onAllow(false)}>
               Allow setup
             </Button>
-            {onEditBrief ? (
-              <Button variant="ghost" onClick={onEditBrief}>
-                Edit the brief
+            {onEditGoal ? (
+              <Button variant="ghost" onClick={onEditGoal}>
+                Edit the goal
               </Button>
             ) : null}
           </>
