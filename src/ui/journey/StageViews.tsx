@@ -57,7 +57,7 @@ function Steer({ model }: { model: string }) {
       }}
     >
       <Input
-        label={`Steer ${model}`}
+        label={`Message ${model}`}
         visuallyHidden
         value={text}
         onValueChange={setText}
@@ -80,7 +80,7 @@ function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void
     <article
       className="journey-take"
       data-light={take.light}
-      aria-label={`Take ${take.id}, ${take.model}`}
+      aria-label={`Attempt ${take.id}, ${take.model}`}
     >
       <header className="journey-take-head">
         <span className="journey-take-letter" aria-hidden="true">
@@ -99,7 +99,7 @@ function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void
         </p>
       ) : null}
       {take.findings?.length ? (
-        <ul className="journey-findings" aria-label={`Findings on take ${take.id}`}>
+        <ul className="journey-findings" aria-label={`Issues on attempt ${take.id}`}>
           {take.findings.map((f) => (
             <li key={f.text} className="journey-row journey-finding" data-light={f.light}>
               <span className="journey-row-icon">
@@ -115,12 +115,12 @@ function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void
         </ul>
       ) : null}
       {take.files?.length ? (
-        <Files files={take.files} label={`Files take ${take.id} changed`} />
+        <Files files={take.files} label={`Files attempt ${take.id} changed`} />
       ) : null}
       {onKeep ? (
         <footer className="journey-take-actions">
           <Button variant="secondary" onClick={() => onKeep(take.id)}>
-            {`Keep take ${take.id}`}
+            {`Keep attempt ${take.id}`}
           </Button>
         </footer>
       ) : null}
@@ -128,7 +128,7 @@ function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void
   );
 }
 
-/** Takes side by side; Build adds the steer box under a working take. */
+/** Attempts side by side; Build adds the message box under a working one. */
 export function Takes({
   takes,
   steer,

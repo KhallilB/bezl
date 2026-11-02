@@ -7,7 +7,7 @@ export type NeedsYouKind = "question" | "access" | "dispute";
 export const kindLabel: Record<NeedsYouKind, string> = {
   question: "Question",
   access: "More access",
-  dispute: "Disputed finding",
+  dispute: "Disputed issue",
 };
 
 /** `next` says what happens once you choose it. */

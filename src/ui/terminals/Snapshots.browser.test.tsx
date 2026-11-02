@@ -174,6 +174,6 @@ describe("Snapshots", () => {
 
   test("an empty record says so", async () => {
     const el = mount(<Snapshots record={fakeRecord([])} />);
-    await settled(() => expect(el.textContent).toContain("No snapshots yet"));
+    await settled(() => expect(el.textContent).toContain("There are no snapshots yet"));
   });
 });

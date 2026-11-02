@@ -8,7 +8,7 @@ describe("WorkerMap", () => {
     render(<WorkerMap task={task} workers={running} />);
     expect(
       screen.getByRole("img", {
-        name: "Task feat/policy-engine: Worker A reads, idle; Worker B writes, running; Worker C reads, finished",
+        name: "Task feat/policy-engine: Worker A reads only, idle; Worker B edits files, running; Worker C reads only, finished",
       }),
     ).toBeInTheDocument();
   });

@@ -9,8 +9,8 @@ const transcript = Array.from(
   { length: 8 },
   (_, i) =>
     `[${String(i + 1).padStart(2, "0")}] cargo test -p bezl-domain ... Compiling bezl-domain v0.1.0; ` +
-    "warning: unused variable `ctx` in src/policy.rs:41; the well scrolls inside its panel, so a " +
-    "long transcript never spills past the panel's edge.",
+    "warning: unused variable `ctx` in src/policy.rs:41; this output scrolls inside its panel, so " +
+    "long output never spills past the panel's edge.",
 ).join("\n");
 
 const a: WorkerView = {
@@ -19,7 +19,7 @@ const a: WorkerView = {
   role: "reviewer",
   provider: "Claude Code",
   state: "idle",
-  summary: "No task assigned.",
+  summary: "Nothing assigned yet.",
 };
 const c: WorkerView = {
   id: "c",
@@ -27,7 +27,7 @@ const c: WorkerView = {
   role: "reviewer",
   provider: "Gemini CLI",
   state: "finished",
-  summary: "Review finished with no findings.",
+  summary: "Finished its review and found no issues.",
   branch: "feat/policy-engine",
   elapsed: "00:42",
 };
@@ -37,7 +37,7 @@ const b: WorkerView = {
   role: "primary",
   provider: "Codex",
   state: "idle",
-  summary: "Waiting for a task worktree.",
+  summary: "Waiting for the task's copy of your code to be ready.",
 };
 
 export const idle: WorkerView[] = [a, b, c];
@@ -47,7 +47,7 @@ export const running: WorkerView[] = [
   {
     ...b,
     state: "running",
-    summary: "Step 3 of 5: cargo check.",
+    summary: "On step 3 of 5, running cargo check.",
     step: { index: 3, total: 5, label: "cargo check" },
     activity,
     transcript: "Compiling bezl-domain v0.1.0\nChecking bezl-app v0.1.0",
@@ -62,7 +62,7 @@ export const blocked: WorkerView[] = [
   {
     ...b,
     state: "blocked",
-    summary: "Needs an answer before it can continue: overwrite src/policy.rs?",
+    summary: "Wants to know whether to overwrite src/policy.rs, and is waiting for your answer.",
     branch: "feat/policy-engine",
     elapsed: "06:30",
   },
@@ -73,7 +73,7 @@ export const longContent: WorkerView[] = [
   {
     ...b,
     state: "running",
-    summary: "Step 4 of 5: tests.",
+    summary: "On step 4 of 5, running the tests.",
     step: { index: 4, total: 5, label: "tests" },
     activity,
     transcript,

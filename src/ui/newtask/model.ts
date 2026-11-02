@@ -25,31 +25,31 @@ export function readiness(draft: BriefDraft): ReadinessCheck[] {
     {
       id: "what",
       label: "What you want",
-      why: "A sentence of intent, not a title, so the model builds the right thing.",
+      why: "Describe the goal in a full sentence rather than a title, so the agent builds the right thing.",
       met: intent(draft.text),
     },
     {
       id: "who",
-      label: "Who it is for",
-      why: "Tells the model whose problem it solves when choices come up.",
+      label: "Who it's for",
+      why: "When the agent has to make a judgement call, knowing whose problem it's solving helps it choose well.",
       met: filled(draft.who),
     },
     {
       id: "done",
-      label: "How you will know it is done",
-      why: "Bezl checks these after every step instead of taking the model's word.",
+      label: "How you'll know it's done",
+      why: "Bezl checks these after every step, so you don't have to take the agent's word that it's finished.",
       met: draft.doneWhen.length > 0,
     },
     {
       id: "avoid",
       label: "What to avoid or reuse",
-      why: "Keeps the change small and inside the code you already have.",
+      why: "This keeps the change small and builds on the code you already have.",
       met: filled(draft.avoid),
     },
     {
       id: "example",
       label: "An example to follow",
-      why: "One existing screen or file is worth a paragraph of description.",
+      why: "Pointing to one existing screen or file says more than a paragraph of description.",
       met: filled(draft.example),
     },
   ];
@@ -82,7 +82,7 @@ export function writerChoices(providers: CrewProvider[]): Choice[] {
   return providers.map((p) =>
     p.canWrite
       ? { id: p.id, label: p.name }
-      : { id: p.id, label: p.name, disabled: "Not an agent CLI, so it has no tools to write with" },
+      : { id: p.id, label: p.name, disabled: "Not a coding agent, so it can't write code" },
   );
 }
 
@@ -90,9 +90,10 @@ export function writerChoices(providers: CrewProvider[]): Choice[] {
 export function reviewerChoices(providers: CrewProvider[], writerId: string): Choice[] {
   const vendor = providers.find((p) => p.id === writerId)?.vendor;
   return providers.map((p): Choice => {
-    if (!p.readOnly) return { id: p.id, label: p.name, disabled: "Not proven read-only" };
+    if (!p.readOnly)
+      return { id: p.id, label: p.name, disabled: "It might change files, so it can't review" };
     return p.vendor === vendor
-      ? { id: p.id, label: p.name, note: "Reviewed by the same provider that wrote it" }
+      ? { id: p.id, label: p.name, note: "The writer and reviewer come from the same company" }
       : { id: p.id, label: p.name };
   });
 }

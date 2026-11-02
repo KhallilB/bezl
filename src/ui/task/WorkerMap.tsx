@@ -92,7 +92,7 @@ export function WorkerMap({ task, workers }: { task: TaskView; workers: WorkerVi
           {task.branch}
         </text>
         <text className="task-hub-meta" x={hub.x} y={hub.y + 14} textAnchor="middle">
-          task worktree
+          task's copy of your code
         </text>
       </g>
     </svg>

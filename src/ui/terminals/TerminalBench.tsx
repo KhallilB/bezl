@@ -25,7 +25,8 @@ export function TerminalBench() {
     invoke<Bench | null>("terminal_bench").then(setBench, () => setBench(null));
   }, []);
   if (bench === undefined) return null;
-  if (bench === null) return <p>No bench: run scripts/terminal-bench/run.sh.</p>;
+  if (bench === null)
+    return <p>There's no benchmark to run. Start one with scripts/terminal-bench/run.sh.</p>;
   return <BenchRun bench={bench} />;
 }
 

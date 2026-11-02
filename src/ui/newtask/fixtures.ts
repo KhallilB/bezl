@@ -12,11 +12,11 @@ export const crew: CrewProvider[] = [
 const who = "New users right after sign-up";
 const doneWhen: DoneWhen[] = [
   { text: "The empty state shows when there are no projects", checker: "bezl" },
-  { text: "One clear way to create the first project", checker: "you" },
-  { text: "Passes accessibility checks", checker: "bezl" },
+  { text: "There's one clear way to create the first project", checker: "you" },
+  { text: "The page passes accessibility checks", checker: "bezl" },
 ];
-const avoid = "Reuse EmptyState; no new card component";
-const example = "Inbox's empty state";
+const avoid = "Reuse EmptyState rather than adding a new card component";
+const example = "The Inbox page's empty state";
 
 export const suggestions: Partial<Record<CheckId, Suggestion>> = {
   who: { who },
@@ -37,21 +37,21 @@ export const drafts = {
 export const paths = ["src/pages/Projects.tsx", "src/pages/Projects.test.tsx"];
 
 const briefView: StageView = {
-  lead: "Brief kept as written.",
+  lead: "Your brief is saved exactly as you wrote it.",
   quote: text,
   sections: [
     {
-      title: "Done when",
+      title: "It's done when",
       rows: doneWhen.map((d) => ({
         text: d.text,
-        meta: d.checker === "bezl" ? "Bezl" : "you",
+        meta: d.checker === "bezl" ? "Bezl checks" : "You check",
         light: "done" as const,
       })),
     },
   ],
 };
 
-/** The task just started: setup waits on you, then the worktree is prepared. */
+/** Task just started: setup waits on you, then its copy of your code is set up. */
 export function startedTask(setup: "asking" | "allowed"): JourneyTask {
   const asking = setup === "asking";
   return {
@@ -70,23 +70,41 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
     views: {
       brief: briefView,
       plan: {
-        lead: asking ? "Setup needs you." : "Preparing.",
-        rest: asking ? "Bezl runs nothing unasked." : "The worktree comes first, then the plan.",
+        lead: asking ? "Setup needs your go-ahead." : "Getting things ready.",
+        rest: asking
+          ? "Bezl never runs anything without asking first."
+          : "Bezl is setting up the task's copy of your code, and then it will make the plan.",
         sections: [
           {
-            title: "Worktree",
+            title: "Its copy of your code",
             rows: [
               { text: "bezl/empty-state from main", mono: true, light: "done" },
               { text: "bun install", mono: true, light: asking ? "needsYou" : "working" },
-              { text: "Plan with Claude Code", light: "waiting" },
+              { text: "Make a plan with Claude Code", light: "waiting" },
             ],
           },
         ],
       },
-      build: { lead: "Not yet.", rest: "Build follows the plan.", sections: [] },
-      check: { lead: "Not yet.", rest: "Checks run after Build.", sections: [] },
-      review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-      ship: { lead: "Not yet.", rest: "Ship opens once you keep a take.", sections: [] },
+      build: {
+        lead: "Build hasn't started.",
+        rest: "It starts once the plan is ready.",
+        sections: [],
+      },
+      check: {
+        lead: "Checks haven't run yet.",
+        rest: "They start once Build finishes.",
+        sections: [],
+      },
+      review: {
+        lead: "Review hasn't started.",
+        rest: "It starts once Check is done.",
+        sections: [],
+      },
+      ship: {
+        lead: "Nothing to ship yet.",
+        rest: "Ship opens once you choose which attempt to keep.",
+        sections: [],
+      },
     },
   };
 }

@@ -80,7 +80,7 @@ export function NeedsYouList({ items, onItems, onOpenTask }: ListProps) {
         />
       ))}
       <p className="needsyou-answered" role="status">
-        {last ? `Answered “${last.label}” on ${last.taskTitle}. ${last.next}` : null}
+        {last ? `You chose “${last.label}” for ${last.taskTitle}. ${last.next}` : null}
       </p>
     </div>
   );
@@ -101,7 +101,9 @@ export function Approvals({
           {items.length === 0 ? "Nothing needs you" : "Approvals"}
         </h1>
         <p className="page-status">
-          {items.length === 0 ? "Answers are kept in each task's history." : count(items.length)}
+          {items.length === 0
+            ? "You're all caught up. Every answer you gave is kept in its task's history."
+            : count(items.length)}
         </p>
       </header>
       <NeedsYouList items={items} onItems={onItems} onOpenTask={onOpenTask} />

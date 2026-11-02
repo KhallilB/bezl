@@ -119,7 +119,7 @@ function UsageList({ check }: { check: ProviderCheck }) {
     <ul className="providers-list" aria-label="Usage">
       <li>
         <Row
-          label={signin.kind === "canary" ? "Canary tokens" : "Tokens"}
+          label={signin.kind === "canary" ? "Test message tokens" : "Tokens"}
           value={tokensText(usage.tokens)}
         />
       </li>
@@ -132,7 +132,7 @@ function UsageList({ check }: { check: ProviderCheck }) {
               Limits
             </Text>
             {limits.detail.windows.length > 0 ? (
-              <ul className="providers-windows" aria-label="Limit windows">
+              <ul className="providers-windows" aria-label="Usage limits">
                 {limits.detail.windows.map((w) => (
                   <li key={w.name}>
                     <Text as="span" size="sm">
@@ -143,9 +143,14 @@ function UsageList({ check }: { check: ProviderCheck }) {
               </ul>
             ) : null}
             {limits.detail.hit !== null ? (
-              <div>
-                <Shows shown={limitHit(limits.detail.hit)} />
-              </div>
+              <>
+                <div>
+                  <Shows shown={limitHit} />
+                </div>
+                <Text size="sm" tone="muted">
+                  {`${providerName[check.discovery.provider]} said "${limits.detail.hit}"`}
+                </Text>
+              </>
             ) : null}
           </>
         )}
@@ -160,7 +165,7 @@ function ReadOnly({ check }: { check: ProviderCheck }) {
   return (
     <section className="providers-section">
       <Inline gap="sm" justify="between">
-        <h3 className="page-label">Read-only</h3>
+        <h3 className="page-label">Can it change files?</h3>
         <Shows shown={overall.shown} />
       </Inline>
       {overall.detail ? (
@@ -168,7 +173,7 @@ function ReadOnly({ check }: { check: ProviderCheck }) {
           {overall.detail}
         </Text>
       ) : null}
-      <ul className="providers-list" aria-label="Capabilities">
+      <ul className="providers-list" aria-label="Safety tests">
         {capabilityRows(check).map((row) => (
           <li key={row.capability} className="providers-home">
             <Inline gap="sm" justify="between">
@@ -199,16 +204,14 @@ function Tiers({ check }: { check: ProviderCheck }) {
   return (
     <section className="providers-section">
       <Inline gap="sm" justify="between">
-        <h3 className="page-label">Coordination tiers</h3>
+        <h3 className="page-label">Working alongside other tasks</h3>
         <Shows shown={overall.shown} />
       </Inline>
       <Text size="sm" tone="muted">
-        {[overall.detail, "Recorded for batches; nothing uses them yet."]
-          .filter(Boolean)
-          .join(". ")}
+        {[overall.detail, "Bezl doesn't use this yet."].filter(Boolean).join(". ")}
       </Text>
       {rows.length > 0 ? (
-        <ul className="providers-list" aria-label="Tiers">
+        <ul className="providers-list" aria-label="What works alongside other tasks">
           {rows.map((row) => (
             <li key={row.tier} className="providers-home">
               <Inline gap="sm" justify="between">
@@ -362,8 +365,8 @@ function Writers({
   return (
     <>
       <div id={reason}>
-        <Callout tone="warning" title="No writer available">
-          Fix a CLI below, then Check again.
+        <Callout tone="warning" title="No coding agent can write code yet">
+          Fix at least one of the coding agents below, then select Check again.
         </Callout>
       </div>
       {button ? <div>{button}</div> : null}
@@ -386,7 +389,7 @@ export function Providers({
       <div className="page providers-page">
         <header className="page-header">
           <div className="page-title-row">
-            <h1 className="page-title">Providers</h1>
+            <h1 className="page-title">Coding agents</h1>
             {onCheckAgain ? (
               <span className="page-action">
                 <Button variant="secondary" size="sm" disabled={busy} onClick={onCheckAgain}>
@@ -395,16 +398,18 @@ export function Providers({
               </span>
             ) : null}
           </div>
-          <p className="page-lead">Agent CLIs on PATH, identified by their version output.</p>
+          <p className="page-lead">
+            Bezl found these coding agents on this computer and checked whether it can use each one.
+          </p>
         </header>
         {firstRun ? <OnboardingSteps current="agents" /> : null}
         {busy ? (
           <Status tone="running" live icon={<StateIcon state="running" />}>
-            Checking agent CLIs…
+            Checking your coding agents…
           </Status>
         ) : null}
         {error ? (
-          <Callout tone="danger" role="alert" title="Preflight failed">
+          <Callout tone="danger" role="alert" title="Agent check failed">
             {error}
           </Callout>
         ) : null}

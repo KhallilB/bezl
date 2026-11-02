@@ -25,14 +25,15 @@ export function ChooseRepository({ onChoose, refused }: ChooseRepositoryProps) {
             Open a repository
           </h1>
           <p className="page-lead">
-            Bezl works inside a git repository. Every task's record stays in its{" "}
-            <code>.git/bezl</code> folder, on this machine.
+            Bezl works inside a git repository, and it keeps each task's history in that
+            repository's <code>.git/bezl</code> folder, on this computer.
           </p>
         </header>
         <OnboardingSteps current="repository" />
         {refused ? (
           <Callout tone="warning" role="alert" title={refused.reason}>
-            <code>{refused.path}</code> has no git history. Choose the folder you cloned.
+            <code>{refused.path}</code> has no git history, so Bezl can't use it. Choose the folder
+            you cloned instead.
           </Callout>
         ) : null}
         <Button variant="secondary" onClick={onChoose}>

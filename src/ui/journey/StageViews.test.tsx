@@ -16,16 +16,16 @@ function open(list: JourneyTask[], id: string, stage: StageId) {
 const take = (name: RegExp) => screen.getByRole("article", { name });
 
 describe("Build", () => {
-  test("each take shows its model, state and one activity line", () => {
+  test("each attempt shows its model, state and one activity line", () => {
     open(tasks, "debounce", "build");
-    const a = take(/Take A, Claude Code/);
+    const a = take(/Attempt A, Claude Code/);
     expect(within(a).getByText("Writing")).toBeVisible();
     expect(within(a).getByText("Editing src/ui/terminals/xterm.ts")).toBeVisible();
   });
 
-  test("a message steers the writer, which reads it at its next step", async () => {
+  test("a message reaches the writer, which reads it at its next step", async () => {
     open(tasks, "debounce", "build");
-    const box = screen.getByRole("textbox", { name: "Steer Claude Code" });
+    const box = screen.getByRole("textbox", { name: "Message Claude Code" });
     await userEvent.type(box, "Keep the trailing resize");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(screen.getByText(/Claude Code reads it at its next step/)).toBeVisible();
@@ -44,7 +44,7 @@ describe("Check", () => {
     expect(screen.getByText(/received row 13/)).toBeVisible();
     expect(problems).toHaveLength(1);
 
-    await userEvent.click(screen.getByRole("button", { name: /restoreSnapshot runs in no test/ }));
+    await userEvent.click(screen.getByRole("button", { name: /No test covers restoreSnapshot/ }));
     expect(first).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/received row 13/)).toBeNull();
     expect(screen.getByText(/No test reaches it/)).toBeVisible();
@@ -66,16 +66,18 @@ describe("Check", () => {
 });
 
 describe("Review", () => {
-  test("takes sit side by side, each with the other provider's verdict", () => {
+  test("attempts sit side by side, each with the other agent's verdict", () => {
     open(tasks, "empty-state", "review");
-    expect(within(take(/Take A, Claude Code/)).getByText(/Clear, reuses EmptyState/)).toBeVisible();
-    expect(within(take(/Take A, Claude Code/)).getByText("Codex:")).toBeVisible();
-    expect(within(take(/Take B, Codex/)).getByText("Claude Code:")).toBeVisible();
+    expect(
+      within(take(/Attempt A, Claude Code/)).getByText(/Clear, and it reuses EmptyState/),
+    ).toBeVisible();
+    expect(within(take(/Attempt A, Claude Code/)).getByText("Codex:")).toBeVisible();
+    expect(within(take(/Attempt B, Codex/)).getByText("Claude Code:")).toBeVisible();
   });
 
-  test("keeping a take hands it to Ship", async () => {
+  test("keeping an attempt hands it to Ship", async () => {
     const { onKeep } = open(tasks, "empty-state", "review");
-    await userEvent.click(screen.getByRole("button", { name: "Keep take A" }));
+    await userEvent.click(screen.getByRole("button", { name: "Keep attempt A" }));
     expect(onKeep).toHaveBeenCalledWith("A");
   });
 });
