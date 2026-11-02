@@ -132,6 +132,16 @@ describe("Preview", () => {
     ).toBeVisible();
   });
 
+  test("screenshot and size are toolbars, like the rest of the app", () => {
+    render(<Harness id="empty-state" stage="review" />);
+    const size = within(side()).getByRole("toolbar", { name: "Size" });
+    expect(within(size).getByRole("button", { name: "Phone" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(within(side()).getByRole("toolbar", { name: "Screenshot" })).toBeVisible();
+  });
+
   test("pins Bezl's findings where they are", () => {
     render(<Harness id="empty-state" stage="review" />);
     const pins = within(side()).getByRole("list", { name: "On this screenshot" });

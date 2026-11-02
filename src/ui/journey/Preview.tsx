@@ -1,5 +1,5 @@
-import { Button } from "@kb.ui/react";
-import { type MouseEvent, useId, useState } from "react";
+import { Badge, Button, Input, Panel, Toolbar } from "@kb.ui/react";
+import { type MouseEvent, useState } from "react";
 import { type Shot, type ShotPin, type ShotSize, shotWidth } from "./model";
 
 type Note = ShotPin & { shot: string };
@@ -16,14 +16,13 @@ function Toggle<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <fieldset className="journey-toggle">
-      <legend className="journey-sr">{label}</legend>
+    <Toolbar aria-label={label}>
       {options.map(([v, name]) => (
-        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)}>
+        <Toolbar.Button key={v} aria-pressed={value === v} onClick={() => onChange(v)}>
           {name}
-        </button>
+        </Toolbar.Button>
       ))}
-    </fieldset>
+    </Toolbar>
   );
 }
 
@@ -34,7 +33,6 @@ const sizes: [ShotSize, string][] = [
 
 /** Screenshots Bezl took of the change, with its findings and your notes pinned on them. */
 export function Preview({ shots, example }: { shots: Shot[]; example: Shot | null }) {
-  const id = useId();
   const [picked, setPicked] = useState(shots[0]?.id);
   const [size, setSize] = useState<ShotSize>("phone");
   const [notes, setNotes] = useState<Note[]>([]);
@@ -75,66 +73,72 @@ export function Preview({ shots, example }: { shots: Shot[]; example: Shot | nul
         )}
         <Toggle label="Size" value={size} options={sizes} onChange={setSize} />
       </div>
-      <figure className="journey-shot" data-size={size}>
-        <div className="journey-shot-frame" data-example={shot.example ? "" : undefined}>
-          <img src={shot.images[size]} alt={`${shot.screen}, ${shot.name}, at ${width} px`} />
-          {shot.example ? <span className="journey-shot-tag">Example, not built yet</span> : null}
-          {findings.map((p, i) => (
-            <span
-              key={p.text}
-              className="journey-pin"
-              data-kind="finding"
-              style={{ left: `${p.x}%`, top: `${p.y}%` }}
-              aria-hidden="true"
-            >
-              {String.fromCharCode(65 + i)}
-            </span>
-          ))}
-          {mine.map((n, i) => (
-            <span
-              key={`${n.x}-${n.y}`}
-              className="journey-pin"
-              style={{ left: `${n.x}%`, top: `${n.y}%` }}
-              aria-hidden="true"
-            >
-              {i + 1}
-            </span>
-          ))}
-          {spot ? (
-            <span
-              className="journey-pin"
-              data-draft=""
-              style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-              aria-hidden="true"
-            >
-              {mine.length + 1}
-            </span>
-          ) : null}
-          {noting && !spot ? (
-            <button type="button" className="journey-shot-place" onClick={place}>
-              <span className="journey-sr">Put your note here</span>
-            </button>
-          ) : null}
-        </div>
-        <figcaption className="journey-shot-caption">
-          {`${width} px · ${shot.from} · ${shot.commit}`}
-        </figcaption>
-      </figure>
+      <Panel.Well>
+        <figure className="journey-shot" data-size={size}>
+          <div className="journey-shot-frame" data-example={shot.example ? "" : undefined}>
+            <img src={shot.images[size]} alt={`${shot.screen}, ${shot.name}, at ${width} px`} />
+            {shot.example ? (
+              <Badge tone="info" className="journey-shot-tag">
+                Example, not built yet
+              </Badge>
+            ) : null}
+            {findings.map((p, i) => (
+              <span
+                key={p.text}
+                className="journey-pin"
+                data-kind="finding"
+                style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                aria-hidden="true"
+              >
+                {String.fromCharCode(65 + i)}
+              </span>
+            ))}
+            {mine.map((n, i) => (
+              <span
+                key={`${n.x}-${n.y}`}
+                className="journey-pin"
+                style={{ left: `${n.x}%`, top: `${n.y}%` }}
+                aria-hidden="true"
+              >
+                {i + 1}
+              </span>
+            ))}
+            {spot ? (
+              <span
+                className="journey-pin"
+                data-draft=""
+                style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
+                aria-hidden="true"
+              >
+                {mine.length + 1}
+              </span>
+            ) : null}
+            {noting && !spot ? (
+              <button type="button" className="journey-shot-place" onClick={place}>
+                <span className="journey-sr">Put your note here</span>
+              </button>
+            ) : null}
+          </div>
+          <figcaption className="journey-shot-caption">
+            {`${width} px · ${shot.from} · ${shot.commit}`}
+          </figcaption>
+        </figure>
+      </Panel.Well>
       {findings.length || mine.length ? (
         <ol className="journey-pins" aria-label="On this screenshot">
           {findings.map((p, i) => (
             <li key={p.text}>
-              <span className="journey-pin" data-kind="finding" aria-hidden="true">
+              <Badge tone="danger" mono aria-hidden="true">
                 {String.fromCharCode(65 + i)}
-              </span>
+              </Badge>
               {p.text}
             </li>
           ))}
           {mine.map((n, i) => (
             <li key={`${n.x}-${n.y}`}>
-              <span className="journey-pin" aria-hidden="true">
+              <Badge tone="info" mono aria-hidden="true">
                 {i + 1}
-              </span>
+              </Badge>
               {n.text}
             </li>
           ))}
@@ -150,15 +154,14 @@ export function Preview({ shots, example }: { shots: Shot[]; example: Shot | nul
             stop();
           }}
         >
-          <label className="journey-sr" htmlFor={`${id}-note`}>
-            Your note
-          </label>
-          <input
-            id={`${id}-note`}
-            // biome-ignore lint/a11y/noAutofocus: you just placed the note, so you type it next.
+          <Input
+            label="Your note"
+            visuallyHidden
+            className="journey-note-field"
+            // You just placed the note, so you type it next.
             autoFocus
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onValueChange={setText}
             placeholder="What should change here?"
           />
           <Button size="sm" variant="secondary" type="submit" disabled={!text.trim()}>
