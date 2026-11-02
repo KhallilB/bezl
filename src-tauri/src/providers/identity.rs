@@ -96,7 +96,7 @@ pub fn discover(provider: Provider, search_path: &OsStr, timeout: Duration) -> D
     }
 }
 
-fn candidates(name: &str, search_path: &OsStr) -> Vec<PathBuf> {
+pub(super) fn candidates(name: &str, search_path: &OsStr) -> Vec<PathBuf> {
     let mut seen = Vec::new();
     let mut out = Vec::new();
     for dir in std::env::split_paths(search_path) {
