@@ -44,7 +44,7 @@ function CoverageBar({ coverage }: { coverage: Coverage }) {
   return (
     <div className="journey-coverage">
       <Progress
-        label="Run in a test"
+        label="Ran in a test"
         value={total ? Math.round((covered / total) * 100) : 0}
         valueText={`${covered} of ${total} lines`}
       />
@@ -53,7 +53,7 @@ function CoverageBar({ coverage }: { coverage: Coverage }) {
   );
 }
 
-/** One finding's chain, from the goal to what needs you; starts from the findings. */
+/** What needs you, then how one of them links back to the goal. */
 export function TraceView({
   trace,
   focus,
@@ -69,9 +69,7 @@ export function TraceView({
       {trace.coverage ? <CoverageBar coverage={trace.coverage} /> : null}
       {lit ? (
         <>
-          <p className="journey-steer-note">
-            How this one connects, from the goal to what needs you.
-          </p>
+          <p className="journey-steer-note">How it links back to your goal.</p>
           <ol className="journey-chain" aria-label="How it connects">
             {traceColumns.map((c) => {
               const here = trace.nodes.filter((n) => n.column === c.id && lit.has(n.id));
@@ -82,7 +80,9 @@ export function TraceView({
                 <li key={c.id}>
                   <h3 className="page-label">{c.name}</h3>
                   {claimed ? (
-                    <p className="journey-claim">Linked to the goal by the plan, not measured</p>
+                    <p className="journey-claim">
+                      The plan says this code serves the goal; no test has shown it yet.
+                    </p>
                   ) : null}
                   {here.map((n) => (
                     <NodeButton key={n.id} node={n} pressed={n.id === focus} onFocus={onFocus} />
@@ -93,13 +93,13 @@ export function TraceView({
           </ol>
           <span>
             <Button size="sm" variant="ghost" onClick={() => onFocus(null)}>
-              Back to what needs you
+              Back to the list
             </Button>
           </span>
         </>
       ) : (
         <>
-          <p className="journey-steer-note">Pick one to see how it connects.</p>
+          <p className="journey-steer-note">Pick one to see where it comes from.</p>
           <ul className="journey-chain-start" aria-label="What needs you">
             {trace.nodes
               .filter((n) => n.column === "decide")

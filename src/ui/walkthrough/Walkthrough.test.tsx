@@ -43,18 +43,20 @@ describe("Walkthrough tour", () => {
     expect(within(dock()).getByText("What it's for, how big, how sure")).toBeVisible();
     const summary = screen.getByRole("list", { name: "This task" });
     await userEvent.click(within(summary).getByRole("button", { name: "3 of 4 done" }));
-    expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("list", { name: "Decided" })).toBeVisible();
+    const intent = screen.getByRole("region", { name: "Intent" });
+    expect(within(intent).getByRole("list", { name: "Decided" })).toBeVisible();
   });
 
   test("the preview step shows the change as Bezl captured it", async () => {
     at("?screen=walkthrough&step=preview");
     render(<Walkthrough />);
     expect(within(dock()).getByText("See it before you decide")).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Design" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(screen.getByRole("button", { name: "After, loading" }));
-    expect(screen.getByRole("img", { name: "Projects, After, loading, at 375 px" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    const screens = screen.getByRole("region", { name: "Screens" });
+    await userEvent.click(within(screens).getByRole("button", { name: "After, loading" }));
+    expect(
+      within(screens).getByRole("img", { name: "Projects, After, loading, at 375 px" }),
+    ).toBeVisible();
+    await userEvent.click(within(screens).getByRole("button", { name: "Full screen" }));
     expect(screen.getByRole("dialog", { name: "Empty state for Projects" })).toBeVisible();
   });
 
@@ -63,8 +65,8 @@ describe("Walkthrough tour", () => {
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(within(dock()).getByText("Follow the evidence")).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("list", { name: "How it connects" })).toBeVisible();
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByRole("list", { name: "How it connects" })).toBeVisible();
   });
 
   test("starts at the first step, where Back is off", () => {
@@ -316,7 +318,7 @@ describe("Walkthrough needs you and look back", () => {
 });
 
 describe("Walkthrough, M5 journey", () => {
-  test("a step opens the workspace full screen, with your path", () => {
+  test("a step opens full screen, with your path", () => {
     at("?screen=walkthrough&step=full-screen");
     render(<Walkthrough />);
     const full = screen.getByRole("dialog", { name: "Empty state for Projects" });

@@ -59,7 +59,7 @@ function Follow({ chain }: { chain: string }) {
   return null;
 }
 
-/** Full-screen evidence: Bezl's four columns as a map, the chain from `focus` lit. */
+/** Full-screen evidence: the four columns as a map, the chain from `focus` lit. */
 export function EvidenceMap({
   trace,
   focus,
@@ -120,7 +120,7 @@ export function EvidenceMap({
         <Background gap={24} />
         <Controls showInteractive={false} />
         <Panel position="bottom-center" className="journey-map-key">
-          Dotted: the plan's claim. Solid: measured by Bezl.
+          Dotted: the plan says they connect; nothing has checked it. Solid: Bezl checked it.
         </Panel>
       </ReactFlow>
     </div>

@@ -157,7 +157,7 @@ export type TraceLink = { from: string; to: string; via?: string };
 
 export type Coverage = { covered: number; uncovered: number; unknown: number; excluded: number };
 
-/** How each done-when line reaches what Bezl measured and what needs you. */
+/** How each done-when line links to the code, what Bezl ran and what needs you. */
 export type Trace = { nodes: TraceNode[]; links: TraceLink[]; coverage?: Coverage };
 
 /** A step toward the goal: something that needs you, and the done-when lines it blocks. */
@@ -172,12 +172,12 @@ export function pathOf(trace: Trace): Step[] {
     });
 }
 
-/** A link out of the goal is the plan's claim about which code meets it; Bezl measures the rest. */
+/** A link out of the goal is only the plan's word; Bezl checked every other link. */
 export function planClaim({ nodes }: Trace, link: TraceLink): boolean {
   return nodes.find((n) => n.id === link.from)?.column === "intent";
 }
 
-/** Everything upstream and downstream of one node. */
+/** Everything one node leads from and to. */
 export function lineage({ links }: Trace, start: string): Set<string> {
   const lit = new Set([start]);
   const up = (cur: string) => {
@@ -201,17 +201,17 @@ export function lineage({ links }: Trace, start: string): Set<string> {
   return lit;
 }
 
-/** Every changed line lands in one bucket; empty buckets go unsaid. */
+/** Counts every changed line once; a count of zero goes unsaid. */
 export function coverageText(c: Coverage): string {
   const total = c.covered + c.uncovered + c.unknown + c.excluded;
   const parts: [number, string][] = [
-    [c.covered, "run in a test"],
-    [c.uncovered, "never run"],
+    [c.covered, "ran in a test"],
+    [c.uncovered, "never ran"],
     [c.unknown, "Bezl can't measure"],
     [c.excluded, "excluded"],
   ];
   const said = parts.filter(([n]) => n > 0).map(([n, what]) => `${n} ${what}`);
-  return `${total} changed lines: ${said.join(", ")}`;
+  return `${total} lines changed: ${said.join(", ")}`;
 }
 
 export type ShotSize = "phone" | "desktop";
@@ -262,7 +262,7 @@ export type StageView = {
   compare?: Comparison;
   /** How the stage's problems can go back; the first fixer is the writer. */
   sendBack?: SendBackOptions;
-  /** Bezl quit mid-step; the step waits for you, never resuming on its own. */
+  /** Bezl closed mid-step; the step waits for you, never restarting on its own. */
   interrupted?: boolean;
 };
 
@@ -286,8 +286,16 @@ export function estimate(
 
 export type CompareCell = { light: Light; text: string };
 
+/** Where a line's proof is: its screenshot, its trace node, the code. */
+export type Proof = { shot?: string; node?: string; where?: string };
+
 /** One line of a comparison: a cell per column, keyed by the column's id. */
-export type CompareRow = { group: string; label: string; cells: Record<string, CompareCell> };
+export type CompareRow = {
+  group: string;
+  label: string;
+  cells: Record<string, CompareCell>;
+  proof?: Proof;
+};
 
 /** Review's lines as they are on main and after the attempt; summary says why it's ready. */
 export type Comparison = {
@@ -317,7 +325,7 @@ export type JourneyTask = {
 
 export type Risk = "low" | "medium" | "high";
 
-/** How far the change reaches; `from` names what the risk was measured from. */
+/** How far the change reaches; `from` names what the risk is based on. */
 export type Impact = { risk: Risk; reach: string; from: string };
 
 export type DoneWhen = { text: string; checker: string; light: Light; status: string };

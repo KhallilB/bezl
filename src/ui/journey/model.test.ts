@@ -340,10 +340,10 @@ describe("lineage", () => {
 
 test("coverageText accounts for every changed line", () => {
   expect(coverageText({ covered: 29, uncovered: 2, unknown: 4, excluded: 2 })).toBe(
-    "37 changed lines: 29 run in a test, 2 never run, 4 Bezl can't measure, 2 excluded",
+    "37 lines changed: 29 ran in a test, 2 never ran, 4 Bezl can't measure, 2 excluded",
   );
   expect(coverageText({ covered: 12, uncovered: 0, unknown: 0, excluded: 0 })).toBe(
-    "12 changed lines: 12 run in a test",
+    "12 lines changed: 12 ran in a test",
   );
 });
 

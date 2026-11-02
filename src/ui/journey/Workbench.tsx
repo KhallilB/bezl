@@ -1,5 +1,5 @@
 import { Badge, Button, Dialog, Panel, Tooltip } from "@kb.ui/react";
-import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useState } from "react";
 import { kindLabel, type NeedsYouChoice, type NeedsYouItem } from "../approvals/model";
 import { usePortalRoot } from "../theme/AppTheme";
 import { EvidenceMap } from "./EvidenceMap";
@@ -21,9 +21,9 @@ import {
   type TraceNode,
 } from "./model";
 import { type Design, Preview } from "./Preview";
-import { TraceView } from "./TraceView";
 
-export type SideTab = "design" | "evidence" | "intent";
+/** One part of a task's proof: a section on the page, a tab in full screen. */
+export type Part = "screens" | "evidence" | "intent";
 
 const riskTone = { low: "success", medium: "warning", high: "danger" } as const;
 
@@ -37,24 +37,29 @@ export function Summary({
   coverage,
   preview,
   trace,
-  onOpen,
+  intent,
+  onIntent,
+  onGo,
 }: {
   context: TaskContext;
   impact?: Impact | undefined;
   coverage?: Coverage | undefined;
-  /** This stage has screenshots, so the change opens them. */
+  /** This stage has screenshots, so the change goes to them. */
   preview: boolean;
-  /** Bezl measured something, so the evidence opens its trace. */
+  /** The task has a trace, so the evidence goes to it. */
   trace: boolean;
-  onOpen: (tab: SideTab) => void;
+  /** Whether Intent is open, and the id of the region it opens. */
+  intent: { open: boolean; id: string };
+  onIntent: () => void;
+  onGo: (to: Part) => void;
 }) {
   const portal = usePortalRoot();
   const total = coverage
     ? coverage.covered + coverage.uncovered + coverage.unknown + coverage.excluded
     : 0;
-  const open = (tab: SideTab, text: string, on: boolean) =>
+  const go = (to: Part, text: string, on: boolean) =>
     on ? (
-      <Button size="sm" variant="ghost" onClick={() => onOpen(tab)}>
+      <Button size="sm" variant="ghost" onClick={() => onGo(to)}>
         {text}
       </Button>
     ) : (
@@ -65,7 +70,7 @@ export function Summary({
       <li>
         <span className="journey-eyebrow">Goal</span>
         <Tooltip content={context.goal} {...(portal ? { container: portal } : {})}>
-          {open(
+          {go(
             "intent",
             context.lines ? `${context.proven} of ${context.lines} done` : "No checks yet",
             true,
@@ -74,14 +79,11 @@ export function Summary({
       </li>
       <li>
         <span className="journey-eyebrow">Change</span>
-        {open("design", context.touches, preview)}
+        {go("screens", context.touches, preview)}
         {impact ? (
           <>
-            <Tooltip
-              content={`Measured from ${impact.from}`}
-              {...(portal ? { container: portal } : {})}
-            >
-              <Button size="sm" variant="ghost" onClick={() => onOpen("intent")}>
+            <Tooltip content={`Based on ${impact.from}`} {...(portal ? { container: portal } : {})}>
+              <Button size="sm" variant="ghost" onClick={() => onGo("intent")}>
                 <Badge tone={riskTone[impact.risk]}>{`${capital(impact.risk)} risk`}</Badge>
               </Button>
             </Tooltip>
@@ -91,13 +93,25 @@ export function Summary({
       </li>
       <li>
         <span className="journey-eyebrow">Evidence</span>
-        {open(
+        {go(
           "evidence",
           coverage && total
-            ? `${coverage.covered} of ${total} lines run in a test`
+            ? `${coverage.covered} of ${total} lines ran in a test`
             : context.evidence,
           trace,
         )}
+      </li>
+      <li>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="journey-disclose"
+          aria-expanded={intent.open}
+          aria-controls={intent.id}
+          onClick={onIntent}
+        >
+          Intent
+        </Button>
       </li>
     </ul>
   );
@@ -180,7 +194,7 @@ export function Questions({
   prefer?: string | null;
   onAnswer: (item: NeedsYouItem, choice: NeedsYouChoice) => void;
   onExample?: OnExample;
-  /** Opens the trace at a question's evidence. */
+  /** Shows a question's evidence. */
   onWhy?: ((id: string) => void) | undefined;
 }) {
   const id = useId();
@@ -296,7 +310,7 @@ export function HandledList({ handled }: { handled: Handled[] }) {
   );
 }
 
-type IntentProps = {
+export type IntentProps = {
   goal: string;
   impact?: Impact | undefined;
   doneWhen: DoneWhen[];
@@ -307,7 +321,16 @@ type IntentProps = {
   onChange?: ((a: Assumption) => void) | undefined;
 };
 
-function Intent({ goal, impact, doneWhen, decisions, assumptions, raised, onChange }: IntentProps) {
+/** What the task is for: the goal, its reach, done-when, your decisions and the agents' guesses. */
+export function Intent({
+  goal,
+  impact,
+  doneWhen,
+  decisions,
+  assumptions,
+  raised,
+  onChange,
+}: IntentProps) {
   const id = useId();
   return (
     <div className="journey-intent">
@@ -319,7 +342,7 @@ function Intent({ goal, impact, doneWhen, decisions, assumptions, raised, onChan
           </h3>
           <p className="journey-reach">
             <Badge tone={riskTone[impact.risk]}>{`${capital(impact.risk)} risk`}</Badge>{" "}
-            {`${impact.reach}. Measured from ${impact.from}.`}
+            {`${impact.reach}. Based on ${impact.from}.`}
           </p>
         </section>
       ) : null}
@@ -359,7 +382,7 @@ function Intent({ goal, impact, doneWhen, decisions, assumptions, raised, onChan
             ))}
           </ul>
         ) : (
-          <p className="journey-steer-note">Nothing yet. Your answers collect here.</p>
+          <p className="journey-steer-note">Nothing yet. Your answers show up here.</p>
         )}
       </section>
       {assumptions.length ? (
@@ -392,25 +415,6 @@ function Intent({ goal, impact, doneWhen, decisions, assumptions, raised, onChan
   );
 }
 
-type WorkspaceProps = IntentProps & {
-  /** Names the full-screen view: the task's title. */
-  title: string;
-  startFull?: boolean | undefined;
-  tab: SideTab;
-  onTab: (t: SideTab) => void;
-  trace?: Trace | undefined;
-  /** The trace node the chain is drawn from; null lists what needs you. */
-  focus: string | null;
-  onFocus: (id: string | null) => void;
-  shots: Shot[];
-  /** An example to show in place of the screenshots while a choice is pointed at. */
-  example: Shot | null;
-  design: Design;
-  /** Get the full-screen spots the stage's questions and bar move to. */
-  onAsk: (el: HTMLElement | null) => void;
-  onBar: (el: HTMLElement | null) => void;
-};
-
 /** Tab `${id}-${tab}` controls the panel `${id}-panel`. */
 function Tabs({
   id,
@@ -419,9 +423,9 @@ function Tabs({
   onTab,
 }: {
   id: string;
-  tabs: { id: SideTab; name: string }[];
-  shown: SideTab;
-  onTab: (t: SideTab) => void;
+  tabs: { id: Part; name: string }[];
+  shown: Part;
+  onTab: (t: Part) => void;
 }) {
   const move = (e: KeyboardEvent<HTMLButtonElement>) => {
     const i = tabs.findIndex((t) => t.id === shown);
@@ -461,7 +465,9 @@ function Tabs({
 }
 
 const blocksText = (blocks: TraceNode[]) =>
-  blocks.length === 1 ? `Blocks: ${blocks[0]?.title}` : `Blocks ${blocks.length} done-when lines`;
+  blocks.length === 1
+    ? `Holds up: ${blocks[0]?.title}`
+    : `Holds up ${blocks.length} done-when lines`;
 
 /** Each step toward the goal that needs you, and what it holds up. */
 function Path({
@@ -510,7 +516,7 @@ function Path({
   );
 }
 
-/** The step or trace node you picked: what it is, what it holds up, where to see it. */
+/** What you picked: what it is, what it holds up, where to see it. */
 function Inspector({
   node,
   blocks,
@@ -540,7 +546,7 @@ function Inspector({
           {blocks.length ? (
             <>
               <h4 id={`${id}-blocks`} className="page-label">
-                Blocks
+                Holds up
               </h4>
               <ul aria-labelledby={`${id}-blocks`}>
                 {blocks.map((b) => (
@@ -558,27 +564,65 @@ function Inspector({
           <div className="journey-inspector-actions">
             {onSee ? (
               <Button size="sm" variant="secondary" onClick={onSee}>
-                See it
+                See the screen
               </Button>
             ) : null}
             {onTrace ? (
               <Button size="sm" variant="secondary" onClick={onTrace}>
-                Trace it
+                See the trace
               </Button>
             ) : null}
           </div>
         </>
       ) : (
-        <p className="journey-steer-note">Pick a step on your path, a finding or a node.</p>
+        <p className="journey-steer-note">
+          Pick a step, a pin on a screenshot or a box on the map.
+        </p>
       )}
     </section>
   );
 }
 
-/** Beside every stage: what it looks like, how it's proven and what it's for; full screen on request. */
-export function Workspace({
+type FullScreenProps = IntentProps & {
+  /** Names the dialog: the task's title. */
+  title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  tab: Part;
+  onTab: (t: Part) => void;
+  trace?: Trace | undefined;
+  /** The trace node the chain is drawn from; null lists what needs you. */
+  focus: string | null;
+  onFocus: (id: string | null) => void;
+  shots: Shot[];
+  /** An example shown in place of the screenshots while a choice is pointed at. */
+  example: Shot | null;
+  design: Design;
+  /** Spots the stage's questions and bar move to while open. */
+  onAsk: (el: HTMLElement | null) => void;
+  onBar: (el: HTMLElement | null) => void;
+};
+
+/** The parts this stage can show; Intent always. */
+export function partsOf(shots: Shot[], example: Shot | null, trace?: Trace): Part[] {
+  return [
+    ...(shots.length || example ? (["screens"] as const) : []),
+    ...(trace ? (["evidence"] as const) : []),
+    "intent",
+  ];
+}
+
+const partName: Record<Part, string> = {
+  screens: "Screens",
+  evidence: "Evidence",
+  intent: "Intent",
+};
+
+/** Screens, Evidence and Intent with the window to themselves; path left, selection right. */
+export function FullScreen({
   title,
-  startFull = false,
+  open,
+  onOpenChange,
   tab,
   onTab,
   shots,
@@ -590,112 +634,71 @@ export function Workspace({
   onAsk,
   onBar,
   ...intent
-}: WorkspaceProps) {
+}: FullScreenProps) {
   const id = useId();
   const portal = usePortalRoot();
-  const [full, setFull] = useState(startFull);
-  const tabs: { id: SideTab; name: string }[] = [
-    ...(shots.length || example ? [{ id: "design" as const, name: "Design" }] : []),
-    ...(trace ? [{ id: "evidence" as const, name: "Evidence" }] : []),
-    { id: "intent", name: "Intent" },
-  ];
-  // The open tab can be missing at this stage: fall back to what was measured, then the intent.
-  const shown =
-    tabs.find((t) => t.id === tab)?.id ?? tabs.find((t) => t.id === "evidence")?.id ?? "intent";
+  const parts = partsOf(shots, example, trace);
+  // The asked-for tab can be missing at this stage: fall back to the evidence, then the intent.
+  const shown = parts.includes(tab) ? tab : parts.includes("evidence") ? "evidence" : "intent";
   const path = trace ? pathOf(trace) : [];
   const picked = trace?.nodes.find((n) => n.id === focus);
   const see =
-    picked?.shot && shown !== "design" && shots.some((s) => s.id === picked.shot)
+    picked?.shot && shown !== "screens" && shots.some((s) => s.id === picked.shot)
       ? () => {
           design.setPicked(picked.shot);
-          onTab("design");
+          onTab("screens");
         }
       : undefined;
-  const view = (wide: boolean) =>
-    shown === "design" ? (
-      <Preview
-        shots={shots}
-        example={example}
-        design={design}
-        wide={wide}
-        focus={focus}
-        onPin={(node) => {
-          onFocus(node);
-          if (!wide) onTab("evidence");
-        }}
-      />
-    ) : shown === "evidence" && trace ? (
-      wide ? (
-        <EvidenceMap trace={trace} focus={focus} onFocus={onFocus} />
-      ) : (
-        <TraceView trace={trace} focus={focus} onFocus={onFocus} />
-      )
-    ) : (
-      <Intent {...intent} />
+  let view: ReactNode = <Intent {...intent} />;
+  if (shown === "screens")
+    view = (
+      <Preview shots={shots} example={example} design={design} wide focus={focus} onPin={onFocus} />
     );
+  else if (shown === "evidence" && trace)
+    view = <EvidenceMap trace={trace} focus={focus} onFocus={onFocus} />;
   return (
-    <aside className="journey-side" aria-labelledby={`${id}-name`}>
-      <h2 id={`${id}-name`} className="page-label">
-        Workspace
-      </h2>
-      <Panel>
-        <Panel.Header>
-          <div className="journey-side-head">
-            <Tabs id={`${id}-in`} tabs={tabs} shown={shown} onTab={onTab} />
-            {tabs.length > 1 ? (
-              <Button size="sm" variant="ghost" onClick={() => setFull(true)}>
-                Full screen
-              </Button>
-            ) : null}
-          </div>
-        </Panel.Header>
-        <Panel.Body
-          id={`${id}-in-panel`}
-          role="tabpanel"
-          aria-labelledby={`${id}-in-${shown}`}
-          className="journey-side-panel"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {open ? (
+        <Dialog.Content
+          {...(portal ? { container: portal } : {})}
+          title={title}
+          description={intent.goal}
+          className="journey-full"
         >
-          {full ? null : view(false)}
-        </Panel.Body>
-      </Panel>
-      <Dialog open={full} onOpenChange={setFull}>
-        {full ? (
-          <Dialog.Content
-            {...(portal ? { container: portal } : {})}
-            title={title}
-            description={intent.goal}
-            className="journey-full"
-          >
-            <div className="journey-full-head">
-              <Tabs id={`${id}-full`} tabs={tabs} shown={shown} onTab={onTab} />
-              <Dialog.Close render={<Button size="sm" variant="secondary" />}>Close</Dialog.Close>
+          <div className="journey-full-head">
+            <Tabs
+              id={id}
+              tabs={parts.map((p) => ({ id: p, name: partName[p] }))}
+              shown={shown}
+              onTab={onTab}
+            />
+            <Dialog.Close render={<Button size="sm" variant="secondary" />}>Close</Dialog.Close>
+          </div>
+          <div className="journey-full-body">
+            {trace ? <Path path={path} focus={focus} onFocus={onFocus} /> : null}
+            <div
+              id={`${id}-panel`}
+              className="journey-full-canvas"
+              role="tabpanel"
+              aria-labelledby={`${id}-${shown}`}
+            >
+              {view}
             </div>
-            <div className="journey-full-body">
-              {trace ? <Path path={path} focus={focus} onFocus={onFocus} /> : null}
-              <div
-                id={`${id}-full-panel`}
-                className="journey-full-canvas"
-                role="tabpanel"
-                aria-labelledby={`${id}-full-${shown}`}
-              >
-                {view(true)}
-              </div>
-              <div className="journey-full-side">
-                <div ref={onAsk} className="journey-full-ask" />
-                {trace ? (
-                  <Inspector
-                    node={picked}
-                    blocks={path.find((s) => s.node.id === focus)?.blocks ?? []}
-                    onSee={see}
-                    onTrace={picked && shown !== "evidence" ? () => onTab("evidence") : undefined}
-                  />
-                ) : null}
-              </div>
+            <div className="journey-full-side">
+              <div ref={onAsk} className="journey-full-ask" />
+              {trace ? (
+                <Inspector
+                  node={picked}
+                  blocks={path.find((s) => s.node.id === focus)?.blocks ?? []}
+                  onSee={see}
+                  onTrace={picked && shown !== "evidence" ? () => onTab("evidence") : undefined}
+                />
+              ) : null}
             </div>
-            <div ref={onBar} className="journey-full-bar" />
-          </Dialog.Content>
-        ) : null}
-      </Dialog>
-    </aside>
+          </div>
+          <div ref={onBar} className="journey-full-bar" />
+        </Dialog.Content>
+      ) : null}
+    </Dialog>
   );
 }

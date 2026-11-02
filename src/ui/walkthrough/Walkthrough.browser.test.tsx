@@ -96,7 +96,7 @@ test("every screen in the shell puts its title on one edge, one line and one siz
   expect(distinct(seen), JSON.stringify(seen)).toHaveLength(1);
 });
 
-// A task page holds its side pane too, so it gets the one wider frame.
+// A task page holds screenshots and Review's table, so it gets the one wider frame.
 const isTask = (s: (typeof steps)[number]) => ["task", "started"].includes(s.view.kind);
 
 test("every screen in the shell is one width, and every task page one wider width", async () => {
@@ -200,6 +200,30 @@ test("Providers' card titles match the shell's", async () => {
     expect(new Set(sizes.split(",")), id).toEqual(new Set([shell.working]));
   }
 });
+
+// A wrapped label is fine; a word per line is not.
+for (const [width, height] of [
+  [1440, 900],
+  [390, 844],
+] as const) {
+  test(`at ${width}px Review's done-when labels read as lines, not a word per line`, async () => {
+    await page.viewport(width, height);
+    const el = await mount("?screen=walkthrough&step=review&theme=dark");
+    const labels = [...el.querySelectorAll<HTMLElement>(".journey-table th[scope='row']")];
+    expect(labels.length).toBeGreaterThan(0);
+    const lines = labels.map((th) => {
+      const tops = new Set<number>();
+      const text = document.createTreeWalker(th, NodeFilter.SHOW_TEXT);
+      for (let n = text.nextNode(); n; n = text.nextNode()) {
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        for (const r of range.getClientRects()) tops.add(Math.round(r.top));
+      }
+      return tops.size;
+    });
+    expect(Math.max(...lines), JSON.stringify(lines)).toBeLessThanOrEqual(2);
+  });
+}
 
 const press = (root: ParentNode, text: string, selector = "button") =>
   [...root.querySelectorAll<HTMLElement>(selector)]

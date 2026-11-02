@@ -1,5 +1,5 @@
 import type { StageId } from "../journey/model";
-import type { SideTab } from "../journey/Workbench";
+import type { Part } from "../journey/Workbench";
 import type { drafts } from "../newtask/fixtures";
 import type { NewTaskStep } from "../newtask/NewTask";
 import { oneOf, type Theme, themes } from "./states";
@@ -31,11 +31,11 @@ export type TourView =
       stage: StageId;
       kept?: boolean;
       shipped?: "checking" | "merged";
-      /** The side tab it opens on. */
-      side?: SideTab;
-      /** Opens with the workspace full screen. */
+      /** Full screen's first tab; Evidence also starts at the first problem. */
+      tab?: Part;
+      /** Opens full screen. */
       full?: boolean;
-      /** The list after Bezl quit mid-Build. */
+      /** The list after Bezl closed mid-Build. */
       interrupted?: boolean;
     }
   | { kind: "approvals"; cleared?: boolean }
@@ -48,84 +48,84 @@ export const steps: Step[] = [
     id: "open-repo",
     chapter: "Getting started",
     title: "Open a repository",
-    note: "Bezl works inside a git repository, and it keeps each task's history right there in the repository, on this computer.",
+    note: "Bezl works inside a git repository. It keeps each task's history in that repository, on this computer.",
     view: { kind: "choose" },
   },
   {
     id: "not-git",
     chapter: "Getting started",
     title: "It has to be a git repository",
-    note: "If you pick a folder that isn't a git repository, Bezl tells you why it can't use it and asks you to choose the folder you cloned.",
+    note: "Pick a folder that isn't a git repository and Bezl says why it can't use it. Choose the folder you cloned instead.",
     view: { kind: "choose", refused: true },
   },
   {
     id: "preflight",
     chapter: "Getting started",
     title: "Agent check",
-    note: "Bezl looks for each coding agent on this computer and checks that it's signed in, and checks your GitHub sign-in too, with a single line showing progress while it works.",
+    note: "Bezl looks for each coding agent on this computer and checks that it's signed in. It checks your GitHub sign-in too. One line shows progress while it works.",
     view: { kind: "providers", result: "checking" },
   },
   {
     id: "providers",
     chapter: "Getting started",
     title: "Coding agents",
-    note: "One row per coding agent and GitHub: whether Bezl can use it, and one line on why. Anything to fix stays in view; Details holds the path, the safety tests and usage.",
+    note: "One row per coding agent, plus GitHub: whether Bezl can use it, and why. Anything to fix stays in view. Details holds the path, the safety tests and usage.",
     view: { kind: "providers", result: "ready" },
   },
   {
     id: "github",
     chapter: "Getting started",
     title: "No GitHub sign-in",
-    note: "Without a GitHub sign-in, Bezl hides the issue picker and Ship can't open a pull request, so the task finishes on a local branch. Nothing else waits on it, so you can still start.",
+    note: "Without a GitHub sign-in there's no issue picker, and Ship can't open a pull request, so the task ends on a local branch. Nothing else needs GitHub, so you can still start.",
     view: { kind: "providers", result: "noGitHub" },
   },
   {
     id: "impostor",
     chapter: "Getting started",
     title: "Not the real one",
-    note: "If a program called codex turns out not to be Codex, Bezl shows you where it lives and won't use it as a coding agent.",
+    note: "If a program called codex isn't really Codex, Bezl shows where it lives and won't use it as a coding agent.",
     view: { kind: "providers", result: "impostor" },
   },
   {
     id: "no-writer",
     chapter: "Getting started",
     title: "No coding agent can write yet",
-    note: "If none of your coding agents can write code yet, Bezl explains why and shows the command that fixes it. You run that command yourself, because Bezl never signs in for you.",
+    note: "If no coding agent can write code yet, Bezl says why and shows the command that fixes it. You run it yourself, because Bezl never signs in for you.",
     view: { kind: "providers", result: "noWriter" },
   },
   {
     id: "empty-list",
     chapter: "Getting started",
     title: "Ready for a first task",
-    note: "Once a coding agent can write code, your task list opens empty and the only thing left to do is start a new task.",
+    note: "Once a coding agent can write code, your task list opens empty. The only thing left is to start a new task.",
     view: { kind: "empty" },
   },
   {
     id: "new-task",
     chapter: "Start a task",
     title: "Write the goal",
-    note: "New task takes two steps: your goal, then Bezl's read of the whole task. First, describe the change in your own words. That's all you have to write.",
+    note: "A new task takes two steps: your goal, then Bezl's read of the task. First, describe the change in your own words. That's all you have to write.",
     view: { kind: "newTask", draft: "blank" },
   },
   {
     id: "from-issue",
     chapter: "Start a task",
     title: "Or start from a GitHub issue",
-    note: "If the work is already an issue, pick it instead. Its title and description become the goal, and its checklist becomes the lines of done when. Bezl reads your open issues through your own GitHub sign-in.",
+    note: "If the work is already a GitHub issue, pick it instead. Its title and description become the goal, and its checklist becomes the done-when list. Bezl reads your open issues with your own GitHub sign-in.",
     view: { kind: "newTask", draft: "blank", issues: "picked" },
   },
   {
     id: "task-read",
     chapter: "Start a task",
     title: "Review and start",
-    note: "From your goal and the code, Bezl fills in the rest: who it's for, what to avoid or reuse, an example, when it's done, who writes and reviews, and Limits on the files it may change. Each part says where it came from. Start it as it is, or Change any part for tighter rails. Start names the setup command it runs, only in the task's copy of your code.",
+    note: "From your goal and the code, Bezl fills in the rest: who it's for, what to avoid or reuse, an example, when it's done, who writes and who reviews, and Limits on the files it may change. Each part says where it came from. Start as it is, or Change any part to tighten it. Start names the setup command it runs, only in the task's copy of your code.",
     view: { kind: "newTask", draft: "partial", step: "review" },
   },
   {
     id: "preparing",
     chapter: "Start a task",
     title: "Preparing",
-    note: "Bezl sets up the task's own copy of your code on its own branch, and then planning begins.",
+    note: "Bezl gives the task its own copy of your code, on its own branch. Then planning starts.",
     view: { kind: "started" },
   },
   {
@@ -139,77 +139,77 @@ export const steps: Step[] = [
     id: "stages",
     chapter: "Your tasks",
     title: "Define to Ship",
-    note: "Each stage has a light that shows how it's going, and you can click any stage to open it. Define holds your goal in your own words and the list of things to be done.",
+    note: "Each stage has a light that shows how it's going. Click any stage to open it. Define holds your goal in your own words and the done-when list.",
     view: { kind: "task", taskId: "empty-state", stage: "define" },
   },
   {
     id: "context",
     chapter: "Your tasks",
     title: "What it's for, how big, how sure",
-    note: "One line under the stages: how much of the goal is done, how far the change reaches and how risky it is, and how much of it ran in a test. Point at the risk to see what it was measured from; each part opens in the workspace beside the stage. Point at a stage to see what happened there and who acted.",
+    note: "One line under the stages: how much of the goal is done, how big and how risky the change is, and how much of it ran in a test. Point at the risk to see what it's based on. Each part takes you to its proof further down, and Intent opens the goal, your decisions and the agents' guesses. Point at a stage to see what happened there and who acted.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
     id: "preview",
     chapter: "Your tasks",
     title: "See it before you decide",
-    note: "Design shows only when Bezl captured screenshots of your app; without them the workspace opens on Evidence. Design takes half the page, so a phone screenshot shows at its own width, with each finding pinned where it is. Click a spot to leave a note. Full screen gives the screenshots the window, another beside it to compare, and your path to the goal down the side.",
+    note: "Screens shows only when Bezl took screenshots of your app. A phone screenshot shows at its real width, with each finding pinned where it is. Click a spot to leave a note. Full screen gives the screenshots the whole window, with a second one beside it to compare and your path to the goal down the side.",
     view: { kind: "task", taskId: "empty-state", stage: "check" },
   },
   {
     id: "working",
     chapter: "Your tasks",
     title: "Work in progress",
-    note: "The attempt works in its own copy of your code. A single line tells you what it's doing right now, and you can send it a message while it works.",
+    note: "The attempt works in its own copy of your code. One line says what it's doing right now, and you can send it a message while it works.",
     view: { kind: "task", taskId: "debounce", stage: "build" },
   },
   {
     id: "question",
     chapter: "Your tasks",
     title: "A question waits on you",
-    note: "When a coding agent stops to ask you something, the task turns amber and the question opens in that stage, with what it holds up, Bezl's recommendation and what each answer leads to, costs and unblocks. Questions Bezl could answer itself are folded away under Bezl handled.",
+    note: "When a coding agent stops to ask you something, the task turns amber and the question opens at the top of the stage. It shows what the question holds up, what Bezl recommends, and what each answer leads to, costs and unblocks. Questions Bezl could answer itself are folded under Bezl handled.",
     view: { kind: "task", taskId: "deny-scopes", stage: "build" },
   },
   {
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw. The bar at the bottom sends them all together; it sits in the same place on every stage. Options beside it picks who fixes, what goes with the problems and which checks run after, with the time, usage and files it may change. Nothing goes until you press send. Checks that passed stay folded away.",
+    note: "Failing checks and changed code with no test come first, each with what Bezl saw. The bar at the bottom sends them all at once, and it sits in the same place on every stage. Options picks who fixes, what goes with the problems and which checks run after, with the time, usage and files it may change. Nothing goes until you press send. Checks that passed stay folded.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {
     id: "trace",
     chapter: "Your tasks",
     title: "Follow the evidence",
-    note: "Evidence follows a problem back through the code it's about to the line of your goal it puts at risk, with every changed line accounted for. A link from changed code to your goal is the plan's claim, and says so; Bezl hasn't measured it. Why Bezl asks, beside a question, opens it at that question. Full screen draws it as a map; a finding pinned on a screenshot traces back to it, and See it goes the other way.",
-    view: { kind: "task", taskId: "snapshot", stage: "check", side: "evidence" },
+    note: "Evidence, under the stage, follows a problem back through the code to the line of your goal it puts at risk, and counts every changed line. Where only the plan says some code serves the goal, it tells you: the plan says so, but no test has shown it yet. Why Bezl asks, on a question, brings you here. Full screen draws it as a map; a pin on a screenshot leads back to it, and See the screen goes the other way.",
+    view: { kind: "task", taskId: "snapshot", stage: "check", tab: "evidence" },
   },
   {
     id: "review",
     chapter: "Your tasks",
     title: "Reviewed, before and after",
-    note: "Another coding agent reviews the attempt. Each done-when line shows how it is on main and after the change. Once you have answered the review's question, the bar at the bottom says why it's ready and ships it.",
+    note: "Another coding agent reviews the attempt. Each done-when line shows main next to the change. Open a line to see its proof: its screenshot, where it is in the code, and a way to the screen or the trace. Once you've answered the review's question, the bar at the bottom says why it's ready and ships it.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
     id: "full-screen",
     chapter: "Your tasks",
     title: "Decide in full screen",
-    note: "Full screen gives the review the window. Your path down the left lists each step that needs you and what it blocks. The middle shows the screenshots or the evidence map, where dotted links are the plan's claim and solid ones Bezl measured. The question and what you picked sit on the right, and the bar comes along, so whatever you decide stays when you close.",
+    note: "Full screen gives the review the whole window. Your path on the left lists each step that needs you and what it holds up. The middle shows the screenshots or the evidence map: dotted links are only the plan's word, solid ones Bezl checked. The question and what you picked sit on the right. The bar comes along, so what you decide stays when you close it.",
     view: { kind: "task", taskId: "empty-state", stage: "review", full: true },
   },
   {
     id: "ship",
     chapter: "Your tasks",
     title: "Ready to ship",
-    note: "You see the pull request next to the history of how it got here, and Bezl puts that history in the pull request's description.",
+    note: "You see the pull request next to how it got here. Bezl puts that history in the pull request's description.",
     view: { kind: "task", taskId: "empty-state", stage: "ship", kept: true },
   },
   {
     id: "pr-checks",
     chapter: "Your tasks",
     title: "Checks on the pull request",
-    note: "Once the pull request is open, Ship shows GitHub's checks as they finish. A failing check links to its log, but nothing here stops you, because merging is your call.",
+    note: "Once the pull request is open, Ship shows GitHub's checks as they finish. A failing check links to its log, but nothing here stops you. Merging is your call.",
     view: { kind: "task", taskId: "empty-state", stage: "ship", shipped: "checking" },
   },
   {
@@ -223,28 +223,28 @@ export const steps: Step[] = [
     id: "come-back",
     chapter: "Your tasks",
     title: "Coming back after a restart",
-    note: "If Bezl quits mid-step, after a crash or a restart, the task comes back amber as Interrupted, with its copy of your code as it was left and the last terminal snapshot. Bezl never picks the step back up on its own: you run it again with a fresh coding agent, or stop.",
+    note: "If Bezl closes mid-step, after a crash or a restart, the task comes back amber as Interrupted. Its copy of your code is as it was left, with the last terminal snapshot. Bezl never restarts the step on its own: you run it again with a fresh coding agent, or stop.",
     view: { kind: "task", taskId: "debounce", stage: "build", interrupted: true },
   },
   {
     id: "approvals",
     chapter: "Needs you",
     title: "One queue for you",
-    note: "Questions, requests for more access and disputed issues from every task wait for you here, and each answer tells you what happens next.",
+    note: "Questions, requests for more access and disputed issues from every task wait for you here. Each answer tells you what happens next.",
     view: { kind: "approvals" },
   },
   {
     id: "approvals-clear",
     chapter: "Needs you",
     title: "Nothing needs you",
-    note: "When nothing is waiting, the page says so plainly. Every answer you gave is kept in its task's history.",
+    note: "When nothing is waiting, the page says so. Every answer you gave is kept in its task's history.",
     view: { kind: "approvals", cleared: true },
   },
   {
     id: "history",
     chapter: "Look back",
     title: "How it got here",
-    note: "Look back over every event, open the terminal snapshots and see what changed, with the time you spent shown next to the agents' time.",
+    note: "Look back over every event, open the terminal snapshots and see what changed, with your time shown next to the agents' time.",
     view: { kind: "history" },
   },
 ];

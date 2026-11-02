@@ -11,7 +11,7 @@ import {
   Switch,
 } from "@kb.ui/react";
 import type { ReactNode } from "react";
-import { createContext, useContext, useId, useState } from "react";
+import { createContext, Fragment, useContext, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { LightIcon, lightTone } from "./icons";
 import "./journey.css";
@@ -24,9 +24,11 @@ import {
   type FileChange,
   lightLabel,
   type Problem,
+  type Proof,
   type Row,
   type SendBackOptions,
   type ShipSummary,
+  type Shot,
   stageLabel,
   type Take,
 } from "./model";
@@ -171,7 +173,7 @@ export function Problems({
   onWhy,
 }: {
   problems: Problem[];
-  /** Opens the trace at a problem. */
+  /** Shows a problem in Evidence. */
   onWhy?: ((id: string) => void) | undefined;
 }) {
   const id = useId();
@@ -228,14 +230,79 @@ function sendText(problems: Problem[]): { what: string; writers: string } {
   };
 }
 
-/** Review: each line as it is on main and after the attempt. */
-export function Compare({ compare }: { compare: Comparison }) {
+/** A line's proof, under it: its screenshot, where in the code, and where to look next. */
+function ProofView({
+  proof,
+  shot,
+  onShot,
+  onNode,
+}: {
+  proof: Proof;
+  shot: Shot | undefined;
+  onShot?: ((id: string) => void) | undefined;
+  onNode?: ((id: string) => void) | undefined;
+}) {
+  const { node, where } = proof;
+  return (
+    <div className="journey-proof">
+      {shot ? (
+        <img
+          className="journey-proof-shot"
+          src={shot.images.desktop}
+          alt={`${shot.screen}, ${shot.name}`}
+        />
+      ) : null}
+      <div className="journey-proof-body">
+        {where ? (
+          <p className="journey-proof-where">
+            <span className="journey-eyebrow">Code</span>
+            <span className="journey-mono">{where}</span>
+          </p>
+        ) : null}
+        <div className="journey-proof-actions">
+          {shot && onShot ? (
+            <Button size="sm" variant="secondary" onClick={() => onShot(shot.id)}>
+              See the screen
+            </Button>
+          ) : null}
+          {node && onNode ? (
+            <Button size="sm" variant="secondary" onClick={() => onNode(node)}>
+              See the trace
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Review: each line as it is on main and after the attempt; a line opens to its proof. */
+export function Compare({
+  compare,
+  shots = [],
+  onShot,
+  onNode,
+}: {
+  compare: Comparison;
+  /** The stage's screenshots, for each line's thumbnail. */
+  shots?: Shot[] | undefined;
+  /** Shows a screenshot in Screens. */
+  onShot?: ((id: string) => void) | undefined;
+  /** Shows a trace node in Evidence. */
+  onNode?: ((id: string) => void) | undefined;
+}) {
+  const id = useId();
   const [diff, setDiff] = useState(false);
+  const [opened, setOpened] = useState<number[]>([]);
   const { columns, rows } = compare;
   const shown = diff
     ? rows.filter((r) => new Set(columns.map((c) => r.cells[c.id]?.text)).size > 1)
     : rows;
   const groups = [...new Set(shown.map((r) => r.group))];
+  const shotOf = (p?: Proof) => shots.find((s) => s.id === p?.shot);
+  // Only a line with something to show opens.
+  const showable = (p?: Proof) =>
+    Boolean(p && ((shotOf(p) && onShot) || p.where || (p.node && onNode)));
   return (
     <section className="journey-section journey-compare" aria-label="Compare">
       <Switch label="Only what differs" checked={diff} onCheckedChange={setDiff} />
@@ -261,27 +328,65 @@ export function Compare({ compare }: { compare: Comparison }) {
             </tr>
             {shown
               .filter((r) => r.group === g)
-              .map((r) => (
-                <tr key={r.label}>
-                  <th scope="row">{r.label}</th>
-                  {columns.map((c) => {
-                    const cell = r.cells[c.id];
-                    return (
-                      <td key={c.id} data-light={cell?.light}>
-                        {cell ? (
-                          <>
-                            <span className="journey-row-icon">
-                              <LightIcon light={cell.light} />
-                              <span className="journey-sr">{`${lightLabel[cell.light]}: `}</span>
-                            </span>
-                            {cell.text}
-                          </>
-                        ) : null}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              .map((r) => {
+                const i = rows.indexOf(r);
+                const proof = showable(r.proof) ? r.proof : undefined;
+                const open = Boolean(proof) && opened.includes(i);
+                return (
+                  <Fragment key={r.label}>
+                    <tr>
+                      <th scope="row">
+                        {proof ? (
+                          <button
+                            type="button"
+                            className="journey-compare-label journey-disclose"
+                            aria-expanded={open}
+                            aria-controls={`${id}-${i}`}
+                            onClick={() =>
+                              setOpened(open ? opened.filter((o) => o !== i) : [...opened, i])
+                            }
+                          >
+                            {r.label}
+                          </button>
+                        ) : (
+                          r.label
+                        )}
+                      </th>
+                      {columns.map((c) => {
+                        const cell = r.cells[c.id];
+                        return (
+                          <td key={c.id} data-light={cell?.light}>
+                            {cell ? (
+                              <>
+                                <span className="journey-compare-col" aria-hidden="true">
+                                  {c.name}
+                                </span>
+                                <span className="journey-row-icon">
+                                  <LightIcon light={cell.light} />
+                                  <span className="journey-sr">{`${lightLabel[cell.light]}: `}</span>
+                                </span>
+                                {cell.text}
+                              </>
+                            ) : null}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {open && proof ? (
+                      <tr id={`${id}-${i}`} className="journey-proof-row">
+                        <td colSpan={columns.length + 1}>
+                          <ProofView
+                            proof={proof}
+                            shot={shotOf(proof)}
+                            onShot={onShot}
+                            onNode={onNode}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
           </tbody>
         ))}
       </table>
@@ -346,7 +451,7 @@ export function SendBack({
             />
             <Checkbox
               label="Your notes"
-              description="The notes you pinned in Preview."
+              description="The notes you put on the screenshots."
               checked={carry.notes}
               onCheckedChange={(notes) => setCarry({ ...carry, notes })}
             />
@@ -358,7 +463,7 @@ export function SendBack({
               />
             ) : null}
           </Fieldset>
-          <Fieldset legend="Checks after the fix">
+          <Fieldset legend="Checks to run after the fix">
             {options.checks.map((c) => (
               <Switch
                 key={c.id}
@@ -395,7 +500,7 @@ export function SendBack({
   );
 }
 
-/** Where the stage's questions and bar go while the workspace is full screen; null keeps them in place. */
+/** Where the stage's questions and bar go while full screen is open; null keeps them in place. */
 export const FullSlots = createContext<{ ask: HTMLElement | null; bar: HTMLElement | null }>({
   ask: null,
   bar: null,
