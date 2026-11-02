@@ -1,5 +1,4 @@
 import type { StageId } from "../journey/model";
-import type { Part } from "../journey/Workbench";
 import type { drafts } from "../newtask/fixtures";
 import type { NewTaskStep } from "../newtask/NewTask";
 import { oneOf, type Theme, themes } from "./states";
@@ -31,9 +30,7 @@ export type TourView =
       stage: StageId;
       kept?: boolean;
       shipped?: "checking" | "merged";
-      /** Full screen's first tab; Evidence also starts at the first problem. */
-      tab?: Part;
-      /** Opens full screen. */
+      /** Opens with the map open. */
       full?: boolean;
       /** The list after Bezl closed mid-Build. */
       interrupted?: boolean;
@@ -146,56 +143,56 @@ export const steps: Step[] = [
     id: "context",
     chapter: "Your tasks",
     title: "What it's for, how big, how sure",
-    note: "One line under the stages: how much of the goal is done, how big and how risky the change is, and how much of it ran in a test. Point at the risk to see what it's based on. Each part takes you to its proof further down, and Intent opens the goal, your decisions and the agents' guesses. Point at a stage to see what happened there and who acted.",
+    note: "Under the stages: your goal in your own words, where it stands, and one quiet line with how big the change is, how risky and how much of it ran in a test. Point at the risk to see what it's based on. Below that, You asked for lists each done-when line with how it's going. Pick a line to see everything behind it beside the list: its questions, problems, screenshots, code and test. Point at a stage to see what happened there and who acted.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
     id: "preview",
     chapter: "Your tasks",
     title: "See it before you decide",
-    note: "Screens shows only when Bezl took screenshots of your app. A phone screenshot shows at its real width, with each finding pinned where it is. Click a spot to leave a note. Full screen gives the screenshots the whole window, with a second one beside it to compare and your path to the goal down the side.",
+    note: "Screenshots show in a line's detail, and only when Bezl took screenshots of your app. A phone screenshot shows at its real width, with each finding pinned where it is. Click a spot to leave a note. Open the map gives the screenshots the whole window, with a second one beside it to compare.",
     view: { kind: "task", taskId: "empty-state", stage: "check" },
   },
   {
     id: "working",
     chapter: "Your tasks",
     title: "Work in progress",
-    note: "The attempt works in its own copy of your code. One line says what it's doing right now, and you can send it a message while it works.",
+    note: "The attempt works in its own copy of your code. Its row says what it's doing right now. Open it to see the whole attempt and send it a message while it works.",
     view: { kind: "task", taskId: "debounce", stage: "build" },
   },
   {
     id: "question",
     chapter: "Your tasks",
     title: "A question waits on you",
-    note: "When a coding agent stops to ask you something, the task turns amber and the question opens at the top of the stage. It shows what the question holds up, what Bezl recommends, and what each answer leads to, costs and unblocks. Questions Bezl could answer itself are folded under Bezl handled.",
+    note: "When a coding agent stops to ask you something, the task turns amber and the question waits on the line it holds up, picked for you. It shows what Bezl recommends, and what each answer leads to, costs and unblocks. A question that isn't about one line sits under Not tied to a line. Questions Bezl could answer itself are folded under Bezl handled.",
     view: { kind: "task", taskId: "deny-scopes", stage: "build" },
   },
   {
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Failing checks and changed code with no test come first, each with what Bezl saw. The bar at the bottom sends them all at once, and it sits in the same place on every stage. Options picks who fixes, what goes with the problems and which checks run after, with the time, usage and files it may change. Nothing goes until you press send. Checks that passed stay folded.",
+    note: "A line that fails comes before the rest, with what Bezl saw in its detail. Changed code with no line of its own sits under Not tied to a line. The bar at the bottom sends every problem at once, and it sits in the same place on every stage. Options picks who fixes, what goes with the problems and which checks run after, with the time, usage and files it may change. Nothing goes until you press send. Checks that passed stay folded.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {
     id: "trace",
     chapter: "Your tasks",
-    title: "Follow the evidence",
-    note: "Evidence, under the stage, follows a problem back through the code to the line of your goal it puts at risk, and counts every changed line. Where only the plan says some code serves the goal, it tells you: the plan says so, but no test has shown it yet. Why Bezl asks, on a question, brings you here. Full screen draws it as a map; a pin on a screenshot leads back to it, and See the screen goes the other way.",
-    view: { kind: "task", taskId: "snapshot", stage: "check", tab: "evidence" },
+    title: "Follow a line into the code",
+    note: "A line's detail lists where it is in the code and what ran to check it. Where only the plan says some code serves the line, it tells you: the plan says so, but no test has shown it yet. Open the map draws the whole path from a problem back to the line it puts at risk, and Why Bezl asks, on a question, opens it there. A pin on a screenshot leads to the map, and See the screen goes the other way.",
+    view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {
     id: "review",
     chapter: "Your tasks",
     title: "Reviewed, before and after",
-    note: "Another coding agent reviews the attempt. Each done-when line shows main next to the change. Open a line to see its proof: its screenshot, where it is in the code, and a way to the screen or the trace. Once you've answered the review's question, the bar at the bottom says why it's ready and ships it.",
+    note: "Another coding agent reviews the attempt. Each line shows main next to the change: main fails, now works. Pick a line to see its screenshot, where it is in the code and the test that ran. Other checks, after the lines, holds the rest, main against now. Once you've answered the review's question, the bar at the bottom says why it's ready and ships it.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
     id: "full-screen",
     chapter: "Your tasks",
-    title: "Decide in full screen",
-    note: "Full screen gives the review the whole window. Your path on the left lists each step that needs you and what it holds up. The middle shows the screenshots or the evidence map: dotted links are only the plan's word, solid ones Bezl checked. The question and what you picked sit on the right. The bar comes along, so what you decide stays when you close it.",
+    title: "Open the map",
+    note: "Open the map gives the review the whole window. Your path on the left lists each step that needs you and what it holds up. The middle shows the map, or the screenshots: dotted links are only the plan's word, solid ones Bezl checked. The question and what you picked sit on the right. The bar comes along, so what you decide stays when you close it.",
     view: { kind: "task", taskId: "empty-state", stage: "review", full: true },
   },
   {

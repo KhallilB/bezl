@@ -23,36 +23,34 @@ import warmPhone from "./samples/projects-warm-phone.jpg";
 
 // Sample data only; shapes match what M5 projects from the task log.
 
-const define = (quote: string, done: DoneWhen[]): StageView => ({
+// Done-when lines show in the list, not here.
+const define = (quote: string): StageView => ({
   lead: "Ready to start.",
   by: "You, from the issue",
   rest: "The goal has what a coding agent needs to start.",
   quote,
-  sections: [
-    {
-      title: "It's done when",
-      rows: done.map(({ text, checker }) => ({ text, meta: checker, light: "done" })),
-    },
-  ],
+  sections: [],
 });
 
-const line = (text: string, checker: string, light: DoneWhen["light"], status: string) => ({
-  text,
-  checker,
-  light,
-  status,
-});
+const line = (
+  text: string,
+  checker: string,
+  light: DoneWhen["light"],
+  status: string,
+  node?: string,
+): DoneWhen => ({ text, checker, light, status, ...(node ? { node } : {}) });
 const unchecked = (text: string, checker: string) => line(text, checker, "waiting", "after Build");
 
 const emptyDone: DoneWhen[] = [
-  line("The empty state shows when there are no projects", "Tests check", "done", "proven"),
+  line("The empty state shows when there are no projects", "Tests check", "done", "proven", "i1"),
   line(
     "There's one clear way to create the first project",
     "You check",
     "needsYou",
     "You check in Review",
+    "i2",
   ),
-  line("The page passes accessibility checks", "Bezl checks", "done", "0 issues"),
+  line("The page passes accessibility checks", "Bezl checks", "done", "0 issues", "i3"),
   line("Existing tests still pass", "Bezl checks", "done", "48 passed"),
 ];
 
@@ -306,7 +304,6 @@ const emptyState: JourneyTask = {
     define: {
       ...define(
         "When someone has no projects yet, the Projects page should help them start one instead of showing an empty table.",
-        emptyDone,
       ),
       shots: [today],
     },
@@ -350,7 +347,7 @@ const emptyState: JourneyTask = {
     review: {
       lead: "Ready to ship?",
       by: "Codex reviewed Claude Code's attempt",
-      rest: "Codex checked it against your done-when list. Each line shows main next to the change. Open a line to see its proof.",
+      rest: "Codex checked it against your done-when list. Each line shows main next to the change. Pick a line to see its screenshot, code and test.",
       sections: [],
       takes: reviewed("Ready"),
       compare: emptyCompare,
@@ -397,10 +394,7 @@ const denyScopes: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    define: define(
-      "A token request with no scopes should be refused, not granted everything.",
-      denyDone,
-    ),
+    define: define("A token request with no scopes should be refused, not granted everything."),
     plan: {
       lead: "The plan is ready.",
       by: "Codex",
@@ -486,10 +480,7 @@ const debounce: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    define: define(
-      "Dragging the window should not resize every terminal on every frame.",
-      debounceDone,
-    ),
+    define: define("Dragging the window should not resize every terminal on every frame."),
     plan: {
       lead: "Working through the plan.",
       by: "Claude Code",
@@ -548,8 +539,9 @@ const snapshotDone = [
     "Tests check",
     "failed",
     "1 failing",
+    "s1",
   ),
-  line("Snapshots stay in .git/bezl", "Bezl checks", "done", "proven"),
+  line("Snapshots stay in .git/bezl", "Bezl checks", "done", "proven", "s2"),
 ];
 
 const snapshotTrace: Trace = {
@@ -600,10 +592,7 @@ const snapshot: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    define: define(
-      "Save a terminal's screen so it opens again after the pane closes.",
-      snapshotDone,
-    ),
+    define: define("Save a terminal's screen so it opens again after the pane closes."),
     plan: {
       lead: "The plan is done.",
       by: "Codex",

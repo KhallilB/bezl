@@ -96,7 +96,7 @@ test("every screen in the shell puts its title on one edge, one line and one siz
   expect(distinct(seen), JSON.stringify(seen)).toHaveLength(1);
 });
 
-// A task page holds screenshots and Review's table, so it gets the one wider frame.
+// A task page holds its lines beside their detail, so it gets the one wider frame.
 const isTask = (s: (typeof steps)[number]) => ["task", "started"].includes(s.view.kind);
 
 test("every screen in the shell is one width, and every task page one wider width", async () => {
@@ -113,13 +113,50 @@ test("every screen in the shell is one width, and every task page one wider widt
   expect(Object.values(wide)[0]).toBeGreaterThan(Object.values(narrow)[0] ?? 0);
 });
 
-test("the summary under the stages is one line, and Preview shows a phone shot at its width", async () => {
+test("the picked line's detail sits beside the list and shows a phone shot at its width", async () => {
   await page.viewport(1440, 900);
   const el = await mount("?screen=walkthrough&step=preview&theme=dark");
-  const summary = el.querySelector<HTMLElement>(".journey-summary");
-  expect(summary?.getBoundingClientRect().height).toBeLessThanOrEqual(40);
-  const shot = el.querySelector<HTMLElement>(".journey-shot img");
+  const list = el.querySelector(".journey-lines-list")?.getBoundingClientRect();
+  const pane = el.querySelector(".journey-detail")?.getBoundingClientRect();
+  expect(list && pane && pane.left >= list.right).toBe(true);
+  const shot = el.querySelector<HTMLElement>(".journey-detail .journey-shot img");
   expect(shot?.getBoundingClientRect().width).toBeGreaterThanOrEqual(360);
+});
+
+test("at 1440x900 the list starts above the fold on Review and Check", async () => {
+  await page.viewport(1440, 900);
+  const seen = await each(
+    steps.filter((s) => ["preview", "problems", "review"].includes(s.id)),
+    (el) => el.querySelector(".journey-line")?.getBoundingClientRect().top ?? Number.NaN,
+  );
+  for (const [id, top] of Object.entries(seen)) {
+    expect(top >= 0 && top < window.innerHeight, `${id}: ${top}`).toBe(true);
+  }
+});
+
+test("at 1440px a picked line's detail is in view without scrolling the page", async () => {
+  await page.viewport(1440, 900);
+  const el = await mount("?screen=walkthrough&step=review&theme=dark");
+  const rows = el.querySelectorAll<HTMLElement>(".journey-lines-list button.journey-line");
+  const last = rows[rows.length - 1] as HTMLElement;
+  last.scrollIntoView({ block: "end" });
+  last.click();
+  await new Promise((r) => requestAnimationFrame(r));
+  const heading = el.querySelector(".journey-detail h2")?.getBoundingClientRect();
+  expect(heading && heading.top >= 0 && heading.bottom <= window.innerHeight).toBe(true);
+});
+
+test("at 390px a line opens in place, under its row", async () => {
+  await page.viewport(390, 844);
+  const el = await mount("?screen=walkthrough&step=problems&theme=dark");
+  const rows = () => [...el.querySelectorAll<HTMLElement>("button.journey-line")];
+  await expect.poll(() => rows()[0]?.getAttribute("aria-expanded")).toBe("true");
+  expect(rows()[0]?.closest("li")?.querySelector(".journey-detail")).toBeTruthy();
+  rows()[1]?.click();
+  await expect.poll(() => rows()[1]?.getAttribute("aria-expanded")).toBe("true");
+  expect(rows()[0]?.getAttribute("aria-expanded")).toBe("false");
+  expect(rows()[1]?.closest("li")?.querySelector(".journey-detail")).toBeTruthy();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 });
 
 test("a header action sits at the end of the title row", async () => {
@@ -190,7 +227,7 @@ test("Providers' card titles match the shell's", async () => {
   const size = (el: Element | null) => (el ? getComputedStyle(el).fontSize : "none");
   const shell = await each(
     steps.filter((s) => s.id === "working"),
-    (el) => size(el.querySelector(".journey-take h2")),
+    (el) => size(el.querySelector(".journey-take-model")),
   );
   const cards = await each(providerSteps, (el) =>
     [...el.querySelectorAll(".providers-panel h2")].map(size).join(),
@@ -201,43 +238,18 @@ test("Providers' card titles match the shell's", async () => {
   }
 });
 
-// A wrapped label is fine; a word per line is not.
-for (const [width, height] of [
-  [1440, 900],
-  [390, 844],
-] as const) {
-  test(`at ${width}px Review's done-when labels read as lines, not a word per line`, async () => {
-    await page.viewport(width, height);
-    const el = await mount("?screen=walkthrough&step=review&theme=dark");
-    const labels = [...el.querySelectorAll<HTMLElement>(".journey-table th[scope='row']")];
-    expect(labels.length).toBeGreaterThan(0);
-    const lines = labels.map((th) => {
-      const tops = new Set<number>();
-      const text = document.createTreeWalker(th, NodeFilter.SHOW_TEXT);
-      for (let n = text.nextNode(); n; n = text.nextNode()) {
-        const range = document.createRange();
-        range.selectNodeContents(n);
-        for (const r of range.getClientRects()) tops.add(Math.round(r.top));
-      }
-      return tops.size;
-    });
-    expect(Math.max(...lines), JSON.stringify(lines)).toBeLessThanOrEqual(2);
-  });
-}
-
 const press = (root: ParentNode, text: string, selector = "button") =>
   [...root.querySelectorAll<HTMLElement>(selector)]
     .find((b) => b.textContent?.includes(text))
     ?.click();
 
 for (const theme of ["dark", "light"] as const) {
-  test(`full screen draws the evidence map with one finding's chain lit, and passes the scan in ${theme}`, async () => {
+  test(`the map lights one finding's chain, and passes the scan in ${theme}`, async () => {
     await page.viewport(1440, 900);
     await mount(`?screen=walkthrough&step=review&theme=${theme}`);
-    press(document, "Full screen");
+    press(document, "Open the map");
     await expect.poll(() => document.querySelector('[role="dialog"]')).toBeTruthy();
     const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
-    press(dialog, "Evidence", '[role="tab"]');
     await expect.poll(() => dialog.querySelectorAll(".journey-map-card").length).toBe(12);
     press(dialog, "Import from GitHub does nothing yet", ".journey-path button");
     const lit = () =>
