@@ -80,7 +80,7 @@ export function StateScene({ scene }: { scene: Scene }) {
       onStop={(id) =>
         setWorkers((all) =>
           all.map((w) =>
-            w.id === id ? { ...w, state: "finished", summary: "Stopped by you." } : w,
+            w.id === id ? { ...w, state: "finished", summary: "You stopped it." } : w,
           ),
         )
       }
@@ -146,7 +146,10 @@ function Overview({ onOpen }: { onOpen: OpenState }) {
     <main className="walkthrough-overview" aria-labelledby="walkthrough-overview-title">
       <header className="walkthrough-intro">
         <h1 id="walkthrough-overview-title">Every state, both themes</h1>
-        <p>The interim Task screen on sample data. Click a screen to open it.</p>
+        <p>
+          These are the interim Task screen's states, shown with sample data. Click any screen to
+          open it.
+        </p>
       </header>
       {themes.map((theme) => (
         <section key={theme} className="walkthrough-row" aria-labelledby={`walkthrough-${theme}`}>

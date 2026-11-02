@@ -32,7 +32,7 @@ function StopWorker({ worker, onStop }: WorkerProps) {
       <Dialog.Content
         {...(portal ? { container: portal } : {})}
         title={`Stop ${worker.name}?`}
-        description="It stops now. What it printed so far stays in the task's history."
+        description="It stops right away, and everything it printed so far stays in the task's history."
       >
         <Dialog.Actions>
           <Dialog.Close render={<Button variant="ghost" />}>Keep going</Dialog.Close>

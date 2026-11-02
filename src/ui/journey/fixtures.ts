@@ -4,7 +4,7 @@ import type { JourneyTask, ProviderUsage, StageView, Take } from "./model";
 
 const brief = (quote: string, done: [string, string][]): StageView => ({
   lead: "Ready to start.",
-  rest: "Everything a coding agent needs is here.",
+  rest: "The brief covers everything a coding agent needs.",
   quote,
   sections: [
     {
@@ -44,7 +44,7 @@ const reviewed = (a: string, b: string): Take[] => [
     state: a,
     verdict: {
       by: "Codex",
-      text: "Clear, reuses EmptyState. The import link does nothing yet.",
+      text: "Clear, and it reuses EmptyState. The import link does nothing yet.",
     },
     findings: [
       {
@@ -60,7 +60,7 @@ const reviewed = (a: string, b: string): Take[] => [
     verdict: { by: "Claude Code", text: "Helpful, but the checklist text is too faint to read." },
     findings: [
       {
-        text: "Checklist text is too faint: contrast is 2.6:1, needs 4.5:1",
+        text: "Checklist text is too faint, with 2.6:1 contrast where 4.5:1 is needed",
         where: "ProjectsChecklist.tsx:18",
         light: "needsYou",
       },
@@ -87,14 +87,14 @@ const emptyState: JourneyTask = {
       "When someone has no projects yet, the Projects page should help them start one instead of showing an empty table.",
       [
         ["The empty state shows when there are no projects", "Tests check"],
-        ["One clear way to create the first project", "You check"],
-        ["Passes accessibility checks", "Bezl checks"],
+        ["There's one clear way to create the first project", "You check"],
+        ["The page passes accessibility checks", "Bezl checks"],
         ["Existing tests still pass", "Bezl checks"],
       ],
     ),
     plan: {
-      lead: "Plan done.",
-      rest: "4 of 4 steps finished.",
+      lead: "The plan is done.",
+      rest: "All 4 steps are finished.",
       sections: [
         {
           title: "Attempt A · Claude Code",
@@ -116,8 +116,8 @@ const emptyState: JourneyTask = {
       ],
     },
     build: {
-      lead: "Built.",
-      rest: "Both attempts finished.",
+      lead: "Build is done.",
+      rest: "Both attempts have finished.",
       sections: [],
       takes: [
         { ...takeA, state: "Finished", light: "done", activity: "Finished in 6 minutes" },
@@ -126,7 +126,7 @@ const emptyState: JourneyTask = {
     },
     check: {
       lead: "Everything passed.",
-      rest: "Attempt B's two problems went back to Codex and are fixed.",
+      rest: "Attempt B had two problems at first, but Codex fixed them once they were sent back.",
       sections: [],
       passed: [
         { text: "bun run test", meta: "48 passed", mono: true, light: "done" },
@@ -136,13 +136,13 @@ const emptyState: JourneyTask = {
     },
     review: {
       lead: "Which attempt should ship?",
-      rest: "Each one was reviewed by the other coding agent.",
+      rest: "Each one has been reviewed by the other coding agent, so you can compare them before you choose.",
       sections: [],
       takes: reviewed("Ready", "Ready"),
     },
     ship: {
-      lead: "Not yet.",
-      rest: "Ship opens once you keep an attempt.",
+      lead: "Nothing to ship yet.",
+      rest: "Ship opens once you choose which attempt to keep.",
       sections: [],
     },
   },
@@ -167,7 +167,7 @@ const denyScopes: JourneyTask = {
       ["Existing grants keep working", "Bezl checks"],
     ]),
     plan: {
-      lead: "Plan ready.",
+      lead: "The plan is ready.",
       rest: "Step 2 of 3 is waiting on you.",
       sections: [
         {
@@ -182,7 +182,7 @@ const denyScopes: JourneyTask = {
     },
     build: {
       lead: "Codex has a question.",
-      rest: "It stopped before overwriting a file.",
+      rest: "It stopped before overwriting a file and is waiting for your answer.",
       sections: [],
       takes: [
         {
@@ -190,14 +190,26 @@ const denyScopes: JourneyTask = {
           model: "Codex",
           state: "Waiting on you",
           light: "needsYou",
-          activity: "Stopped before changing src/policy.rs · waiting 6 min",
+          activity: "Stopped before changing src/policy.rs and has been waiting 6 minutes",
           files: [{ path: "crates/bezl-domain/tests/policy.rs", added: 22, removed: 0 }],
         },
       ],
     },
-    check: { lead: "Not yet.", rest: "Checks run after Build.", sections: [] },
-    review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-    ship: { lead: "Not yet.", rest: "Ship opens once you keep an attempt.", sections: [] },
+    check: {
+      lead: "Checks haven't run yet.",
+      rest: "They start once Build finishes.",
+      sections: [],
+    },
+    review: {
+      lead: "Review hasn't started.",
+      rest: "It starts once Check is done.",
+      sections: [],
+    },
+    ship: {
+      lead: "Nothing to ship yet.",
+      rest: "Ship opens once you choose which attempt to keep.",
+      sections: [],
+    },
   },
 };
 
@@ -216,12 +228,12 @@ const debounce: JourneyTask = {
   },
   views: {
     brief: brief("Dragging the window should not resize every terminal on every frame.", [
-      ["At most one resize per pane every 100 ms", "Tests check"],
+      ["Each pane resizes at most once every 100 ms", "Tests check"],
       ["The final size is always applied", "Tests check"],
     ]),
     plan: {
       lead: "Working through the plan.",
-      rest: "On step 2 of 3.",
+      rest: "It's on step 2 of 3.",
       sections: [
         {
           title: "Attempt A · Claude Code",
@@ -235,7 +247,7 @@ const debounce: JourneyTask = {
     },
     build: {
       lead: "Claude Code is writing.",
-      rest: "4 minutes in.",
+      rest: "It started 4 minutes ago.",
       sections: [],
       takes: [
         {
@@ -248,9 +260,21 @@ const debounce: JourneyTask = {
         },
       ],
     },
-    check: { lead: "Not yet.", rest: "Checks run after Build.", sections: [] },
-    review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-    ship: { lead: "Not yet.", rest: "Ship opens once you keep an attempt.", sections: [] },
+    check: {
+      lead: "Checks haven't run yet.",
+      rest: "They start once Build finishes.",
+      sections: [],
+    },
+    review: {
+      lead: "Review hasn't started.",
+      rest: "It starts once Check is done.",
+      sections: [],
+    },
+    ship: {
+      lead: "Nothing to ship yet.",
+      rest: "Ship opens once you choose which attempt to keep.",
+      sections: [],
+    },
   },
 };
 
@@ -269,12 +293,12 @@ const snapshot: JourneyTask = {
   },
   views: {
     brief: brief("Save a terminal's screen so it opens again after the pane closes.", [
-      ["A snapshot restores colours and cursor", "Tests check"],
+      ["A snapshot restores the colours and the cursor position", "Tests check"],
       ["Snapshots stay in .git/bezl", "Bezl checks"],
     ]),
     plan: {
-      lead: "Plan done.",
-      rest: "3 of 3 steps finished.",
+      lead: "The plan is done.",
+      rest: "All 3 steps are finished.",
       sections: [
         {
           title: "Attempt A · Codex",
@@ -287,7 +311,7 @@ const snapshot: JourneyTask = {
       ],
     },
     build: {
-      lead: "Built.",
+      lead: "Build is done.",
       rest: "Attempt A finished in 11 minutes.",
       sections: [],
       takes: [
@@ -306,7 +330,7 @@ const snapshot: JourneyTask = {
     },
     check: {
       lead: "2 things need a look.",
-      rest: "Everything else passed.",
+      rest: "Everything else passed, so these are all that's left.",
       sections: [],
       problems: [
         {
@@ -340,8 +364,16 @@ const snapshot: JourneyTask = {
         { text: "Accessibility at 1440 px and 390 px wide", meta: "0 issues", light: "done" },
       ],
     },
-    review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-    ship: { lead: "Not yet.", rest: "Ship opens once you keep an attempt.", sections: [] },
+    review: {
+      lead: "Review hasn't started.",
+      rest: "It starts once Check is done.",
+      sections: [],
+    },
+    ship: {
+      lead: "Nothing to ship yet.",
+      rest: "Ship opens once you choose which attempt to keep.",
+      sections: [],
+    },
   },
 };
 
@@ -360,8 +392,8 @@ const kept: JourneyTask = {
   views: {
     ...emptyState.views,
     review: {
-      lead: "Attempt A kept.",
-      rest: "Attempt B is set aside, not deleted.",
+      lead: "You kept attempt A.",
+      rest: "Attempt B is set aside rather than deleted, in case you want it later.",
       sections: [],
       takes: reviewed("Kept", "Set aside"),
     },
@@ -372,18 +404,21 @@ const kept: JourneyTask = {
       ship: {
         title: "Add an empty state to the Projects page",
         summary:
-          "Claude Code wrote attempt A and Codex reviewed it. It reuses EmptyState with one action, “Create your first project”.",
+          "Claude Code wrote attempt A and Codex reviewed it. It reuses EmptyState with a single action, “Create your first project”.",
         facts: ["12 of 12 checks passed", "Reviewed by Codex", "Attempt A of 2"],
         files: takeA.files ?? [],
         history: [
-          { stage: "brief", text: "For new users; reuse EmptyState; one clear action" },
-          { stage: "plan", text: "4 steps by Claude Code, 3 by Codex" },
-          { stage: "build", text: "Two attempts, one by Claude Code and one by Codex" },
+          {
+            stage: "brief",
+            text: "Help new users start a project by reusing EmptyState with one clear action",
+          },
+          { stage: "plan", text: "Claude Code planned 4 steps and Codex planned 3" },
+          { stage: "build", text: "Claude Code and Codex each built one attempt" },
           {
             stage: "check",
-            text: "Attempt B had 2 problems, now fixed; attempt A passed all 12 checks",
+            text: "Attempt A passed all 12 checks, and attempt B's 2 problems are now fixed",
           },
-          { stage: "review", text: "Codex: “Clear, reuses EmptyState”" },
+          { stage: "review", text: "Codex said “Clear, and it reuses EmptyState”" },
         ],
         pullRequest: { number: 42, url: "https://github.com/acme/studio-web/pull/42" },
       },

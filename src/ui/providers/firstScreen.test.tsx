@@ -32,6 +32,6 @@ describe("first screen", () => {
     expect(screen.queryByRole("heading", { level: 1, name: "Coding agents" })).toBeNull();
     expect(invoke).not.toHaveBeenCalledWith("providers_preflight");
     expect(screen.getByRole("region", { name: "Worker B" })).toBeVisible();
-    expect(screen.getByText(/overwrite src\/policy\.rs\?/)).toBeVisible();
+    expect(screen.getByText(/whether to overwrite src\/policy\.rs/)).toBeVisible();
   });
 });

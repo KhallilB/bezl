@@ -69,7 +69,7 @@ describe("Review", () => {
   test("attempts sit side by side, each with the other agent's verdict", () => {
     open(tasks, "empty-state", "review");
     expect(
-      within(take(/Attempt A, Claude Code/)).getByText(/Clear, reuses EmptyState/),
+      within(take(/Attempt A, Claude Code/)).getByText(/Clear, and it reuses EmptyState/),
     ).toBeVisible();
     expect(within(take(/Attempt A, Claude Code/)).getByText("Codex:")).toBeVisible();
     expect(within(take(/Attempt B, Codex/)).getByText("Claude Code:")).toBeVisible();

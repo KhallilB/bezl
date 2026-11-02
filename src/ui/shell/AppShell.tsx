@@ -51,8 +51,8 @@ export function EmptyTasks({
           No tasks yet
         </h1>
         <p className="page-lead">
-          Describe a change and choose who writes and who reviews it. Bezl gives the task its own
-          copy of your code.
+          Describe a change, then choose which coding agent writes it and which one reviews it. Bezl
+          gives every task its own copy of your code to work in.
         </p>
       </header>
       {firstRun ? <OnboardingSteps current="first" /> : null}

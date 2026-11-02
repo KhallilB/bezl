@@ -14,7 +14,7 @@ function SnapshotViewer({ snapshot, onClose }: { snapshot: Snapshot | null; onCl
         <Dialog.Content
           {...(portal ? { container: portal } : {})}
           title={`Snapshot · attempt ${snapshot.take} · ${snapshot.model}`}
-          description={`The terminal as it was at ${snapshot.at}.`}
+          description={`This is how the terminal looked at ${snapshot.at}.`}
           className="history-viewer"
         >
           <pre className="history-screen">{snapshot.lines.join("\n")}</pre>

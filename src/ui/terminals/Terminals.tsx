@@ -43,7 +43,7 @@ export function Terminals({
         <Dialog.Content
           {...(portal ? { container: portal } : {})}
           title="Snapshot"
-          description="Saved in this clone's record. The Snapshots screen lists every one."
+          description="Bezl saved it with this repository's history, and the Snapshots screen lists every one."
           className="snapshot-dialog"
         >
           {viewing ? <SnapshotViewer saved={viewing} /> : null}

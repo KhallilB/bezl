@@ -38,7 +38,7 @@ describe("ProvidersScreen", () => {
     expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
 
     await again.finish([claudeFound, codexProbed]);
-    expect(screen.getByText("Ready: Claude Code and Codex can write code.")).toBeVisible();
+    expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
     expect(screen.queryByRole("status")).toBeNull();
   });
 

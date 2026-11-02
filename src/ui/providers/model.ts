@@ -155,7 +155,7 @@ export function signinShown(signin: CodexSignIn): Shown {
     case "homeMissing":
       return quiet("Not set up yet");
     case "unrecognized":
-      return needsYou(`Unexpected reply: "${signin.detail.says}"`);
+      return needsYou("Unexpected reply");
     case "failed":
       return failed(runErrorText(signin.detail));
   }
@@ -166,11 +166,11 @@ export function canaryShown(signin: ClaudeSignIn): Shown {
     case "signedIn":
       return good(`Signed in. ${signin.detail.model} answered a test message`);
     case "signedOut":
-      return needsYou(`Signed out: "${signin.detail.says}"`);
+      return needsYou("Signed out");
     case "outOfQuota":
-      return needsYou(`Usage limit reached: "${signin.detail.says}"`);
+      return needsYou("Usage limit reached");
     case "unrecognized":
-      return needsYou(`Unexpected reply: "${signin.detail.says}"`);
+      return needsYou("Unexpected reply");
     case "failed":
       return failed(runErrorText(signin.detail));
   }
@@ -179,15 +179,17 @@ export function canaryShown(signin: ClaudeSignIn): Shown {
 export function rejectionText(reason: Rejection): string {
   switch (reason.kind) {
     case "says":
-      return `Printed "${reason.detail}" when asked for its version`;
+      return `It printed "${reason.detail}" when Bezl asked for its version`;
     case "noOutput":
-      return "Printed nothing when asked for its version";
+      return "It printed nothing when Bezl asked for its version";
     case "exited":
-      return `Stopped with error code ${reason.detail.code ?? "none"}: "${reason.detail.says}"`;
+      return reason.detail.code === null
+        ? `It stopped without an error code and said "${reason.detail.says}"`
+        : `It stopped with error code ${reason.detail.code} and said "${reason.detail.says}"`;
     case "timedOut":
-      return "Didn't answer when asked for its version";
+      return "It didn't answer when Bezl asked for its version";
     case "didNotStart":
-      return `Didn't start: ${reason.detail}`;
+      return `It didn't start: ${reason.detail}`;
   }
 }
 
@@ -202,27 +204,31 @@ export function tokensText(tokens: Tokens): string {
 
 /** Codex names windows `primary`/`secondary`, so its length names it instead. */
 function windowName({ name, minutes }: LimitWindow): string {
-  if (minutes === null) return name.replaceAll("_", " ");
+  if (minutes === null) return name.replaceAll("_", "-");
   if (minutes % 1440 === 0) return `${minutes / 1440}-day`;
   if (minutes % 60 === 0) return `${minutes / 60}-hour`;
   return `${minutes}-minute`;
 }
 
 export function windowText(w: LimitWindow): string {
-  const parts = [w.usedPercent === null ? "usage unknown" : `${w.usedPercent}% used`];
-  if (w.reached) parts.push("limit reached");
+  const name = windowName(w);
+  let text = w.reached
+    ? `You've reached your ${name} limit`
+    : w.usedPercent === null
+      ? `Bezl can't tell how much of your ${name} limit you've used`
+      : `You've used ${w.usedPercent}% of your ${name} limit`;
   if (w.resetsAt !== null) {
     const at = new Date(w.resetsAt * 1000).toLocaleString("en-US", {
       weekday: "short",
       hour: "numeric",
       minute: "2-digit",
     });
-    parts.push(`resets ${at}`);
+    text += `. It resets ${at}`;
   }
-  return `${windowName(w)}: ${parts.join(", ")}`;
+  return `${text}.`;
 }
 
-export const limitHit = (says: string) => needsYou(`Limit reached: "${says}"`);
+export const limitHit = needsYou("Usage limit reached");
 
 export const found = good("Installed");
 export const notFound = failed("Not installed");
@@ -239,7 +245,8 @@ export function canWrite({ discovery, signin }: ProviderCheck): boolean {
 /** `null` when nothing can write; the screen then says so. */
 export function readyShown(checks: ProviderCheck[]): Shown | null {
   const names = checks.filter(canWrite).map((c) => providerName[c.discovery.provider]);
-  return names.length === 0 ? null : good(`Ready: ${names.join(" and ")} can write code.`);
+  if (names.length === 0) return null;
+  return good(`${names.join(" and ")} ${names.length === 1 ? "is" : "are"} ready to write code`);
 }
 
 /** What failed and what the operator runs; backticks mark code. Bezl never runs a sign-in. */
@@ -261,7 +268,7 @@ function rejectedFix(provider: ProviderId, reason: Rejection): Fix {
   if (reason.kind === "says")
     return {
       problem: `This ${bin} isn't ${providerName[provider]}`,
-      says: `It printed "${reason.detail}" when asked for its version`,
+      says: rejectionText(reason),
       action,
     };
   // Silence or crash: not proof it is a different program.
@@ -276,24 +283,27 @@ function canaryFix(signin: ClaudeSignIn): Fix | null {
     case "signedOut":
       return {
         problem: "Claude Code is signed out",
-        says: signin.detail.says,
-        action: "Run `claude`, then `/login`.",
+        says: `Claude Code said "${signin.detail.says}"`,
+        action: "Run `claude`, then type `/login`.",
       };
     case "outOfQuota":
       return {
         problem: "Claude Code has reached its usage limit",
-        says: signin.detail.says,
+        says: `Claude Code said "${signin.detail.says}"`,
         action: "Wait for the limit to reset, then select Check again.",
       };
     case "unrecognized":
       return {
         problem: "Bezl didn't understand Claude Code's reply to a test message",
-        says: signin.detail.says,
+        says: `Claude Code said "${signin.detail.says}"`,
         action: see,
       };
     case "failed":
       return {
-        problem: `Test message to Claude Code: ${runErrorText(signin.detail)}`,
+        problem:
+          signin.detail.kind === "timedOut"
+            ? "The test message to Claude Code timed out"
+            : `Claude Code didn't start for the test message: ${signin.detail.detail}`,
         action: see,
       };
   }
@@ -302,7 +312,7 @@ function canaryFix(signin: ClaudeSignIn): Fix | null {
 function homeFix({ home, path, signin }: HomeSignIn, operatorIn: boolean): Fix | null {
   const q = shellQuote(path);
   const env = home === "workers" ? `CODEX_HOME=${q} ` : "";
-  const status = `Run \`${env}codex login status\` to see it.`;
+  const status = `Run \`${env}codex login status\` to see what it says.`;
   switch (signin.kind) {
     case "signedIn":
       return null;
@@ -320,13 +330,16 @@ function homeFix({ home, path, signin }: HomeSignIn, operatorIn: boolean): Fix |
     }
     case "unrecognized":
       return {
-        problem: `${homeName[home]}: unexpected sign-in status`,
-        says: signin.detail.says,
+        problem: `Bezl didn't understand the sign-in status for ${homeName[home]}`,
+        says: `Codex said "${signin.detail.says}"`,
         action: status,
       };
     case "failed":
       return {
-        problem: `${homeName[home]}: ${runErrorText(signin.detail)}`,
+        problem:
+          signin.detail.kind === "timedOut"
+            ? `The sign-in check for ${homeName[home]} timed out`
+            : `The sign-in check for ${homeName[home]} didn't start: ${signin.detail.detail}`,
         action: status,
       };
   }
@@ -336,8 +349,8 @@ function couldNotRunFix(problem: string, check: Recorded<unknown>): Fix | null {
   return check.kind === "couldNotRun"
     ? {
         problem,
-        says: check.detail.says,
-        action: "Select Check again to try again.",
+        says: `The error was "${check.detail.says}"`,
+        action: "Select Check again to retry them.",
       }
     : null;
 }
@@ -349,7 +362,7 @@ export function fixes({ discovery, signin, readOnly, tiers }: ProviderCheck): Fi
       ...discovery.rejected.map((r) => rejectedFix(provider, r.reason)),
       {
         problem: `${providerName[provider]} isn't installed on this computer`,
-        action: `Install it: \`${install[provider]}\``,
+        action: `Install it with \`${install[provider]}\``,
       },
     ];
   const homes = signin.kind === "homes" ? signin.detail : [];
@@ -361,7 +374,7 @@ export function fixes({ discovery, signin, readOnly, tiers }: ProviderCheck): Fi
   return [
     ...signinFixes,
     couldNotRunFix("The safety tests couldn't run", readOnly),
-    couldNotRunFix("The working-alongside tests couldn't run", tiers),
+    couldNotRunFix("The tests for working alongside other tasks couldn't run", tiers),
   ].filter((f): f is Fix => f !== null);
 }
 
@@ -422,7 +435,7 @@ function recordedShown<R extends { version: string; probedAt: number }>(
     case "noBinary":
       return null;
     case "needsSignIn":
-      return { shown: needsYou("Not tested yet: sign in first") };
+      return { shown: needsYou("Sign in to test") };
     case "couldNotRun":
       return { shown: failed("Couldn't run") };
     case "probed": {
@@ -444,7 +457,7 @@ export function readOnlyShown({ readOnly }: ProviderCheck): Overall | null {
     if (kinds.includes("failed")) return failed("A safety test failed");
     return kinds.every((k) => k === "passed")
       ? good("All 5 safety tests passed")
-      : quiet("Some not tested");
+      : quiet("Some weren't tested");
   });
 }
 

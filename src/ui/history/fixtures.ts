@@ -22,7 +22,7 @@ export const history: TaskHistory = {
       who: "Bezl",
       text: "Set up a copy of your code for each attempt, A and B",
     },
-    { at: "10:04", stage: "plan", who: "You", text: "Allowed bun install" },
+    { at: "10:04", stage: "plan", who: "You", text: "Allowed bun install to run" },
     { at: "10:05", stage: "plan", who: "Claude Code", text: "Planned 4 steps for attempt A" },
     { at: "10:05", stage: "plan", who: "Codex", text: "Planned 3 steps for attempt B" },
     {
@@ -43,7 +43,7 @@ export const history: TaskHistory = {
       at: "10:15",
       stage: "check",
       who: "Bezl",
-      text: "Attempt B had 2 problems; attempt A passed all 12 checks",
+      text: "Found 2 problems in attempt B, while attempt A passed all 12 checks",
       light: "failed",
     },
     { at: "10:17", stage: "check", who: "You", text: "Sent attempt B's 2 problems to Codex" },
@@ -51,7 +51,7 @@ export const history: TaskHistory = {
       at: "10:22",
       stage: "check",
       who: "Codex",
-      text: "Fixed both; attempt B passed all 12 checks",
+      text: "Fixed both problems, and attempt B then passed all 12 checks",
     },
     { at: "10:24", stage: "review", who: "Codex", text: "Reviewed attempt A and found 1 issue" },
     {

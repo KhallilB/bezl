@@ -99,7 +99,7 @@ describe("Walkthrough free navigation", () => {
   test("a stage in the strip opens its view", async () => {
     render(<Walkthrough />);
     await userEvent.click(within(stageStrip()).getByRole("button", { name: "Plan, done" }));
-    expect(screen.getByText("Plan done.")).toBeVisible();
+    expect(screen.getByText("The plan is done.")).toBeVisible();
     expect(screen.getByText("Reuse EmptyState with one primary action")).toBeVisible();
   });
 
@@ -151,7 +151,7 @@ describe("Walkthrough getting started", () => {
   test("Coding agents shows the real screen for each agent check result", () => {
     at("?screen=walkthrough&step=providers");
     const { unmount } = render(<Walkthrough />);
-    expect(screen.getByText("Ready: Claude Code and Codex can write code.")).toBeVisible();
+    expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
     unmount();
     at("?screen=walkthrough&step=impostor");
     const impostor = render(<Walkthrough />);

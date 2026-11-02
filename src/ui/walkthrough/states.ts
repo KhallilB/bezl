@@ -15,9 +15,9 @@ export const sceneLabel: Record<Scene, string> = {
 };
 
 export const sceneNote: Record<Scene, string> = {
-  idle: "No task running; every worker waits.",
-  running: "The writer works while reviewers wait or finish.",
-  blocked: "The writer waits for your answer.",
+  idle: "No task is running, so every worker is waiting.",
+  running: "The writer works while the reviewers wait or finish up.",
+  blocked: "The writer is waiting for your answer.",
   longContent: "Long output scrolls inside its own panel.",
 };
 

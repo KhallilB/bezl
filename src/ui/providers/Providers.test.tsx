@@ -48,31 +48,36 @@ describe("Providers", () => {
       ...claudeFound,
       signin: { kind: "canary", detail: canary },
     });
-    const cases: [ClaudeSignIn, string, string][] = [
+    // Chip stays short; the reply, quoted exactly, shows under To fix.
+    const cases: [ClaudeSignIn, string, string, string | null][] = [
       [
         { kind: "signedOut", detail: { says: "Not logged in · Please run /login" } },
-        'Signed out: "Not logged in · Please run /login"',
+        "Signed out",
         "warning",
+        'Claude Code said "Not logged in · Please run /login"',
       ],
       [
         { kind: "outOfQuota", detail: { says: "limit" } },
-        'Usage limit reached: "limit"',
+        "Usage limit reached",
         "warning",
+        'Claude Code said "limit"',
       ],
       [
         { kind: "unrecognized", detail: { code: 1, says: "?" } },
-        'Unexpected reply: "?"',
+        "Unexpected reply",
         "warning",
+        'Claude Code said "?"',
       ],
-      [{ kind: "failed", detail: { kind: "timedOut" } }, "Timed out", "blocked"],
+      [{ kind: "failed", detail: { kind: "timedOut" } }, "Timed out", "blocked", null],
     ];
-    for (const [canary, label, tone] of cases) {
+    for (const [canary, label, tone, says] of cases) {
       const { unmount } = render(<Providers checks={[claudeWith(canary)]} />);
       const signin = screen.getByRole("list", { name: "Sign-in" });
       expect(within(signin).getByText(label).closest(".kb-status")).toHaveAttribute(
         "data-tone",
         tone,
       );
+      if (says) expect(screen.getByRole("list", { name: "To fix" })).toHaveTextContent(says);
       unmount();
     }
   });
@@ -91,7 +96,7 @@ describe("Providers", () => {
     const rejected = within(codex).getByRole("list", { name: "Rejected binaries" });
     const item = within(rejected).getByRole("listitem");
     expect(within(item).getByText("/Users/me/.bun/bin/codex")).toBeVisible();
-    expect(item).toHaveTextContent('Printed "0.2.3" when asked for its version');
+    expect(item).toHaveTextContent('It printed "0.2.3" when Bezl asked for its version');
     expect(within(codex).queryByRole("list", { name: "Sign-in" })).toBeNull();
   });
 
@@ -114,8 +119,8 @@ describe("Providers", () => {
       "listitem",
     );
     expect(items.map((i) => i.textContent)).toEqual([
-      expect.stringContaining('Printed "0.2.3" when asked for its version'),
-      expect.stringContaining('Stopped with error code 2: "boom"'),
+      expect.stringContaining('It printed "0.2.3" when Bezl asked for its version'),
+      expect.stringContaining('It stopped with error code 2 and said "boom"'),
     ]);
   });
 
@@ -146,11 +151,14 @@ describe("Providers", () => {
       "listitem",
     );
     expect(windows.map((w) => w.textContent)).toEqual([
-      `five hour: 43% used, resets ${resets(1793299200)}`,
-      `seven day: 100% used, limit reached, resets ${resets(1793343600)}`,
+      `You've used 43% of your five-hour limit. It resets ${resets(1793299200)}.`,
+      `You've reached your seven-day limit. It resets ${resets(1793343600)}.`,
     ]);
-    const hit = screen.getByText('Limit reached: "You\'ve hit your limit · resets 5pm"');
+    const hit = screen.getByText("Usage limit reached");
     expect(hit.closest(".kb-status")).toHaveAttribute("data-tone", "warning");
+    expect(
+      screen.getByText('Claude Code said "You\'ve hit your limit · resets 5pm"'),
+    ).toBeVisible();
   });
 
   test("names a Codex window by its length", () => {
@@ -175,7 +183,10 @@ describe("Providers", () => {
     const windows = within(screen.getByRole("list", { name: "Usage limits" })).getAllByRole(
       "listitem",
     );
-    expect(windows.map((w) => w.textContent)).toEqual(["7-day: 65% used", "5-hour: 65% used"]);
+    expect(windows.map((w) => w.textContent)).toEqual([
+      "You've used 65% of your 7-day limit.",
+      "You've used 65% of your 5-hour limit.",
+    ]);
   });
 
   test("shows no usage for a CLI that was not found", () => {
@@ -243,7 +254,7 @@ describe("Providers", () => {
     render(<Providers checks={[codexFound, thisMachine[1] as ProviderCheck]} />);
     const [found, missing] = screen.getAllByRole("region") as [HTMLElement, HTMLElement];
     // Read-only and tiers both wait on sign-in.
-    expect(within(found).getAllByText("Not tested yet: sign in first")).toHaveLength(2);
+    expect(within(found).getAllByText("Sign in to test")).toHaveLength(2);
     expect(within(found).getByRole("list", { name: "Safety tests" })).toHaveTextContent(
       "Asked, not enforced",
     );
@@ -266,7 +277,7 @@ describe("Providers", () => {
       HTMLElement,
     ];
     expect(impostor).toHaveTextContent("This codex isn't Codex");
-    expect(impostor).toHaveTextContent('It printed "0.2.3" when asked for its version');
+    expect(impostor).toHaveTextContent('It printed "0.2.3" when Bezl asked for its version');
     expect(impostor).toHaveTextContent("Remove it, or show Bezl where the real one is.");
     expect(within(install).getByText("npm install -g @openai/codex").tagName).toBe("CODE");
   });
@@ -284,10 +295,10 @@ describe("Providers", () => {
 
   test("says which CLIs can write when one can", () => {
     const { rerender } = render(<Providers checks={[claudeSignedOut, codexProbed]} />);
-    expect(screen.getByText("Ready: Codex can write code.")).toBeVisible();
+    expect(screen.getByText("Codex is ready to write code")).toBeVisible();
     expect(screen.queryByText("No coding agent can write code yet")).toBeNull();
     rerender(<Providers checks={[claudeFound, codexProbed]} />);
-    expect(screen.getByText("Ready: Claude Code and Codex can write code.")).toBeVisible();
+    expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
   });
 
   test("Check again keeps the old results on screen while it runs", async () => {

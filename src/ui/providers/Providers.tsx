@@ -135,9 +135,14 @@ function UsageList({ check }: { check: ProviderCheck }) {
               </ul>
             ) : null}
             {limits.detail.hit !== null ? (
-              <div>
-                <Shows shown={limitHit(limits.detail.hit)} />
-              </div>
+              <>
+                <div>
+                  <Shows shown={limitHit} />
+                </div>
+                <Text size="sm" tone="muted">
+                  {`${providerName[check.discovery.provider]} said "${limits.detail.hit}"`}
+                </Text>
+              </>
             ) : null}
           </>
         )}
@@ -326,7 +331,7 @@ function Writers({
     <>
       <div id={reason}>
         <Callout tone="warning" title="No coding agent can write code yet">
-          Fix one of the coding agents below, then select Check again.
+          Fix at least one of the coding agents below, then select Check again.
         </Callout>
       </div>
       {button ? <div>{button}</div> : null}
@@ -358,7 +363,7 @@ export function Providers({
             ) : null}
           </div>
           <p className="page-lead">
-            The coding agents installed on this computer, and whether Bezl can use them.
+            Bezl found these coding agents on this computer and checked whether it can use each one.
           </p>
         </header>
         {firstRun ? <OnboardingSteps current="agents" /> : null}

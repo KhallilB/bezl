@@ -28,7 +28,9 @@ describe("Approvals", () => {
     const access = screen.getByRole("article", { name: /More access from Codex/ });
     await userEvent.click(within(access).getByRole("button", { name: "Deny" }));
     expect(screen.queryByRole("article", { name: /More access/ })).toBeNull();
-    expect(screen.getByRole("status")).toHaveTextContent(/Codex continues without it/);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /You chose “Deny” for Refuse tokens with no scopes\. Codex carries on without internet access\./,
+    );
     expect(screen.getByText("2 things need you.")).toBeVisible();
   });
 

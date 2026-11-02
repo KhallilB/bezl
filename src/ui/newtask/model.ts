@@ -25,31 +25,31 @@ export function readiness(draft: BriefDraft): ReadinessCheck[] {
     {
       id: "what",
       label: "What you want",
-      why: "A full sentence about the goal, not a title, so the agent builds the right thing.",
+      why: "Describe the goal in a full sentence rather than a title, so the agent builds the right thing.",
       met: intent(draft.text),
     },
     {
       id: "who",
-      label: "Who it is for",
-      why: "Tells the agent whose problem it solves when it has to make a choice.",
+      label: "Who it's for",
+      why: "When the agent has to make a judgement call, knowing whose problem it's solving helps it choose well.",
       met: filled(draft.who),
     },
     {
       id: "done",
-      label: "How you will know it is done",
-      why: "Bezl checks these after every step instead of taking the agent's word for it.",
+      label: "How you'll know it's done",
+      why: "Bezl checks these after every step, so you don't have to take the agent's word that it's finished.",
       met: draft.doneWhen.length > 0,
     },
     {
       id: "avoid",
       label: "What to avoid or reuse",
-      why: "Keeps the change small and inside the code you already have.",
+      why: "This keeps the change small and builds on the code you already have.",
       met: filled(draft.avoid),
     },
     {
       id: "example",
       label: "An example to follow",
-      why: "One existing screen or file is worth a paragraph of description.",
+      why: "Pointing to one existing screen or file says more than a paragraph of description.",
       met: filled(draft.example),
     },
   ];
@@ -93,7 +93,7 @@ export function reviewerChoices(providers: CrewProvider[], writerId: string): Ch
     if (!p.readOnly)
       return { id: p.id, label: p.name, disabled: "It might change files, so it can't review" };
     return p.vendor === vendor
-      ? { id: p.id, label: p.name, note: "The same company's models write and review it" }
+      ? { id: p.id, label: p.name, note: "The writer and reviewer come from the same company" }
       : { id: p.id, label: p.name };
   });
 }

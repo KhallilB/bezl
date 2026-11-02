@@ -26,7 +26,7 @@ export function TerminalBench() {
   }, []);
   if (bench === undefined) return null;
   if (bench === null)
-    return <p>No benchmark to run. Start one with scripts/terminal-bench/run.sh.</p>;
+    return <p>There's no benchmark to run. Start one with scripts/terminal-bench/run.sh.</p>;
   return <BenchRun bench={bench} />;
 }
 

@@ -26,7 +26,7 @@ export function Snapshots({ record }: { record: TerminalRecord }) {
       <h1 className="terminals-heading">Snapshots</h1>
       {error ? <p className="terminal-says">{error}</p> : null}
       {refs?.length === 0 ? (
-        <p>No snapshots yet. Take one from a pane on the Terminals screen.</p>
+        <p>There are no snapshots yet. You can take one from any pane on the Terminals screen.</p>
       ) : null}
       <div className="snapshots-layout">
         <ul className="snapshots-list" aria-label="Saved snapshots">

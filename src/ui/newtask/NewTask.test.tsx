@@ -37,15 +37,15 @@ describe("NewTask brief", () => {
 
   test("a gap says why and adds its suggestion in one click", async () => {
     setup({ initial: { text, doneWhen: [] } });
-    expect(within(check(/Who it is for/)).getByText(/whose problem/)).toBeVisible();
-    await userEvent.click(within(check(/Who it is for/)).getByRole("button", { name: /Add/ }));
-    expect(check(/Who it is for/)).toHaveAccessibleDescription(/present/);
+    expect(within(check(/Who it's for/)).getByText(/whose problem/)).toBeVisible();
+    await userEvent.click(within(check(/Who it's for/)).getByRole("button", { name: /Add/ }));
+    expect(check(/Who it's for/)).toHaveAccessibleDescription(/present/);
     expect(screen.getByText(suggestions.who?.who ?? "")).toBeVisible();
   });
 
   test("done checks say who checks each", async () => {
     setup({ initial: { text, doneWhen: [] } });
-    await userEvent.click(within(check(/How you will know/)).getByRole("button", { name: /Add/ }));
+    await userEvent.click(within(check(/How you'll know/)).getByRole("button", { name: /Add/ }));
     const list = screen.getByRole("list", { name: "It's done when" });
     expect(within(list).getAllByText("Bezl checks").length).toBeGreaterThan(0);
     expect(within(list).getAllByText("You check").length).toBeGreaterThan(0);
@@ -77,7 +77,7 @@ describe("NewTask crew", () => {
     expect(within(reviewer).queryByText(/same company/)).toBeNull();
     await userEvent.click(within(reviewer).getByRole("radio", { name: /Claude Code/ }));
     expect(
-      within(reviewer).getByText("The same company's models write and review it"),
+      within(reviewer).getByText("The writer and reviewer come from the same company"),
     ).toBeVisible();
   });
 

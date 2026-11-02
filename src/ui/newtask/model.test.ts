@@ -106,7 +106,7 @@ describe("reviewerChoices", () => {
   test("the writer's own vendor is allowed, and labelled as self-review", () => {
     const choices = reviewerChoices([claude, codex], "claude");
     expect(choices.find((c) => c.id === "claude")).toMatchObject({
-      note: "The same company's models write and review it",
+      note: "The writer and reviewer come from the same company",
     });
     expect(choices.find((c) => c.id === "claude")?.disabled).toBeUndefined();
     expect(choices.find((c) => c.id === "codex")?.note).toBeUndefined();

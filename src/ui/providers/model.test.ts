@@ -15,8 +15,10 @@ import {
   type HomeSignIn,
   type ProviderCheck,
   readOnlyShown,
+  rejectionText,
   tierRows,
   tiersShown,
+  windowText,
 } from "./model";
 
 const workersPath = "/Users/me/Library/Application Support/dev.bezl.app/codex-home";
@@ -61,12 +63,12 @@ describe("fixes", () => {
     expect(fixes(thisMachine[1] as ProviderCheck)).toEqual([
       {
         problem: "This `codex` isn't Codex",
-        says: 'It printed "0.2.3" when asked for its version',
+        says: 'It printed "0.2.3" when Bezl asked for its version',
         action: "Remove it, or show Bezl where the real one is.",
       },
       {
         problem: "Codex isn't installed on this computer",
-        action: "Install it: `npm install -g @openai/codex`",
+        action: "Install it with `npm install -g @openai/codex`",
       },
     ]);
   });
@@ -82,7 +84,7 @@ describe("fixes", () => {
     };
     expect(fixes(broken)[0]).toEqual({
       problem: "Bezl couldn't tell what this `codex` is",
-      says: "Didn't answer when asked for its version",
+      says: "It didn't answer when Bezl asked for its version",
       action: "Remove it, or show Bezl where the real one is.",
     });
   });
@@ -97,7 +99,7 @@ describe("fixes", () => {
     expect(fixes(missing)).toEqual([
       {
         problem: "Claude Code isn't installed on this computer",
-        action: "Install it: `curl -fsSL https://claude.ai/install.sh | bash`",
+        action: "Install it with `curl -fsSL https://claude.ai/install.sh | bash`",
       },
     ]);
   });
@@ -106,8 +108,8 @@ describe("fixes", () => {
     expect(fixes(claudeSignedOut)).toEqual([
       {
         problem: "Claude Code is signed out",
-        says: "Not logged in · Please run /login",
-        action: "Run `claude`, then `/login`.",
+        says: 'Claude Code said "Not logged in · Please run /login"',
+        action: "Run `claude`, then type `/login`.",
       },
     ]);
   });
@@ -144,9 +146,9 @@ describe("fixes", () => {
     const odd: CodexSignIn = { kind: "unrecognized", detail: { code: 1, says: "huh" } };
     expect(fixes(codexWith(signedIn, odd))).toEqual([
       {
-        problem: "Codex for Bezl's agents: unexpected sign-in status",
-        says: "huh",
-        action: `Run \`CODEX_HOME=${quotedWorkers} codex login status\` to see it.`,
+        problem: "Bezl didn't understand the sign-in status for Codex for Bezl's agents",
+        says: 'Codex said "huh"',
+        action: `Run \`CODEX_HOME=${quotedWorkers} codex login status\` to see what it says.`,
       },
     ]);
   });
@@ -159,8 +161,8 @@ describe("fixes", () => {
     expect(fixes(check)).toEqual([
       {
         problem: "The safety tests couldn't run",
-        says: "no result event",
-        action: "Select Check again to try again.",
+        says: 'The error was "no result event"',
+        action: "Select Check again to retry them.",
       },
     ]);
   });
@@ -174,9 +176,9 @@ describe("tier probe fixes", () => {
     };
     expect(fixes(check)).toEqual([
       {
-        problem: "The working-alongside tests couldn't run",
-        says: "timed out",
-        action: "Select Check again to try again.",
+        problem: "The tests for working alongside other tasks couldn't run",
+        says: 'The error was "timed out"',
+        action: "Select Check again to retry them.",
       },
     ]);
   });
@@ -268,14 +270,14 @@ describe("readOnlyShown", () => {
       },
     };
     expect(readOnlyShown(partly)).toEqual({
-      shown: { label: "Some not tested", tone: "neutral", icon: "idle" },
+      shown: { label: "Some weren't tested", tone: "neutral", icon: "idle" },
       detail: `Tested version 0.163.0 on ${on(1793313000)}`,
     });
   });
 
   test("an unprobed reviewer says why", () => {
     expect(readOnlyShown(codexFound)).toEqual({
-      shown: { label: "Not tested yet: sign in first", tone: "warning", icon: "blocked" },
+      shown: { label: "Sign in to test", tone: "warning", icon: "blocked" },
     });
     expect(
       readOnlyShown({ ...claudeFound, readOnly: { kind: "couldNotRun", detail: { says: "x" } } }),
@@ -356,11 +358,31 @@ describe("tiersShown", () => {
 
   test("an unprobed CLI says why", () => {
     expect(tiersShown(codexFound)).toEqual({
-      shown: { label: "Not tested yet: sign in first", tone: "warning", icon: "blocked" },
+      shown: { label: "Sign in to test", tone: "warning", icon: "blocked" },
     });
     expect(
       tiersShown({ ...claudeFound, tiers: { kind: "couldNotRun", detail: { says: "x" } } }),
     ).toEqual({ shown: { label: "Couldn't run", tone: "blocked", icon: "blocked" } });
     expect(tiersShown(thisMachine[1] as ProviderCheck)).toBeNull();
+  });
+});
+
+describe("plain sentences for edge cases", () => {
+  test("a usage window with no reported use says Bezl can't tell", () => {
+    expect(
+      windowText({
+        name: "weekly",
+        minutes: null,
+        usedPercent: null,
+        resetsAt: null,
+        reached: null,
+      }),
+    ).toBe("Bezl can't tell how much of your weekly limit you've used.");
+  });
+
+  test("a program that stopped with no error code still quotes what it said", () => {
+    expect(rejectionText({ kind: "exited", detail: { code: null, says: "boom" } })).toBe(
+      'It stopped without an error code and said "boom"',
+    );
   });
 });
