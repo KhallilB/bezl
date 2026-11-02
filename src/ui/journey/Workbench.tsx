@@ -1,4 +1,4 @@
-import { Button } from "@kb.ui/react";
+import { Badge, Button, Panel } from "@kb.ui/react";
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { kindLabel, type NeedsYouChoice, type NeedsYouItem } from "../approvals/model";
 import { LightIcon } from "./icons";
@@ -11,20 +11,25 @@ import {
   type Shot,
   stageLabel,
   type TaskContext,
+  type Trace,
 } from "./model";
 import { Preview } from "./Preview";
+import { TraceView } from "./TraceView";
 
-export type SideTab = "preview" | "intent";
+export type SideTab = "preview" | "trace" | "intent";
 
 /** One line under the stages: the goal, what changed, how much is proven. */
 export function ContextBar({
   context,
   preview,
+  trace,
   onOpen,
 }: {
   context: TaskContext;
   /** This stage has screenshots, so what changed can open them. */
   preview: boolean;
+  /** Bezl measured something, so the evidence opens its trace. */
+  trace: boolean;
   onOpen: (tab: SideTab) => void;
 }) {
   return (
@@ -53,7 +58,11 @@ export function ContextBar({
       </li>
       <li>
         <span className="journey-context-label">Evidence</span>
-        <button type="button" className="journey-context-link" onClick={() => onOpen("intent")}>
+        <button
+          type="button"
+          className="journey-context-link"
+          onClick={() => onOpen(trace ? "trace" : "intent")}
+        >
           {context.evidence}
         </button>
       </li>
@@ -86,24 +95,25 @@ function Choices({
     <>
       <div className="journey-choices">
         {item.choices.map((c) => (
-          <Button
-            key={c.id}
-            size="sm"
-            variant={c.id === item.recommended ? "secondary" : "ghost"}
-            aria-describedby={c.id === item.recommended ? rec : undefined}
-            onPointerEnter={() => setHint(c.id)}
-            onPointerLeave={() => setHint(null)}
-            onFocus={() => setHint(c.id)}
-            onBlur={() => setHint(null)}
-            onClick={() => onAnswer(c)}
-          >
-            {c.label}
+          <span key={c.id} className="journey-choice">
+            <Button
+              size="sm"
+              variant="secondary"
+              aria-describedby={c.id === item.recommended ? rec : undefined}
+              onPointerEnter={() => setHint(c.id)}
+              onPointerLeave={() => setHint(null)}
+              onFocus={() => setHint(c.id)}
+              onBlur={() => setHint(null)}
+              onClick={() => onAnswer(c)}
+            >
+              {c.label}
+            </Button>
             {c.id === item.recommended ? (
-              <span id={rec} className="journey-rec" aria-hidden="true">
+              <Badge id={rec} tone="info">
                 Recommended
-              </span>
+              </Badge>
             ) : null}
-          </Button>
+          </span>
         ))}
       </div>
       {shown ? (
@@ -122,6 +132,7 @@ export function Questions({
   prefer,
   onAnswer,
   onExample,
+  onWhy,
 }: {
   items: NeedsYouItem[];
   answered: Answer[];
@@ -129,6 +140,8 @@ export function Questions({
   prefer?: string | null;
   onAnswer: (item: NeedsYouItem, choice: NeedsYouChoice) => void;
   onExample?: OnExample;
+  /** Opens the trace at a question's evidence. */
+  onWhy?: ((id: string) => void) | undefined;
 }) {
   const id = useId();
   const [picked, setPicked] = useState<string | null>(null);
@@ -154,52 +167,59 @@ export function Questions({
           const light = choice ? "done" : "needsYou";
           return (
             <li key={item.id} className="journey-problem" data-light={light}>
-              <button
-                id={`${id}-head-${item.id}`}
-                type="button"
-                className="journey-problem-head"
-                aria-expanded={expanded}
-                aria-controls={`${id}-${item.id}`}
-                onClick={() => setPicked(expanded ? "" : item.id)}
-              >
-                <span className="journey-row-icon">
-                  <LightIcon light={light} />
-                  <span className="journey-sr">{`${lightLabel[light]}: `}</span>
-                </span>
-                <span className="journey-row-text">{item.prompt}</span>
-                <span className="journey-row-meta">
-                  {choice ? choice.label : kindLabel[item.kind]}
-                </span>
-              </button>
-              {expanded ? (
-                <div id={`${id}-${item.id}`} className="journey-problem-body">
-                  <p className="journey-question-from">
-                    {`${kindLabel[item.kind]} from ${item.from} · waiting ${item.waited}`}
-                  </p>
-                  {item.context ? (
-                    <p className="journey-mono journey-problem-where">{item.context}</p>
-                  ) : null}
-                  {item.blocks ? (
-                    <p className="journey-blocks">{`Holds up ${item.blocks}`}</p>
-                  ) : null}
-                  {choice ? (
-                    <p className="journey-then">
-                      <strong>{`You chose ${choice.label}.`}</strong> {choice.next}
+              <Panel density="compact" tone={expanded && !choice ? "active" : "quiet"}>
+                <button
+                  id={`${id}-head-${item.id}`}
+                  type="button"
+                  className="journey-problem-head"
+                  aria-expanded={expanded}
+                  aria-controls={`${id}-${item.id}`}
+                  onClick={() => setPicked(expanded ? "" : item.id)}
+                >
+                  <span className="journey-row-icon">
+                    <LightIcon light={light} />
+                    <span className="journey-sr">{`${lightLabel[light]}: `}</span>
+                  </span>
+                  <span className="journey-row-text">{item.prompt}</span>
+                  <span className="journey-row-meta">
+                    {choice ? choice.label : <Badge tone="warning">{kindLabel[item.kind]}</Badge>}
+                  </span>
+                </button>
+                {expanded ? (
+                  <div id={`${id}-${item.id}`} className="journey-problem-body">
+                    <p className="journey-question-from">
+                      {`${kindLabel[item.kind]} from ${item.from} · waiting ${item.waited}`}
                     </p>
-                  ) : (
-                    <Choices
-                      item={item}
-                      onExample={onExample}
-                      onAnswer={(c) => {
-                        setPicked(null);
-                        setLast({ item, choice: c });
-                        onExample?.(null);
-                        onAnswer(item, c);
-                      }}
-                    />
-                  )}
-                </div>
-              ) : null}
+                    {item.context ? (
+                      <p className="journey-mono journey-problem-where">{item.context}</p>
+                    ) : null}
+                    {item.blocks ? (
+                      <Badge appearance="plain">{`Holds up ${item.blocks}`}</Badge>
+                    ) : null}
+                    {item.why && onWhy ? (
+                      <Button size="sm" variant="ghost" onClick={() => onWhy(item.why as string)}>
+                        Why Bezl asks
+                      </Button>
+                    ) : null}
+                    {choice ? (
+                      <p className="journey-then">
+                        <strong>{`You chose ${choice.label}.`}</strong> {choice.next}
+                      </p>
+                    ) : (
+                      <Choices
+                        item={item}
+                        onExample={onExample}
+                        onAnswer={(c) => {
+                          setPicked(null);
+                          setLast({ item, choice: c });
+                          onExample?.(null);
+                          onAnswer(item, c);
+                        }}
+                      />
+                    )}
+                  </div>
+                ) : null}
+              </Panel>
             </li>
           );
         })}
@@ -304,9 +324,9 @@ function Intent({ goal, doneWhen, decisions, assumptions, raised, onChange }: In
                   {raised.has(a.id) ? (
                     "Now a question"
                   ) : onChange ? (
-                    <button type="button" className="journey-link" onClick={() => onChange(a)}>
+                    <Button size="sm" variant="ghost" onClick={() => onChange(a)}>
                       Change
-                    </button>
+                    </Button>
                   ) : null}
                 </span>
               </li>
@@ -321,16 +341,21 @@ function Intent({ goal, doneWhen, decisions, assumptions, raised, onChange }: In
 type SideProps = IntentProps & {
   tab: SideTab;
   onTab: (t: SideTab) => void;
+  trace?: Trace | undefined;
+  /** The trace node the chain is drawn from; null lists what needs you. */
+  focus: string | null;
+  onFocus: (id: string | null) => void;
   shots: Shot[];
   /** An example to show in place of the screenshots while a choice is pointed at. */
   example: Shot | null;
 };
 
 /** Beside every stage: what it looks like and what it's for, kept in view while you decide. */
-export function Side({ tab, onTab, shots, example, ...intent }: SideProps) {
+export function Side({ tab, onTab, shots, example, trace, focus, onFocus, ...intent }: SideProps) {
   const id = useId();
   const tabs: { id: SideTab; name: string }[] = [
     ...(shots.length || example ? [{ id: "preview" as const, name: "Preview" }] : []),
+    ...(trace ? [{ id: "trace" as const, name: "Trace" }] : []),
     { id: "intent", name: "Intent" },
   ];
   const shown = tabs.some((t) => t.id === tab) ? tab : "intent";
@@ -352,31 +377,41 @@ export function Side({ tab, onTab, shots, example, ...intent }: SideProps) {
   };
   return (
     <aside className="journey-side" aria-label="Beside this stage">
-      <div className="journey-tabs" role="tablist" aria-label="Show">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            id={`${id}-${t.id}`}
-            type="button"
-            role="tab"
-            aria-selected={shown === t.id}
-            aria-controls={`${id}-panel`}
-            tabIndex={shown === t.id ? 0 : -1}
-            onClick={() => onTab(t.id)}
-            onKeyDown={move}
-          >
-            {t.name}
-          </button>
-        ))}
-      </div>
-      <div
-        id={`${id}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${id}-${shown}`}
-        className="journey-side-panel"
-      >
-        {shown === "preview" ? <Preview shots={shots} example={example} /> : <Intent {...intent} />}
-      </div>
+      <Panel>
+        <Panel.Header>
+          <div className="journey-tabs" role="tablist" aria-label="Show">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                id={`${id}-${t.id}`}
+                type="button"
+                role="tab"
+                aria-selected={shown === t.id}
+                aria-controls={`${id}-panel`}
+                tabIndex={shown === t.id ? 0 : -1}
+                onClick={() => onTab(t.id)}
+                onKeyDown={move}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        </Panel.Header>
+        <Panel.Body
+          id={`${id}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${id}-${shown}`}
+          className="journey-side-panel"
+        >
+          {shown === "preview" ? (
+            <Preview shots={shots} example={example} />
+          ) : shown === "trace" && trace ? (
+            <TraceView trace={trace} focus={focus} onFocus={onFocus} />
+          ) : (
+            <Intent {...intent} />
+          )}
+        </Panel.Body>
+      </Panel>
     </aside>
   );
 }

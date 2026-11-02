@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 import {
   ciText,
   contextOf,
+  coverageText,
   diffLabel,
+  lineage,
   type StageLights,
   stageIds,
   stageLabel,
@@ -224,4 +226,63 @@ describe("contextOf", () => {
     ];
     expect(contextOf({ ...task, doneWhen }).evidence).toBe("1 of 3 proven");
   });
+});
+
+describe("lineage", () => {
+  const node = (id: string, column: "intent" | "change" | "measured" | "decide") => ({
+    id,
+    column,
+    title: id,
+    meta: "",
+    light: "done" as const,
+  });
+  const trace = {
+    nodes: [
+      node("goal", "intent"),
+      node("a11y", "intent"),
+      node("list", "change"),
+      node("button", "change"),
+      node("tests", "measured"),
+      node("axe", "measured"),
+      node("untested", "decide"),
+      node("unnamed", "decide"),
+    ],
+    links: [
+      { from: "goal", to: "list" },
+      { from: "goal", to: "button" },
+      { from: "a11y", to: "button" },
+      { from: "list", to: "tests" },
+      { from: "button", to: "tests" },
+      { from: "button", to: "axe" },
+      { from: "tests", to: "untested", via: "list" },
+      { from: "axe", to: "unnamed", via: "button" },
+    ],
+  };
+
+  test("a finding traces back through the code it's about, not every file the run covered", () => {
+    expect([...lineage(trace, "untested")].sort()).toEqual(["goal", "list", "tests", "untested"]);
+  });
+
+  test("a test run traces forward to every finding it made", () => {
+    expect(lineage(trace, "tests").has("untested")).toBe(true);
+  });
+
+  test("a goal line traces forward to the findings on its own code", () => {
+    expect([...lineage(trace, "a11y")].sort()).toEqual([
+      "a11y",
+      "axe",
+      "button",
+      "tests",
+      "unnamed",
+    ]);
+  });
+});
+
+test("coverageText accounts for every changed line", () => {
+  expect(coverageText({ covered: 29, uncovered: 2, unknown: 4, excluded: 2 })).toBe(
+    "37 changed lines: 29 run in a test, 2 never run, 4 Bezl can't measure, 2 excluded",
+  );
+  expect(coverageText({ covered: 12, uncovered: 0, unknown: 0, excluded: 0 })).toBe(
+    "12 changed lines: 12 run in a test",
+  );
 });
