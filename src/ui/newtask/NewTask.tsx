@@ -11,6 +11,8 @@ import {
   reviewerChoices,
   type Suggestion,
   suggest,
+  withIssue,
+  withoutIssue,
   writerChoices,
 } from "./model";
 import "./newtask.css";
@@ -198,8 +200,6 @@ function Choices({
   );
 }
 
-const emptyBrief: BriefDraft = { text: "", doneWhen: [] };
-
 function IssuePicker({
   repo,
   issues,
@@ -316,6 +316,7 @@ export function NewTask({
       setDraft((d) => ({ ...d, doneWhen: [...d.doneWhen, { text, checker: "you" }] }));
     setLine("");
   };
+  const issueOf = (d: BriefDraft) => issues?.find((i) => i.number === d.issue?.number);
   const checks = readiness(draft);
   const gap = (id: CheckId) => checks.find((c) => c.id === id && !c.met);
   const why = (id: CheckId) => checks.find((c) => c.id === id)?.why ?? "";
@@ -329,6 +330,8 @@ export function NewTask({
   // Each move lands on the new step's question, for keyboard and screen reader alike.
   const land = (el: HTMLHeadingElement | null) => {
     if (!el || !moved.current) return;
+    // Once per move: the ref reruns on every render, and typing would lose focus.
+    moved.current = false;
     el.focus();
     el.scrollIntoView?.({ block: "nearest" });
   };
@@ -366,8 +369,8 @@ export function NewTask({
               issues={issues}
               initialOpen={issuesOpen}
               picked={draft.issue}
-              onPick={(issue) => setDraft(briefFromIssue(issue))}
-              onClear={() => setDraft(emptyBrief)}
+              onPick={(issue) => setDraft((d) => withIssue(d, issue, issueOf(d)))}
+              onClear={() => setDraft((d) => withoutIssue(d, issueOf(d)))}
             />
           ) : null}
           <Textarea

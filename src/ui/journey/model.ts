@@ -24,9 +24,12 @@ export const lightLabel: Record<Light | TaskLight, string> = {
   working: "working",
   needsYou: "needs you",
   failed: "failed",
-  waiting: "not started",
+  waiting: "waiting",
   idle: "idle",
 };
+
+/** The stage strip's words: a stage that hasn't begun is not started, not waiting. */
+export const stageLightLabel: Record<Light, string> = { ...lightLabel, waiting: "not started" };
 
 /** What needs you comes first, then failures, then live work. */
 export function taskLight(stages: StageLights): TaskLight {
@@ -126,6 +129,7 @@ export function ciText(ci: CiStatus): string {
   if (running > 0)
     return `${passed} of ${checks(all)} ${passed === 1 ? "has" : "have"} passed, and ${running} ${running === 1 ? "is" : "are"} still running.`;
   const where = ci.on === "merge" ? `the merged commit ${ci.commit}` : "the pull request";
+  if (all === 0) return `No checks have reported on ${where} yet.`;
   return `${all === 1 ? "The check" : `All ${checks(all)}`} passed on ${where}.`;
 }
 
@@ -313,8 +317,7 @@ export type JourneyTask = {
 
 export type Risk = "low" | "medium" | "high";
 
-/** How far the change reaches, as Bezl judged it from what changed. */
-/** `from` names what the risk was measured from; a label without one is not shown. */
+/** How far the change reaches; `from` names what the risk was measured from. */
 export type Impact = { risk: Risk; reach: string; from: string };
 
 export type DoneWhen = { text: string; checker: string; light: Light; status: string };
@@ -354,14 +357,16 @@ function sizeLabel(set: FileChange[]): string {
 }
 
 /** Ship's kept attempt wins; otherwise the latest stage with attempts. */
-function changed(task: JourneyTask): string {
+function changed(task: JourneyTask): { label: string; any: boolean } {
   const kept = task.views.ship.ship?.files;
-  const takes = task.views.review.takes ?? task.views.build.takes ?? [];
+  const { review, build } = task.views;
+  const takes = [review.takes, build.takes].find((t) => t?.length) ?? [];
   const sets = kept ? [kept] : takes.map((t) => t.files ?? []).filter((f) => f.length > 0);
-  if (sets.length === 0) return "Nothing changed yet";
+  if (sets.length === 0) return { label: "Nothing changed yet", any: false };
   const paths = new Set(sets.flat().map((f) => f.path));
-  if (sets.length > 1) return `${files(paths.size)} across ${sets.length} attempts`;
-  return sizeLabel(sets[0] ?? []);
+  if (sets.length > 1)
+    return { label: `${files(paths.size)} across ${sets.length} attempts`, any: true };
+  return { label: sizeLabel(sets[0] ?? []), any: true };
 }
 
 /** The summary under the stages: what it's for, how big, how sure. */
@@ -373,8 +378,8 @@ export function contextOf(task: JourneyTask): TaskContext {
   const touches = changed(task);
   return {
     goal: task.views.define.quote ?? task.title,
-    touches,
-    screens: touches === "Nothing changed yet" ? 0 : shown.size,
+    touches: touches.label,
+    screens: touches.any ? shown.size : 0,
     evidence: checked ? `${proven} of ${lines.length} proven` : "Not checked yet",
     proven,
     lines: lines.length,

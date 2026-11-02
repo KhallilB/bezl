@@ -191,10 +191,12 @@ export function Questions({
     ...items.map((item) => ({ item, choice: undefined })),
   ];
   const fallback = items.find((i) => i.id === prefer) ?? items[0];
-  const open = rows.some((r) => r.item.id === picked) ? picked : (fallback?.id ?? null);
-  // The answered choice unmounts; focus moves to whatever opened next.
+  // "" is a question you closed: nothing reopens until you pick one.
+  const open =
+    picked === "" ? null : rows.some((r) => r.item.id === picked) ? picked : (fallback?.id ?? null);
+  // The answered choice unmounts; focus moves to whatever opened next, else stays on the answer.
   useEffect(() => {
-    if (last) document.getElementById(`${id}-head-${open}`)?.focus();
+    if (last) document.getElementById(`${id}-head-${open ?? last.item.id}`)?.focus();
   }, [last, open, id]);
   return (
     <section className="journey-section" aria-labelledby={id}>
