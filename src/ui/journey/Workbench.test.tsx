@@ -53,6 +53,18 @@ test("the side is the workspace, labelled so", () => {
   expect(screen.getByRole("complementary", { name: "Workspace" })).toBeVisible();
 });
 
+test("with no screenshots, the workspace opens on what Bezl measured", () => {
+  render(<Harness id="snapshot" stage="check" />);
+  expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
+  expect(within(side()).getByRole("list", { name: "What needs you" })).toBeVisible();
+});
+
+test("with only the intent to show, there is no full screen", () => {
+  render(<Harness id="debounce" stage="build" />);
+  expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.queryByRole("button", { name: "Full screen" })).toBeNull();
+});
+
 describe("summary", () => {
   test("one line under the stages: the goal, the change's reach and how sure Bezl is", () => {
     render(<Harness id="empty-state" stage="review" />);

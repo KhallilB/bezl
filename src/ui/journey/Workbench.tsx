@@ -576,7 +576,9 @@ export function Workspace({
     ...(trace ? [{ id: "evidence" as const, name: "Evidence" }] : []),
     { id: "intent", name: "Intent" },
   ];
-  const shown = tabs.some((t) => t.id === tab) ? tab : "intent";
+  // The open tab can be missing at this stage: fall back to what was measured, then the intent.
+  const shown =
+    tabs.find((t) => t.id === tab)?.id ?? tabs.find((t) => t.id === "evidence")?.id ?? "intent";
   const path = trace ? pathOf(trace) : [];
   const picked = trace?.nodes.find((n) => n.id === focus);
   const see =
@@ -617,9 +619,11 @@ export function Workspace({
         <Panel.Header>
           <div className="journey-side-head">
             <Tabs id={`${id}-in`} tabs={tabs} shown={shown} onTab={onTab} />
-            <Button size="sm" variant="ghost" onClick={() => setFull(true)}>
-              Full screen
-            </Button>
+            {tabs.length > 1 ? (
+              <Button size="sm" variant="ghost" onClick={() => setFull(true)}>
+                Full screen
+              </Button>
+            ) : null}
           </div>
         </Panel.Header>
         <Panel.Body
