@@ -266,6 +266,27 @@ export const codexProbed: ProviderCheck = {
   tiers: codexTiers,
 };
 
+/** Codex fit to review: every safety test passed, unlike the live probe above. */
+export const codexReady: ProviderCheck = {
+  ...codexProbed,
+  readOnly:
+    codexProbed.readOnly.kind === "probed"
+      ? {
+          kind: "probed",
+          detail: {
+            ...codexProbed.readOnly.detail,
+            capabilities: {
+              fileWrites: { kind: "passed" },
+              shell: { kind: "passed" },
+              mcpTools: { kind: "passed" },
+              hooks: { kind: "passed" },
+              network: { kind: "passed" },
+            },
+          },
+        }
+      : codexProbed.readOnly,
+};
+
 export const claudeSignedOut: ProviderCheck = {
   ...claudeFound,
   signin: {
