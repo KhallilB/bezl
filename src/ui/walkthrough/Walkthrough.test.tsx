@@ -255,13 +255,16 @@ describe("Walkthrough start a task", () => {
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     blank.unmount();
     at("?screen=walkthrough&step=define-ready");
+    const done = render(<Walkthrough />);
+    expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
+    done.unmount();
+    at("?screen=walkthrough&step=crew");
     render(<Walkthrough />);
     expect(screen.getByRole("button", { name: "Start task" })).toBeVisible();
-    expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
   });
 
   test("starting asks about setup, and Allow prepares the first task", async () => {
-    at("?screen=walkthrough&step=define-ready");
+    at("?screen=walkthrough&step=crew");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Start task" }));
     expect(within(dock()).getByText(position("setup"))).toBeVisible();

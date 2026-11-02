@@ -6,6 +6,11 @@ import { NewTask, type NewTaskProps } from "./NewTask";
 import { SetupConfirm } from "./SetupConfirm";
 
 const text = "Help people with no projects start their first one.";
+const next = () => userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+const stepNow = () =>
+  within(screen.getByRole("list", { name: "New task steps" })).getByRole("listitem", {
+    current: "step",
+  });
 
 function setup(props: Partial<NewTaskProps> = {}) {
   const onStart = vi.fn();
@@ -24,35 +29,78 @@ function setup(props: Partial<NewTaskProps> = {}) {
   return { onStart };
 }
 
-const readinessList = () => screen.getByRole("list", { name: "Is the task ready?" });
-const check = (name: RegExp) => within(readinessList()).getByRole("listitem", { name });
+describe("NewTask steps", () => {
+  test("walks Goal, Done when, then Who works on it, and Back keeps what you wrote", async () => {
+    setup();
+    expect(stepNow()).toHaveTextContent("Goal");
+    await userEvent.type(screen.getByRole("textbox", { name: "Goal" }), text);
+    await next();
+    expect(stepNow()).toHaveTextContent("Done when");
+    expect(screen.queryByRole("textbox", { name: "Goal" })).toBeNull();
+    await next();
+    expect(stepNow()).toHaveTextContent("Who works on it");
+    expect(screen.getByRole("radiogroup", { name: "Writes" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue(text);
+  });
+
+  test("the walkthrough can open on a later step", () => {
+    setup({ step: "who" });
+    expect(stepNow()).toHaveTextContent("Who works on it");
+  });
+});
 
 describe("NewTask goal", () => {
-  test("is checked as you type", async () => {
+  test("a short goal says why a sentence helps", async () => {
     setup();
-    expect(check(/What you want/)).toHaveAccessibleDescription(/missing/);
+    expect(screen.getByText(/full sentence rather than a title/)).toBeVisible();
     await userEvent.type(screen.getByRole("textbox", { name: "Goal" }), text);
-    expect(check(/What you want/)).toHaveAccessibleDescription(/present/);
+    expect(screen.queryByText(/full sentence rather than a title/)).toBeNull();
   });
 
-  test("a gap says why and adds its suggestion in one click", async () => {
+  test("the optional parts are fields, each with its suggestion one click away", async () => {
     setup({ initial: { text, doneWhen: [] } });
-    expect(within(check(/Who it's for/)).getByText(/whose problem/)).toBeVisible();
-    await userEvent.click(within(check(/Who it's for/)).getByRole("button", { name: /Add/ }));
-    expect(check(/Who it's for/)).toHaveAccessibleDescription(/present/);
-    expect(screen.getByText(suggestions.who?.who ?? "")).toBeVisible();
+    const who = screen.getByRole("textbox", { name: "Who it's for" });
+    expect(screen.getByText(/whose problem/)).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Use suggestion for Who it's for" }));
+    expect(who).toHaveValue(suggestions.who?.who);
+    await userEvent.clear(screen.getByRole("textbox", { name: "Example" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Example" }), "The Inbox page");
+    expect(screen.getByRole("textbox", { name: "Example" })).toHaveValue("The Inbox page");
   });
+});
 
-  test("done checks say who checks each", async () => {
-    setup({ initial: { text, doneWhen: [] } });
-    await userEvent.click(within(check(/How you'll know/)).getByRole("button", { name: /Add/ }));
+describe("NewTask done when", () => {
+  test("each line says who checks it, and suggested lines add in one click", async () => {
+    setup({ initial: { text, doneWhen: [] }, step: "done" });
+    expect(screen.getByText(/take the agent's word/)).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: /Add 3 suggested lines/ }));
     const list = screen.getByRole("list", { name: "It's done when" });
     expect(within(list).getAllByText("Bezl checks").length).toBeGreaterThan(0);
     expect(within(list).getAllByText("You check").length).toBeGreaterThan(0);
   });
 
-  test("starting anyway stays possible with gaps, and the label says so", async () => {
-    const { onStart } = setup({ initial: { text, doneWhen: [] } });
+  test("a line you type is yours to check, and you can remove it", async () => {
+    setup({ initial: { text, doneWhen: [] }, step: "done" });
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Add a line" }),
+      "It feels calm{Enter}",
+    );
+    const list = screen.getByRole("list", { name: "It's done when" });
+    expect(within(list).getByText("It feels calm")).toBeVisible();
+    expect(within(list).getByText("You check")).toBeVisible();
+    await userEvent.click(within(list).getByRole("button", { name: "Remove It feels calm" }));
+    expect(screen.queryByRole("list", { name: "It's done when" })).toBeNull();
+  });
+});
+
+describe("NewTask start", () => {
+  test("the last step sums up the task and names any gaps; you can start anyway", async () => {
+    const { onStart } = setup({ initial: { text, doneWhen: [] }, step: "who" });
+    const summary = screen.getByRole("region", { name: "Your task" });
+    expect(within(summary).getByText(text)).toBeVisible();
+    expect(within(summary).getByText(/Not filled in: who it's for/)).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Start anyway" }));
     expect(onStart).toHaveBeenCalledWith(
       expect.objectContaining({ writer: "claude", reviewer: "codex", blockShip: false }),
@@ -62,7 +110,7 @@ describe("NewTask goal", () => {
 
 describe("NewTask crew", () => {
   test("offers what passed preflight and greys the rest with the reason", () => {
-    setup();
+    setup({ step: "who" });
     const writer = screen.getByRole("radiogroup", { name: "Writes" });
     expect(within(writer).getByRole("radio", { name: /Local model/ })).toHaveAttribute(
       "aria-disabled",
@@ -72,7 +120,7 @@ describe("NewTask crew", () => {
   });
 
   test("a reviewer from the writer's vendor is allowed and labelled", async () => {
-    setup();
+    setup({ step: "who" });
     const reviewer = screen.getByRole("radiogroup", { name: "Reviews" });
     expect(within(reviewer).queryByText(/same company/)).toBeNull();
     await userEvent.click(within(reviewer).getByRole("radio", { name: /Claude Code/ }));
@@ -82,7 +130,7 @@ describe("NewTask crew", () => {
   });
 
   test("open problems do not block Ship unless you say so", () => {
-    setup();
+    setup({ step: "who" });
     expect(screen.getByRole("switch", { name: /Don't ship with open problems/ })).not.toBeChecked();
   });
 });
@@ -125,7 +173,7 @@ describe("SetupConfirm", () => {
 });
 
 describe("NewTask from a GitHub issue", () => {
-  test("picking an issue fills the goal, which is checked like any other", async () => {
+  test("picking an issue fills the goal, and its checklist becomes done-when lines", async () => {
     setup({ issues });
     await userEvent.click(screen.getByRole("button", { name: "Start from a GitHub issue" }));
     const list = screen.getByRole("list", { name: "Open issues in studio-web" });
@@ -133,24 +181,25 @@ describe("NewTask from a GitHub issue", () => {
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveDisplayValue(
       /^Projects page shows an empty table/,
     );
-    expect(
-      within(screen.getByRole("list", { name: "It's done when" })).getAllByRole("listitem"),
-    ).toHaveLength(2);
-    expect(check(/How you'll know it's done/)).toHaveAccessibleDescription(/present/);
-    expect(check(/Who it's for/)).toHaveAccessibleDescription(/missing/);
     expect(screen.getByRole("link", { name: "View issue #128" })).toHaveAttribute(
       "href",
       "https://github.com/acme/studio-web/issues/128",
     );
+    await next();
+    expect(
+      within(screen.getByRole("list", { name: "It's done when" })).getAllByRole("listitem"),
+    ).toHaveLength(2);
   });
 
   test("the issue travels with the task, and you can start from scratch", async () => {
-    const { onStart } = setup({ issues, pickedIssue: 128 });
+    const { onStart } = setup({ issues, pickedIssue: 128, step: "who" });
     await userEvent.click(screen.getByRole("button", { name: "Start anyway" }));
     expect(onStart.mock.calls[0]?.[0].draft.issue).toEqual({
       number: 128,
       url: "https://github.com/acme/studio-web/issues/128",
     });
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
     await userEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     expect(screen.queryByRole("link", { name: "View issue #128" })).toBeNull();
@@ -164,7 +213,7 @@ describe("NewTask from a GitHub issue", () => {
 
 describe("NewTask limits", () => {
   test("you add and remove the files it may change, and the task starts with yours", async () => {
-    const { onStart } = setup({ initial: { text, doneWhen: [] } });
+    const { onStart } = setup({ initial: { text, doneWhen: [] }, step: "who" });
     const paths = () => screen.getByRole("list", { name: "Files it may change" });
     await userEvent.type(screen.getByRole("textbox", { name: "Add a path" }), "src/components/**");
     await userEvent.click(screen.getByRole("button", { name: "Add path" }));
@@ -173,7 +222,7 @@ describe("NewTask limits", () => {
       within(paths()).getByRole("button", { name: "Remove src/pages/Projects.tsx" }),
     );
     expect(within(paths()).queryByText("src/pages/Projects.tsx")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /Start/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start/ }));
     expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ paths: ["src/components/**"] }));
   });
 });
