@@ -8,6 +8,7 @@ import {
   estimate,
   lineage,
   pathOf,
+  planClaim,
   type StageLights,
   stageIds,
   stageLabel,
@@ -330,4 +331,11 @@ describe("pathOf", () => {
     expect(path[0]?.blocks.map((n) => n.id)).toEqual(["i2"]);
     expect(path[1]?.blocks.map((n) => n.id)).toEqual(["i1", "i2", "i3"]);
   });
+});
+
+test("a link from the goal to code is the plan's claim; every other link is measured", () => {
+  const trace = tasks.find((t) => t.id === "empty-state")?.trace;
+  if (!trace) throw new Error("no trace");
+  expect(planClaim(trace, { from: "i2", to: "link" })).toBe(true);
+  expect(planClaim(trace, { from: "link", to: "review" })).toBe(false);
 });

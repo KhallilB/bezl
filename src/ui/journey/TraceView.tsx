@@ -5,6 +5,7 @@ import {
   coverageText,
   lightLabel,
   lineage,
+  planClaim,
   type Trace,
   type TraceNode,
   traceColumns,
@@ -74,9 +75,15 @@ export function TraceView({
           <ol className="journey-chain" aria-label="How it connects">
             {traceColumns.map((c) => {
               const here = trace.nodes.filter((n) => n.column === c.id && lit.has(n.id));
+              const claimed =
+                c.id === "change" &&
+                trace.links.some((l) => planClaim(trace, l) && lit.has(l.from) && lit.has(l.to));
               return here.length ? (
                 <li key={c.id}>
                   <h3 className="page-label">{c.name}</h3>
+                  {claimed ? (
+                    <p className="journey-claim">Linked to the goal by the plan, not measured</p>
+                  ) : null}
                   {here.map((n) => (
                     <NodeButton key={n.id} node={n} pressed={n.id === focus} onFocus={onFocus} />
                   ))}

@@ -1044,6 +1044,37 @@
   opacity: 0.35;
 }
 
+/* The plan's claims are dotted; what Bezl measured is solid. */
+.journey-map .journey-map-claim .react-flow__edge-path {
+  stroke-dasharray: 2 5;
+}
+
+.journey-map .journey-map-lit .react-flow__edge-path {
+  stroke: var(--kb-color-fg);
+  stroke-width: 2;
+}
+
+.journey-map-key {
+  padding: var(--kb-space-1) var(--kb-space-2);
+  border: 1px solid var(--kb-color-border);
+  border-radius: var(--kb-radius-sm);
+  background: var(--kb-material-raised-face);
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+}
+
+.journey-claim {
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+  font-style: italic;
+}
+
+.journey-reach {
+  margin: 0;
+  font-size: var(--kb-size-sm);
+}
+
 .journey-full-canvas > .journey-preview,
 .journey-full-canvas > .journey-map,
 .journey-full-canvas > .journey-intent {
