@@ -122,6 +122,18 @@ export type ProviderCheck = {
   enforcement: Record<Capability, Enforcement>;
 };
 
+// Mirrors `providers/github.rs`.
+export type GhSignIn =
+  | { kind: "signedIn"; detail: { login: string } }
+  | { kind: "signedOut" }
+  | { kind: "failing"; detail: { says: string } }
+  | { kind: "unrecognized"; detail: { code: number | null; says: string } }
+  | { kind: "failed"; detail: RunError };
+
+export type GitHubCheck =
+  | { kind: "noBinary" }
+  | { kind: "found"; detail: { path: string; version: string; signin: GhSignIn } };
+
 export const providerName: Record<ProviderId, string> = {
   claude: "Claude Code",
   codex: "Codex",
@@ -484,4 +496,64 @@ export function tiersShown({ tiers }: ProviderCheck): Overall | null {
       ? good("All three hold")
       : quiet(`${holding} of ${tierOrder.length} hold`);
   });
+}
+
+/** D7: never blocks a writer, so nothing here is red but a run that failed. */
+export function githubShown(check: GitHubCheck): Shown {
+  if (check.kind === "noBinary") return needsYou("Not installed");
+  const { signin } = check.detail;
+  switch (signin.kind) {
+    case "signedIn":
+      return good(`Signed in as ${signin.detail.login}`);
+    case "signedOut":
+      return needsYou("Not signed in");
+    case "failing":
+      return needsYou("Sign-in failing");
+    case "unrecognized":
+      return needsYou(`Unrecognized: "${signin.detail.says}"`);
+    case "failed":
+      return failed(runErrorText(signin.detail));
+  }
+}
+
+export const githubChecking: Shown = { label: "Checking", tone: "running", icon: "running" };
+
+export const githubNote =
+  "Needed only for Ship. Without it, or in a repository with no GitHub remote, Bezl hides the issue picker, and Ship can't open a pull request: the task finishes on a local branch.";
+
+export function githubFixes(check: GitHubCheck): Fix[] {
+  const login = "`gh auth login`";
+  if (check.kind === "noBinary")
+    return [
+      {
+        problem: "No GitHub CLI on your path",
+        action: `Install it from cli.github.com (\`brew install gh\`), then run ${login}.`,
+      },
+    ];
+  const { signin } = check.detail;
+  const see = "Run `gh auth status` to see why";
+  switch (signin.kind) {
+    case "signedIn":
+      return [];
+    case "signedOut":
+      return [{ problem: "GitHub CLI is not signed in", action: `Run ${login}.` }];
+    case "failing":
+      return [
+        {
+          problem: "GitHub did not accept gh's sign-in",
+          says: signin.detail.says,
+          action: `${see}, then ${login}.`,
+        },
+      ];
+    case "unrecognized":
+      return [
+        {
+          problem: "Bezl could not read `gh auth status`",
+          says: signin.detail.says,
+          action: "Update gh to 2.81.0 or later, then Check again.",
+        },
+      ];
+    case "failed":
+      return [{ problem: `\`gh auth status\`: ${runErrorText(signin.detail)}`, action: `${see}.` }];
+  }
 }

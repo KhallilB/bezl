@@ -14,7 +14,7 @@ export type Chapter = (typeof chapters)[number];
 
 export type Draft = keyof typeof drafts;
 
-export type Preflight = "checking" | "ready" | "impostor" | "noWriter";
+export type Preflight = "checking" | "ready" | "noGitHub" | "impostor" | "noWriter";
 
 export type TourView =
   | { kind: "choose"; refused?: boolean }
@@ -60,6 +60,13 @@ export const steps: Step[] = [
     title: "Providers",
     note: "One card per CLI: version, sign-in, the read-only probe and usage reporting.",
     view: { kind: "providers", result: "ready" },
+  },
+  {
+    id: "github",
+    chapter: "Getting started",
+    title: "No GitHub sign-in",
+    note: "Preflight also asks gh for your GitHub sign-in. Without one, Ship can't open a pull request; nothing else waits on it.",
+    view: { kind: "providers", result: "noGitHub" },
   },
   {
     id: "impostor",
