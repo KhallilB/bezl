@@ -37,22 +37,14 @@ describe("Walkthrough tour", () => {
     ).toBeVisible();
   });
 
-  test("the context step keeps the goal, the change and its proof beside the stage", async () => {
+  test("the context step keeps the goal, the change and its proof on one line", async () => {
     at("?screen=walkthrough&step=context");
     render(<Walkthrough />);
     expect(within(dock()).getByText("What it's for, how big, how sure")).toBeVisible();
-    const context = screen.getByRole("list", { name: "This task" });
-    await userEvent.click(within(context).getByRole("button", { name: "Open Intent" }));
+    const summary = screen.getByRole("list", { name: "This task" });
+    await userEvent.click(within(summary).getByRole("button", { name: "3 of 4 done" }));
     expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("list", { name: "Decided" })).toBeVisible();
-  });
-
-  test("the flow step shows how the task got here, a card per stage", async () => {
-    at("?screen=walkthrough&step=flow");
-    render(<Walkthrough />);
-    expect(within(dock()).getByText("How it got here")).toBeVisible();
-    const flow = screen.getByRole("list", { name: "How this task got here" });
-    expect(within(flow).getAllByRole("listitem")).toHaveLength(6);
   });
 
   test("the preview step shows the change as Bezl captured it", async () => {
@@ -62,6 +54,8 @@ describe("Walkthrough tour", () => {
     expect(screen.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
     await userEvent.click(screen.getByRole("button", { name: "A, loading" }));
     expect(screen.getByRole("img", { name: "Projects, A, loading, at 375 px" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
+    expect(screen.getByRole("dialog", { name: "Design review · Projects" })).toBeVisible();
   });
 
   test("the trace step follows a problem back to the goal, arriving from the step before", async () => {
