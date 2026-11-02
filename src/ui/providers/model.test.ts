@@ -4,6 +4,9 @@ import {
   claudeSignedOut,
   codexFound,
   codexProbed,
+  githubMissing,
+  githubSignedIn,
+  githubSignedOut,
   noWriter,
   thisMachine,
 } from "./fixtures";
@@ -12,6 +15,10 @@ import {
   canWrite,
   capabilityRows,
   fixes,
+  type GhSignIn,
+  type GitHubCheck,
+  githubFixes,
+  githubShown,
   type HomeSignIn,
   type ProviderCheck,
   readOnlyShown,
@@ -384,5 +391,71 @@ describe("plain sentences for edge cases", () => {
     expect(rejectionText({ kind: "exited", detail: { code: null, says: "boom" } })).toBe(
       'It stopped without an error code and said "boom"',
     );
+  });
+});
+
+describe("GitHub sign-in", () => {
+  const ghWith = (signin: GhSignIn): GitHubCheck => ({
+    kind: "found",
+    detail: { path: "/opt/homebrew/bin/gh", version: "2.92.0", signin },
+  });
+
+  test("names the signed-in account", () => {
+    expect(githubShown(githubSignedIn)).toEqual({
+      label: "Signed in as octocat",
+      tone: "success",
+      icon: "finished",
+    });
+    expect(githubFixes(githubSignedIn)).toEqual([]);
+  });
+
+  test("signed out names `gh auth login` for you to run", () => {
+    expect(githubShown(githubSignedOut)).toEqual({
+      label: "Not signed in",
+      tone: "warning",
+      icon: "blocked",
+    });
+    expect(githubFixes(githubSignedOut)).toEqual([
+      { problem: "GitHub CLI is not signed in", action: "Run `gh auth login`." },
+    ]);
+  });
+
+  test("no gh on your path names how to install it", () => {
+    expect(githubShown(githubMissing).label).toBe("Not installed");
+    expect(githubFixes(githubMissing)).toEqual([
+      {
+        problem: "No GitHub CLI on your path",
+        action: "Install it from cli.github.com (`brew install gh`), then run `gh auth login`.",
+      },
+    ]);
+  });
+
+  test("a refused sign-in, an old gh and a hung one each say what to run", () => {
+    const failing = ghWith({ kind: "failing", detail: { says: "401 Unauthorized" } });
+    expect(githubShown(failing).label).toBe("Sign-in failing");
+    expect(githubFixes(failing)).toEqual([
+      {
+        problem: "GitHub did not accept gh's sign-in",
+        says: "401 Unauthorized",
+        action: "Run `gh auth status` to see why, then `gh auth login`.",
+      },
+    ]);
+    const old = ghWith({
+      kind: "unrecognized",
+      detail: { code: 1, says: "unknown flag: --json" },
+    });
+    expect(githubShown(old).label).toBe('Unrecognized: "unknown flag: --json"');
+    expect(githubFixes(old)).toEqual([
+      {
+        problem: "Bezl could not read `gh auth status`",
+        says: "unknown flag: --json",
+        action: "Update gh to 2.81.0 or later, then Check again.",
+      },
+    ]);
+    const hung = ghWith({ kind: "failed", detail: { kind: "timedOut" } });
+    expect(githubShown(hung)).toEqual({ label: "Timed out", tone: "blocked", icon: "blocked" });
+    expect(githubFixes(hung)).toEqual([
+      { problem: "`gh auth status`: Timed out", action: "Run `gh auth status` to see why." },
+    ]);
   });
 });

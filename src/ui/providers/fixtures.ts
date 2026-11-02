@@ -1,6 +1,7 @@
 import type {
   Capability,
   Enforcement,
+  GitHubCheck,
   ProviderCheck,
   TierOutcome,
   TiersCheck,
@@ -278,3 +279,15 @@ export const claudeSignedOut: ProviderCheck = {
 
 /** Claude signed out, only an impostor `codex`: nothing can write. */
 export const noWriter: ProviderCheck[] = [claudeSignedOut, thisMachine[1] as ProviderCheck];
+
+// `github.rs` GitHubCheck as preflight serializes it.
+const gh = { path: "/opt/homebrew/bin/gh", version: "2.92.0" };
+export const githubSignedIn: GitHubCheck = {
+  kind: "found",
+  detail: { ...gh, signin: { kind: "signedIn", detail: { login: "octocat" } } },
+};
+export const githubSignedOut: GitHubCheck = {
+  kind: "found",
+  detail: { ...gh, signin: { kind: "signedOut" } },
+};
+export const githubMissing: GitHubCheck = { kind: "noBinary" };

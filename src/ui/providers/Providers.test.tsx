@@ -7,6 +7,9 @@ import {
   claudeSignedOut,
   codexFound,
   codexProbed,
+  githubMissing,
+  githubSignedIn,
+  githubSignedOut,
   noWriter,
   thisMachine,
 } from "./fixtures";
@@ -316,6 +319,39 @@ describe("Providers", () => {
     render(<Providers checks={noWriter} error="spawn failed" />);
     expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
     expect(screen.getByRole("region", { name: "Codex" })).toBeVisible();
+  });
+
+  test("the GitHub row names the account and says it is needed only for Ship", () => {
+    render(<Providers checks={[claudeFound, codexProbed]} github={githubSignedIn} />);
+    const github = screen.getByRole("region", { name: "GitHub" });
+    expect(within(github).getByText("Signed in as octocat")).toBeVisible();
+    expect(within(github).getByText("/opt/homebrew/bin/gh")).toBeVisible();
+    expect(within(github).getByText(/Needed only for Ship/)).toBeVisible();
+    expect(
+      within(github).getByText(/hides the issue picker, and Ship can't open a pull request/),
+    ).toBeVisible();
+  });
+
+  test("no GitHub sign-in names `gh auth login` and never blocks a writer", () => {
+    render(<Providers checks={[claudeFound, codexProbed]} github={githubSignedOut} />);
+    const github = screen.getByRole("region", { name: "GitHub" });
+    expect(within(github).getByText("Not signed in")).toBeVisible();
+    const fix = within(github).getByRole("list", { name: "To fix" });
+    expect(within(fix).getByText("gh auth login")).toBeVisible();
+    expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
+  });
+
+  test("no gh says Not installed and how to install it", () => {
+    render(<Providers checks={noWriter} github={githubMissing} />);
+    const github = screen.getByRole("region", { name: "GitHub" });
+    expect(within(github).getByText("Not installed")).toBeVisible();
+    expect(within(github).getByText("brew install gh")).toBeVisible();
+  });
+
+  test("the GitHub row shows its own check in flight", () => {
+    render(<Providers checks={[claudeFound, codexProbed]} github={null} />);
+    const github = screen.getByRole("region", { name: "GitHub" });
+    expect(within(github).getByText("Checking")).toBeVisible();
   });
 });
 
