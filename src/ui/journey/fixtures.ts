@@ -2,8 +2,10 @@ import type {
   Assumption,
   CiCheck,
   CiStatus,
+  Comparison,
   DoneWhen,
   JourneyTask,
+  Light,
   ProviderUsage,
   Shot,
   StageView,
@@ -244,6 +246,54 @@ const reviewed = (a: string, b: string): Take[] => [
   },
 ];
 
+const both = (light: Light, text: string) => ({ A: { light, text }, B: { light, text } });
+
+const emptyCompare: Comparison = {
+  lean: {
+    take: "A",
+    why: "it meets the goal once the import link goes, and more of its lines run in a test.",
+  },
+  rows: [
+    { group: "Done when", label: emptyDone[0]?.text ?? "", cells: both("done", "Proven") },
+    {
+      group: "Done when",
+      label: emptyDone[1]?.text ?? "",
+      cells: {
+        A: { light: "needsYou", text: "The import link does nothing yet" },
+        B: { light: "needsYou", text: "A checklist adds a second way in" },
+      },
+    },
+    {
+      group: "Done when",
+      label: emptyDone[2]?.text ?? "",
+      cells: {
+        A: { light: "done", text: "0 issues" },
+        B: { light: "failed", text: "Contrast 2.6:1, needs 4.5:1" },
+      },
+    },
+    { group: "Done when", label: emptyDone[3]?.text ?? "", cells: both("done", "48 passed") },
+    {
+      group: "Checks",
+      label: "Changed lines run in a test",
+      cells: { A: { light: "done", text: "29 of 31" }, B: { light: "needsYou", text: "12 of 20" } },
+    },
+    { group: "Checks", label: "New dependencies", cells: both("done", "None") },
+    {
+      group: "Cost",
+      label: "Time",
+      cells: { A: { light: "done", text: "6 min" }, B: { light: "done", text: "9 min" } },
+    },
+    {
+      group: "Cost",
+      label: "Usage",
+      cells: {
+        A: { light: "done", text: "3% of Claude Code" },
+        B: { light: "done", text: "5% of Codex" },
+      },
+    },
+  ],
+};
+
 const emptyState: JourneyTask = {
   id: "empty-state",
   title: "Empty state for Projects",
@@ -328,6 +378,7 @@ const emptyState: JourneyTask = {
       rest: "Each one has been reviewed by the other coding agent, so you can compare them before you choose.",
       sections: [],
       takes: reviewed("Ready", "Ready"),
+      compare: emptyCompare,
       shots: [reviewedA, shotB],
       handled: [
         {

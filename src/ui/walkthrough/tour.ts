@@ -210,7 +210,7 @@ export const steps: Step[] = [
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw, and one button sends them all to the writer together. Checks that passed stay folded away.",
+    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw. The bar at the bottom sends them all to the writer together; it sits in the same place on every stage. Checks that passed stay folded away.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {
@@ -224,7 +224,7 @@ export const steps: Step[] = [
     id: "review-takes",
     chapter: "Your tasks",
     title: "Two attempts, two reviews",
-    note: "Each attempt is reviewed by the other coding agent, so you can weigh both reviews and keep the one that should ship.",
+    note: "The attempts line up row by row against your done-when lines, the checks, size and cost, with each one's review by the other coding agent. Keep heads each column, and the bar at the bottom says which one Bezl leans to and why.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {

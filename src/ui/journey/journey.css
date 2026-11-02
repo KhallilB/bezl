@@ -474,16 +474,79 @@
   gap: var(--kb-space-3);
 }
 
-.journey-ship-actions {
+/* Next step: the stage's one action, pinned to the bottom of the decide column. */
+.journey-next {
+  position: sticky;
+  inset-block-end: var(--kb-space-4);
+  z-index: 1;
+}
+
+.journey-next-body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--kb-space-3);
+  gap: var(--kb-space-2) var(--kb-space-3);
 }
 
-/* The opened line sits above what comes next. */
-.journey-ship-actions > [role="status"] {
-  flex-basis: 100%;
+.journey-next-text {
+  flex: 1 1 16rem;
+  margin: 0;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
+}
+
+.journey-next-text strong {
+  color: var(--kb-color-fg);
+  font-weight: 600;
+}
+
+/* Compare: a row per line, a column per attempt; Keep heads each column. */
+.journey-compare {
+  justify-items: start;
+}
+
+.journey-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--kb-size-sm);
+}
+
+.journey-table th,
+.journey-table td {
+  padding: var(--kb-space-2) var(--kb-space-3) var(--kb-space-2) 0;
+  border-block-end: 1px solid var(--kb-color-border);
+  font-weight: 400;
+  text-align: start;
+  vertical-align: top;
+}
+
+.journey-table thead th {
+  vertical-align: bottom;
+}
+
+.journey-table thead th:not(:first-child) {
+  width: 36%;
+}
+
+.journey-table-take {
+  display: block;
+  margin-block-end: var(--kb-space-2);
+  color: var(--kb-color-fg);
+  font-weight: 600;
+}
+
+.journey-table th[scope="row"] {
+  color: var(--kb-color-muted);
+}
+
+.journey-table th[scope="colgroup"] {
+  padding-block-start: var(--kb-space-4);
+}
+
+.journey-table td .journey-row-icon {
+  display: inline-flex;
+  margin-inline-end: var(--kb-space-1);
+  vertical-align: -0.2em;
 }
 
 .journey-link {

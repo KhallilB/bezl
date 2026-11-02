@@ -463,7 +463,10 @@ export function Side({ tab, onTab, shots, example, trace, focus, onFocus, ...int
     document.getElementById(`${id}-${next.id}`)?.focus();
   };
   return (
-    <aside className="journey-side" aria-label="Beside this stage">
+    <aside className="journey-side" aria-labelledby={`${id}-evidence`}>
+      <h2 id={`${id}-evidence`} className="page-label">
+        Evidence
+      </h2>
       <Panel>
         <Panel.Header>
           <div className="journey-tabs" role="tablist" aria-label="Show">

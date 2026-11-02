@@ -191,7 +191,7 @@ test("card titles and the brand mark match the shell's", async () => {
   const size = (el: Element | null) => (el ? getComputedStyle(el).fontSize : "none");
   const width = (el: Element | null) => Math.round(el?.getBoundingClientRect().width ?? 0);
   const shell = await each(
-    steps.filter((s) => s.id === "review-takes"),
+    steps.filter((s) => s.id === "working"),
     (el) =>
       `${size(el.querySelector(".journey-take h2"))} ${width(el.querySelector(".shell-mark"))}`,
   );
@@ -199,7 +199,7 @@ test("card titles and the brand mark match the shell's", async () => {
     [...el.querySelectorAll(".providers-panel h2, .task-cell h2")].map(size).join(),
   );
   const marks = await each(stateSteps, (el) => width(el.querySelector(".task-mark")));
-  const [title, mark] = String(shell["review-takes"]).split(" ");
+  const [title, mark] = String(shell.working).split(" ");
   // Preflight is still checking: no panels yet.
   for (const [id, sizes] of Object.entries(cards).filter(([, sizes]) => sizes)) {
     expect(new Set(sizes.split(",")), id).toEqual(new Set([title]));
