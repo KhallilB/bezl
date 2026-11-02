@@ -11,7 +11,14 @@ export const kindLabel: Record<NeedsYouKind, string> = {
 };
 
 /** `next` says what happens once you choose it; `example` names a Shot that shows it. */
-export type NeedsYouChoice = { id: string; label: string; next: string; example?: string };
+export type NeedsYouChoice = {
+  id: string;
+  label: string;
+  next: string;
+  example?: string;
+  /** What it costs or unblocks, a few words each. */
+  tradeoffs?: string[];
+};
 
 export type NeedsYouItem = {
   id: string;

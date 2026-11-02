@@ -4,6 +4,7 @@ import {
   contextOf,
   coverageText,
   diffLabel,
+  estimate,
   lineage,
   type StageLights,
   stageIds,
@@ -230,6 +231,31 @@ describe("contextOf", () => {
       evidence: "1 of 3 proven",
       proven: 1,
       lines: 3,
+    });
+  });
+});
+
+describe("estimate", () => {
+  const options = {
+    fixers: [
+      { id: "codex", name: "Codex", minutes: 5, usage: "4% of Codex" },
+      { id: "claude", name: "Claude Code", minutes: 8, usage: "6% of Claude Code" },
+    ],
+    checks: [
+      { id: "tests", label: "Tests", note: "", minutes: 2 },
+      { id: "a11y", label: "Accessibility", note: "", minutes: 3 },
+    ],
+    paths: ["src/**"],
+  };
+
+  test("the fixer's own time plus each check that runs after", () => {
+    expect(estimate(options, { fixer: "codex", checks: ["tests", "a11y"] })).toEqual({
+      minutes: 10,
+      usage: "4% of Codex",
+    });
+    expect(estimate(options, { fixer: "claude", checks: ["tests"] })).toEqual({
+      minutes: 10,
+      usage: "6% of Claude Code",
     });
   });
 });

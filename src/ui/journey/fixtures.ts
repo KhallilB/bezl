@@ -652,6 +652,23 @@ const snapshot: JourneyTask = {
       ],
     },
     check: {
+      sendBack: {
+        fixers: [
+          { id: "codex", name: "Codex", minutes: 5, usage: "4% of Codex" },
+          { id: "claude", name: "Claude Code", minutes: 8, usage: "6% of Claude Code" },
+        ],
+        checks: [
+          { id: "tests", label: "Browser tests", note: "bun run test:browser", minutes: 2 },
+          { id: "a11y", label: "Accessibility", note: "At 375 and 1280 px", minutes: 2 },
+          {
+            id: "cover",
+            label: "Changed code needs a test",
+            note: "Stops Ship on any untested line",
+            minutes: 1,
+          },
+        ],
+        paths: ["src/ui/terminals/**"],
+      },
       lead: "2 things need a look.",
       by: "Bezl ran 6 checks",
       rest: "Everything else passed, so these are all that's left.",

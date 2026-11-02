@@ -500,6 +500,31 @@
   font-weight: 600;
 }
 
+/* Open Options can outgrow the viewport; a stuck bar would hide its top. */
+.journey-next:has(.journey-sendback) {
+  position: static;
+}
+
+.journey-sendback {
+  flex: 1 0 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--kb-space-4);
+  padding-block-end: var(--kb-space-3);
+  border-block-end: 1px solid var(--kb-color-border);
+}
+
+.journey-estimate {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--kb-space-3);
+  padding: var(--kb-space-3);
+  border-radius: var(--kb-radius-md);
+  background: var(--kb-material-recessed-face);
+  box-shadow: var(--kb-material-field-shadow);
+}
+
 /* Compare: a row per line, a column per attempt; Keep heads each column. */
 .journey-compare {
   justify-items: start;
@@ -791,6 +816,13 @@
 
 .journey-then {
   color: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
+}
+
+.journey-tradeoffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-1);
+  margin-block-start: var(--kb-space-2);
 }
 
 .journey-then strong {

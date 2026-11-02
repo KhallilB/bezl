@@ -112,6 +112,14 @@ describe("questions", () => {
     expect(screen.getByText(/Codex keeps your edits/)).toBeVisible();
   });
 
+  test("each choice shows what it costs and what it unblocks", async () => {
+    render(<Harness id="deny-scopes" stage="build" />);
+    const then = screen.getByText(/Codex keeps your edits/).closest("p") as HTMLElement;
+    expect(within(then).getByText("Keeps your edits")).toBeVisible();
+    await userEvent.hover(screen.getByRole("button", { name: "Overwrite them" }));
+    expect(screen.getByText("Your edits stay out of it")).toBeVisible();
+  });
+
   test("each choice says what happens before you pick it", async () => {
     render(<Harness id="deny-scopes" stage="build" />);
     await userEvent.hover(screen.getByRole("button", { name: "Overwrite them" }));

@@ -206,6 +206,13 @@ function Choices({
       {shown ? (
         <p className="journey-then">
           <strong>{`${hint ? shown.label : `Recommended: ${shown.label}`}.`}</strong> {shown.next}
+          {shown.tradeoffs?.length ? (
+            <span className="journey-tradeoffs">
+              {shown.tradeoffs.map((t) => (
+                <Badge key={t}>{t}</Badge>
+              ))}
+            </span>
+          ) : null}
         </p>
       ) : null}
     </>

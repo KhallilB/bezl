@@ -230,7 +230,27 @@ export type StageView = {
   ship?: ShipSummary;
   /** Review's attempts line by line, and which one Bezl leans to. */
   compare?: Comparison;
+  /** How the stage's problems can go back; the first fixer is the writer. */
+  sendBack?: SendBackOptions;
 };
+
+export type Fixer = { id: string; name: string; minutes: number; usage: string };
+export type AfterCheck = { id: string; label: string; note: string; minutes: number };
+export type SendBackOptions = { fixers: Fixer[]; checks: AfterCheck[]; paths: string[] };
+export type SendBackPlan = { fixer: string; checks: string[] };
+
+/** The fixer's own time plus each check that runs after; usage is the fixer's. */
+export function estimate(
+  { fixers, checks }: SendBackOptions,
+  plan: SendBackPlan,
+): { minutes: number; usage: string } {
+  const fixer = fixers.find((f) => f.id === plan.fixer) ?? fixers[0];
+  const after = checks.filter((c) => plan.checks.includes(c.id));
+  return {
+    minutes: after.reduce((n, c) => n + c.minutes, fixer?.minutes ?? 0),
+    usage: fixer?.usage ?? "",
+  };
+}
 
 export type CompareCell = { light: Light; text: string };
 

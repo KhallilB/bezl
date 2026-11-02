@@ -196,14 +196,14 @@ export const steps: Step[] = [
     id: "question",
     chapter: "Your tasks",
     title: "A question waits on you",
-    note: "When a coding agent stops to ask you something, the task turns amber and the question opens in that stage, with what it holds up, Bezl's recommendation and what each answer leads to. Questions Bezl could answer itself are folded away under Bezl handled.",
+    note: "When a coding agent stops to ask you something, the task turns amber and the question opens in that stage, with what it holds up, Bezl's recommendation and what each answer leads to, costs and unblocks. Questions Bezl could answer itself are folded away under Bezl handled.",
     view: { kind: "task", taskId: "deny-scopes", stage: "build" },
   },
   {
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw. The bar at the bottom sends them all to the writer together; it sits in the same place on every stage. Checks that passed stay folded away.",
+    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw. The bar at the bottom sends them all together; it sits in the same place on every stage. Options beside it picks who fixes, what goes with the problems and which checks run after, with the time, usage and files it may change. Nothing goes until you press send. Checks that passed stay folded away.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {

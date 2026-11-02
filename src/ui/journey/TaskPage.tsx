@@ -14,7 +14,7 @@ import {
   stageLabel,
   stageMarker,
 } from "./model";
-import { Compare, NextStep, Passed, Problems, RowItem, Ship, sendText, Takes } from "./StageViews";
+import { Compare, NextStep, Passed, Problems, RowItem, SendBack, Ship, Takes } from "./StageViews";
 import {
   type Answer,
   ContextTiles,
@@ -93,22 +93,18 @@ function StagePane({
 }: PaneProps & { onWhy?: ((id: string) => void) | undefined; asking: number }) {
   // Keeping is the decision Review waits on; once made, the buttons go.
   const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
-  const [sent, setSent] = useState(false);
   const [opened, setOpened] = useState(
     task.stages.ship === "working" || task.stages.ship === "done",
   );
   const lean = keep && view.compare ? view.compare.lean : undefined;
   const next = () => {
     if (view.problems?.length) {
-      const { what, writers } = sendText(view.problems);
-      return sent ? (
-        <p className="journey-next-text" role="status">
-          {`Sent ${what} to ${writers} with what Bezl saw.`}
-        </p>
-      ) : (
-        <Button variant="primary" onClick={() => setSent(true)}>
-          {`Send ${what} to ${writers}`}
-        </Button>
+      return (
+        <SendBack
+          problems={view.problems}
+          options={view.sendBack}
+          shots={Boolean(view.shots?.length)}
+        />
       );
     }
     if (lean && keep) {

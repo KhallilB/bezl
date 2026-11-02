@@ -76,6 +76,38 @@ describe("Check", () => {
     );
   });
 
+  test("Options picks who fixes and which checks run after, with an estimate", async () => {
+    open(tasks, "snapshot", "check");
+    const options = within(bar()).getByRole("button", { name: "Options" });
+    expect(options).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(options);
+    expect(options).toHaveAttribute("aria-expanded", "true");
+    expect(within(bar()).getByText("About 10 min")).toBeVisible();
+    await userEvent.click(within(bar()).getByRole("switch", { name: /Accessibility/ }));
+    expect(within(bar()).getByText("About 8 min")).toBeVisible();
+    await userEvent.click(within(bar()).getByRole("radio", { name: "Claude Code" }));
+    expect(within(bar()).getByText("About 11 min")).toBeVisible();
+    expect(within(bar()).getByText("6% of Claude Code")).toBeVisible();
+    expect(within(bar()).getByText("src/ui/terminals/**")).toBeVisible();
+    expect(screen.queryByRole("status")).toBeNull();
+    await userEvent.click(
+      within(bar()).getByRole("button", { name: "Send 2 problems to Claude Code" }),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Sent 2 problems to Claude Code with what Bezl saw.",
+    );
+  });
+
+  test("what goes with the problems is yours to choose", async () => {
+    open(tasks, "snapshot", "check");
+    await userEvent.click(within(bar()).getByRole("button", { name: "Options" }));
+    const notes = within(bar()).getByRole("checkbox", { name: /Your notes/ });
+    expect(notes).toBeChecked();
+    await userEvent.click(notes);
+    expect(notes).not.toBeChecked();
+    expect(within(bar()).getByRole("checkbox", { name: /What Bezl saw/ })).toBeDisabled();
+  });
+
   test("passed checks stay folded until asked for", async () => {
     open(tasks, "snapshot", "check");
     const passed = screen.getByText("cargo test -p bezl-domain");
