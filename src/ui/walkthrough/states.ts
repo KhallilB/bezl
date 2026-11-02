@@ -7,20 +7,6 @@ export type Scene = (typeof scenes)[number];
 export const themes = ["dark", "light"] as const;
 export type Theme = (typeof themes)[number];
 
-export const sceneLabel: Record<Scene, string> = {
-  idle: "Idle",
-  running: "Running",
-  blocked: "Blocked",
-  longContent: "Long content",
-};
-
-export const sceneNote: Record<Scene, string> = {
-  idle: "No task is running, so every worker is waiting.",
-  running: "The writer works while the reviewers wait or finish up.",
-  blocked: "The writer is waiting for your answer.",
-  longContent: "Long output scrolls inside its own panel.",
-};
-
 export const sceneWorkers: Record<Scene, WorkerView[]> = {
   idle: samples.idle,
   running: samples.running,
@@ -31,11 +17,6 @@ export const sceneWorkers: Record<Scene, WorkerView[]> = {
 // Own-property check: `in` would accept "toString".
 export function oneOf<T extends string>(list: readonly T[], value: string | null): T | undefined {
   return list.find((item) => item === value);
-}
-
-/** Query for the bare Task screen in one scene and theme. */
-export function frameSrc(scene: Scene, theme: Theme): string {
-  return `?screen=task&sample=${scene}&theme=${theme}`;
 }
 
 /** Reads ?sample= and ?theme= for the bare Task screen. */

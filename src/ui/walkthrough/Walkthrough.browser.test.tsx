@@ -36,16 +36,12 @@ function unmount() {
 
 afterEach(unmount);
 
-// Design-state steps render the Task screen, which Task.browser.test.tsx already scans.
-const scanned = steps.filter((s) => s.view.kind !== "state");
-
 for (const theme of ["dark", "light"] as const) {
   describe(theme, () => {
-    for (const s of scanned) {
+    for (const s of steps) {
       test(`${s.id} passes the accessibility scan`, async () => {
         const el = await mount(`?screen=walkthrough&step=${s.id}&theme=${theme}`);
-        // Overview frames load the app itself; their contents are the Task screen's scan.
-        const result = await axe.run(el, { iframes: false });
+        const result = await axe.run(el);
         expect(result.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
       });
     }
@@ -74,10 +70,8 @@ test("the task title, stage markers, status and the stage's content share one le
   ]).toEqual([edge, edge, edge]);
 });
 
-// Screens inside the app shell; onboarding, Providers and the design states keep their own frame.
-const inShell = steps.filter(
-  (s) => !["choose", "providers", "state", "overview"].includes(s.view.kind),
-);
+// Screens inside the app shell; onboarding and Providers keep their own frame.
+const inShell = steps.filter((s) => !["choose", "providers"].includes(s.view.kind));
 
 /** Mounts each step in turn; `read` returns one value per step. */
 async function each<T>(list: typeof steps, read: (el: HTMLElement) => T) {
@@ -148,10 +142,7 @@ for (const [width, height] of [
 ] as const) {
   test(`at ${width}px no step scrolls sideways`, async () => {
     await page.viewport(width, height);
-    const seen = await each(
-      steps.filter((s) => s.view.kind !== "overview"),
-      () => document.documentElement.scrollWidth,
-    );
+    const seen = await each(steps, () => document.documentElement.scrollWidth);
     expect(Object.entries(seen).filter(([, w]) => w > width)).toEqual([]);
   });
 
@@ -173,12 +164,11 @@ test("at phone width the open task's row scrolls into the task bar", async () =>
 });
 
 const providerSteps = steps.filter((s) => s.view.kind === "providers");
-const stateSteps = steps.filter((s) => s.view.kind === "state");
 
-test("every step's title is one size, Providers and the design states included", async () => {
+test("every step's title is one size, Providers included", async () => {
   await page.viewport(1440, 900);
   const seen = await each(
-    steps.filter((s) => s.view.kind !== "overview"),
+    steps,
     (el) => getComputedStyle(el.querySelector("h1") as HTMLElement).fontSize,
   );
   expect(distinct(seen), JSON.stringify(seen)).toHaveLength(1);
@@ -195,25 +185,20 @@ test("Providers is one page as wide as the shell's, its action at the title row'
   expect(distinct(seen), JSON.stringify(seen)).toEqual(new Set(["832 0"]));
 });
 
-test("card titles and the brand mark match the shell's", async () => {
+test("Providers' card titles match the shell's", async () => {
   await page.viewport(1440, 900);
   const size = (el: Element | null) => (el ? getComputedStyle(el).fontSize : "none");
-  const width = (el: Element | null) => Math.round(el?.getBoundingClientRect().width ?? 0);
   const shell = await each(
     steps.filter((s) => s.id === "working"),
-    (el) =>
-      `${size(el.querySelector(".journey-take h2"))} ${width(el.querySelector(".shell-mark"))}`,
+    (el) => size(el.querySelector(".journey-take h2")),
   );
-  const cards = await each([...providerSteps, ...stateSteps], (el) =>
-    [...el.querySelectorAll(".providers-panel h2, .task-cell h2")].map(size).join(),
+  const cards = await each(providerSteps, (el) =>
+    [...el.querySelectorAll(".providers-panel h2")].map(size).join(),
   );
-  const marks = await each(stateSteps, (el) => width(el.querySelector(".task-mark")));
-  const [title, mark] = String(shell.working).split(" ");
   // Preflight is still checking: no panels yet.
   for (const [id, sizes] of Object.entries(cards).filter(([, sizes]) => sizes)) {
-    expect(new Set(sizes.split(",")), id).toEqual(new Set([title]));
+    expect(new Set(sizes.split(",")), id).toEqual(new Set([shell.working]));
   }
-  expect(distinct(marks)).toEqual(new Set([mark]));
 });
 
 const press = (root: ParentNode, text: string, selector = "button") =>
@@ -224,7 +209,7 @@ const press = (root: ParentNode, text: string, selector = "button") =>
 for (const theme of ["dark", "light"] as const) {
   test(`full screen draws the evidence map with one finding's chain lit, and passes the scan in ${theme}`, async () => {
     await page.viewport(1440, 900);
-    await mount(`?screen=walkthrough&step=review-takes&theme=${theme}`);
+    await mount(`?screen=walkthrough&step=review&theme=${theme}`);
     press(document, "Full screen");
     await expect.poll(() => document.querySelector('[role="dialog"]')).toBeTruthy();
     const dialog = document.querySelector('[role="dialog"]') as HTMLElement;

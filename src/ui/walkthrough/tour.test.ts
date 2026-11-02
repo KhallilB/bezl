@@ -12,6 +12,39 @@ describe("steps", () => {
     const order = steps.map((s) => s.chapter).filter((c, i, all) => c !== all[i - 1]);
     expect(order).toEqual([...chapters]);
   });
+
+  test("tell the product's story, ending at History", () => {
+    expect(chapters).toEqual([
+      "Getting started",
+      "Start a task",
+      "Your tasks",
+      "Needs you",
+      "Look back",
+    ]);
+    expect(steps.at(-1)?.id).toBe("history");
+  });
+
+  test("put the restart after the task loop, and name Review for what it shows", () => {
+    const ids = steps.map((s) => s.id);
+    expect(ids.slice(ids.indexOf("trace"), ids.indexOf("approvals"))).toEqual([
+      "trace",
+      "review",
+      "full-screen",
+      "ship",
+      "pr-checks",
+      "merged",
+      "come-back",
+    ]);
+  });
+
+  test("notes name what each screen now shows", () => {
+    const note = (id: string) => steps.find((s) => s.id === id)?.note ?? "";
+    expect(note("crew")).toContain("Limits");
+    expect(note("context")).toContain("measured from");
+    expect(note("preview")).toContain("only when Bezl captured screenshots");
+    expect(note("trace")).toContain("the plan's claim");
+    expect(note("preflight")).toContain("GitHub");
+  });
 });
 
 describe("parseTour", () => {

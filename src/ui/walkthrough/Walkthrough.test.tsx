@@ -144,25 +144,6 @@ describe("Walkthrough free navigation", () => {
   });
 });
 
-describe("Walkthrough design states", () => {
-  test("a state step shows the interim Task screen in that state", () => {
-    at("?screen=walkthrough&step=state-blocked");
-    render(<Walkthrough />);
-    const summary = screen.getByRole("list", { name: "Workers by state" });
-    expect(within(summary).getByText("1 blocked")).toBeVisible();
-  });
-
-  test("the overview opens any state and theme full size", async () => {
-    at("?screen=walkthrough&step=overview");
-    render(<Walkthrough />);
-    const cells = screen.getAllByRole("button", { name: /^Open / });
-    expect(cells).toHaveLength(8);
-    await userEvent.click(screen.getByRole("button", { name: "Open Long content, light" }));
-    expect(within(dock()).getByText("Long content")).toBeVisible();
-    expect(document.documentElement.dataset.theme).toBe("light");
-  });
-});
-
 describe("Walkthrough getting started", () => {
   test("Choose a folder moves on to the agent check", async () => {
     at("?screen=walkthrough&step=open-repo");
@@ -185,7 +166,7 @@ describe("Walkthrough getting started", () => {
     unmount();
     at("?screen=walkthrough&step=impostor");
     const impostor = render(<Walkthrough />);
-    expect(screen.getByText(/\/Users\/me\/\.bun\/bin\/codex/)).toBeVisible();
+    expect(screen.getByText("The codex at /Users/me/.bun/bin/codex isn't Codex")).toBeVisible();
     impostor.unmount();
     at("?screen=walkthrough&step=no-writer");
     render(<Walkthrough />);
@@ -298,7 +279,7 @@ describe("Walkthrough start a task", () => {
 
 describe("Walkthrough stage details", () => {
   test("answering Review's question, then Ship it, moves the tour to Ship", async () => {
-    at("?screen=walkthrough&step=review-takes");
+    at("?screen=walkthrough&step=review");
     render(<Walkthrough />);
     expect(screen.queryByRole("button", { name: "Ship it" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Side with Claude Code" }));
