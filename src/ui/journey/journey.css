@@ -505,36 +505,88 @@
   }
 }
 
-/* Context line: goal, size of the change, how much is proven; each part opens the side. */
-.journey-context {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--kb-space-1) var(--kb-space-6);
+/* Context tiles: goal, reach of the change, how sure; each opens its view beside the stage. */
+.journey-tiles,
+.journey-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  gap: var(--kb-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: var(--kb-size-sm);
 }
 
-.journey-context li {
-  display: flex;
-  align-items: baseline;
-  gap: var(--kb-space-2);
+.journey-tiles > li,
+.journey-flow > li {
+  display: grid;
   min-width: 0;
 }
 
-/* The goal truncates; the full text is in Intent. */
-.journey-context li:first-child {
-  flex: 0 1 auto;
-  max-width: 34rem;
+.journey-tile {
+  min-width: 0;
 }
 
-.journey-context-label {
+/* Two lines of the goal; the full text is in Intent. */
+.journey-tile-text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-sm);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.journey-tile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-1);
+}
+
+/* Ghost button pads its text; pull it level with the tile's own text. */
+.journey-tile-action {
+  margin-block-start: auto;
+  margin-inline-start: calc(-1 * var(--kb-space-2));
+}
+
+/* Phone: the numbers stay, the detail goes to the views they open. */
+@container journey (max-width: 34rem) {
+  .journey-tiles .journey-tile-text,
+  .journey-tiles .journey-tile-tags {
+    display: none;
+  }
+}
+
+.journey-flow {
+  grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr));
+  gap: var(--kb-space-2);
+}
+
+.journey-flow-stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kb-space-1);
+  min-width: 0;
+  font-size: var(--kb-size-sm);
+}
+
+.journey-flow-stage[data-current] {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: -1px;
+}
+
+.journey-flow-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--kb-space-1);
+}
+
+.journey-flow-by {
   color: var(--kb-color-muted);
   font-size: var(--kb-size-xs);
 }
 
-.journey-context-link,
 .journey-link {
   min-width: 0;
   padding: 0;
@@ -548,18 +600,10 @@
   cursor: pointer;
 }
 
-.journey-context-link[data-goal] {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.journey-context-link:hover,
 .journey-link:hover {
   text-decoration-style: solid;
 }
 
-.journey-context-link:focus-visible,
 .journey-link:focus-visible {
   outline: 2px solid var(--kb-color-ring);
   outline-offset: 2px;

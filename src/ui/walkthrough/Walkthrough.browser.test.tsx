@@ -124,7 +124,8 @@ test("a header action sits at the end of the title row", async () => {
   const seen = await each(
     steps.filter((s) => ["ship", "history"].includes(s.id)),
     (el) => {
-      const action = el.querySelector("header button")?.getBoundingClientRect().right ?? 0;
+      const buttons = el.querySelectorAll("header .page-action button");
+      const action = buttons[buttons.length - 1]?.getBoundingClientRect().right ?? 0;
       const page = el.querySelector(".shell-main > *")?.getBoundingClientRect().right ?? -1;
       return Math.round(page - action);
     },

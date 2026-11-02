@@ -42,9 +42,17 @@ describe("Walkthrough tour", () => {
     render(<Walkthrough />);
     expect(within(dock()).getByText("What it's for, how big, how sure")).toBeVisible();
     const context = screen.getByRole("list", { name: "This task" });
-    await userEvent.click(within(context).getByRole("button", { name: /When someone has no/ }));
+    await userEvent.click(within(context).getByRole("button", { name: "Open Intent" }));
     expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("list", { name: "Decided" })).toBeVisible();
+  });
+
+  test("the flow step shows how the task got here, a card per stage", async () => {
+    at("?screen=walkthrough&step=flow");
+    render(<Walkthrough />);
+    expect(within(dock()).getByText("How it got here")).toBeVisible();
+    const flow = screen.getByRole("list", { name: "How this task got here" });
+    expect(within(flow).getAllByRole("listitem")).toHaveLength(6);
   });
 
   test("the preview step shows the change as Bezl captured it", async () => {

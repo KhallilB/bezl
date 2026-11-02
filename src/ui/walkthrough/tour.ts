@@ -34,6 +34,8 @@ export type TourView =
       shipped?: "checking" | "merged";
       /** The side tab it opens on. */
       side?: SideTab;
+      /** Opens with the flow shown. */
+      flow?: boolean;
     }
   | { kind: "approvals"; cleared?: boolean }
   | { kind: "history" }
@@ -166,8 +168,15 @@ export const steps: Step[] = [
     id: "context",
     chapter: "Your tasks",
     title: "What it's for, how big, how sure",
-    note: "The line under the stages keeps your goal, how much the change touches and how many done-when lines are proven in view. Beside every stage, Intent holds what you decided and what the agents assumed, and changing an assumption asks you about it.",
+    note: "Three tiles under the stages: how much of the goal is done, how far the change reaches and how risky it is, and how much of it ran in a test. Each opens its view beside the stage; Intent holds what you decided and what the agents assumed.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
+  },
+  {
+    id: "flow",
+    chapter: "Your tasks",
+    title: "How it got here",
+    note: "Show the flow lays every stage out in a row: what happened there, who acted or acts next, and how it stands. Open any stage from its card.",
+    view: { kind: "task", taskId: "empty-state", stage: "review", flow: true },
   },
   {
     id: "preview",

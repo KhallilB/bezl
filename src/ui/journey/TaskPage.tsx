@@ -15,7 +15,15 @@ import {
   stageMarker,
 } from "./model";
 import { Passed, Problems, RowItem, Ship, Takes } from "./StageViews";
-import { type Answer, ContextBar, HandledList, Questions, Side, type SideTab } from "./Workbench";
+import {
+  type Answer,
+  ContextTiles,
+  Flow,
+  HandledList,
+  Questions,
+  Side,
+  type SideTab,
+} from "./Workbench";
 
 type StageStripProps = { task: JourneyTask; stage: StageId; onStage: (stage: StageId) => void };
 
@@ -115,10 +123,20 @@ export type TaskPageProps = StageStripProps & {
   onNewTask?: () => void;
   /** The side tab to open on; Preview when the stage has screenshots. */
   side?: SideTab;
+  /** Opens with the flow shown. */
+  flow?: boolean;
 };
 
 /** One task: header, stages, context line, status; then the stage beside its intent. */
-export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest }: TaskPageProps) {
+export function TaskPage({
+  task,
+  stage,
+  onStage,
+  onHistory,
+  side: first,
+  flow: flowFirst = false,
+  ...rest
+}: TaskPageProps) {
   const view = task.views[stage];
   const { needsYou, onNeedsYou } = rest;
   const [tab, setTab] = useState<SideTab>(first ?? "preview");
@@ -128,6 +146,8 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
   const [example, setExample] = useState<string | null>(null);
   const [answered, setAnswered] = useState<Answer[]>([]);
   const [raised, setRaised] = useState<string | null>(null);
+  const [flow, setFlow] = useState(flowFirst);
+  const flowId = useId();
   const side = useRef<HTMLDivElement>(null);
   const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
   const mine = answered.filter((a) => a.item.taskId === task.id);
@@ -153,17 +173,29 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
             {task.title}
           </h1>
           <span className="page-tag">{task.repo}</span>
-          {onHistory ? (
-            <span className="page-action">
+          <span className="page-action">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={flow}
+              aria-controls={flowId}
+              onClick={() => setFlow(!flow)}
+            >
+              {flow ? "Hide the flow" : "Show the flow"}
+            </Button>
+            {onHistory ? (
               <Button variant="ghost" size="sm" onClick={onHistory}>
                 History
               </Button>
-            </span>
-          ) : null}
+            ) : null}
+          </span>
         </div>
         <StageStrip task={task} stage={stage} onStage={onStage} />
-        <ContextBar
+        {flow ? <Flow id={flowId} task={task} stage={stage} onStage={onStage} /> : null}
+        <ContextTiles
           context={contextOf(task)}
+          impact={task.impact}
+          coverage={task.trace?.coverage}
           preview={shots.length > 0}
           trace={Boolean(task.trace)}
           onOpen={open}

@@ -8,7 +8,17 @@ import { tasks } from "./fixtures";
 import type { StageId } from "./model";
 import { TaskPage } from "./TaskPage";
 
-function Harness({ id, stage, onQueue }: { id: string; stage: StageId; onQueue?: () => void }) {
+function Harness({
+  id,
+  stage,
+  onQueue,
+  onStage = vi.fn(),
+}: {
+  id: string;
+  stage: StageId;
+  onQueue?: () => void;
+  onStage?: (s: StageId) => void;
+}) {
   const task = tasks.find((t) => t.id === id);
   const [queue, setQueue] = useState<NeedsYouItem[]>(needsYou);
   if (!task) throw new Error(`no fixture ${id}`);
@@ -16,7 +26,7 @@ function Harness({ id, stage, onQueue }: { id: string; stage: StageId; onQueue?:
     <TaskPage
       task={task}
       stage={stage}
-      onStage={vi.fn()}
+      onStage={onStage}
       needsYou={queue}
       onNeedsYou={(items) => {
         setQueue(items);
@@ -28,28 +38,59 @@ function Harness({ id, stage, onQueue }: { id: string; stage: StageId; onQueue?:
 
 const side = () => screen.getByRole("tabpanel");
 
-describe("context line", () => {
-  test("keeps the goal, what changed and how much is proven in view", () => {
+describe("context tiles", () => {
+  test("keep the goal, the change's reach and how sure Bezl is in view", () => {
     render(<Harness id="empty-state" stage="review" />);
     const context = screen.getByRole("list", { name: "This task" });
+    expect(within(context).getByText("3 of 4 done")).toBeVisible();
+    expect(within(context).getByText(/When someone has no projects/)).toBeVisible();
+    expect(within(context).getByText("4 files across 2 attempts")).toBeVisible();
+    expect(within(context).getByText("1 screen")).toBeVisible();
+    expect(within(context).getByText("Low risk")).toBeVisible();
     expect(
-      within(context).getByRole("button", { name: /When someone has no projects/ }),
-    ).toBeVisible();
-    expect(
-      within(context).getByRole("button", { name: "4 files across 2 attempts · 1 screen" }),
-    ).toBeVisible();
-    expect(within(context).getByRole("button", { name: "3 of 4 proven" })).toBeVisible();
+      within(context).getByRole("progressbar", { name: /Lines run in a test/ }),
+    ).toHaveAttribute("aria-valuenow", "80");
   });
 
   test("the goal opens Intent: what's proven, what you decided and what was assumed", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    await userEvent.click(screen.getByRole("button", { name: /When someone has no projects/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Open Intent" }));
     expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
     const done = within(side()).getByRole("list", { name: "Done when" });
     expect(within(done).getAllByRole("listitem")).toHaveLength(4);
     expect(within(done).getByText("You check in Review")).toBeVisible();
     expect(within(side()).getByRole("list", { name: "Decided" })).toBeVisible();
     expect(within(side()).getByRole("list", { name: "Assumed" })).toBeVisible();
+  });
+});
+
+describe("flow", () => {
+  test("folded until asked for, then each stage with what happened and who acted", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    expect(screen.queryByRole("list", { name: "How this task got here" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show the flow" }));
+    const flow = screen.getByRole("list", { name: "How this task got here" });
+    const stages = within(flow).getAllByRole("listitem");
+    expect(stages).toHaveLength(6);
+    const review = stages[4] as HTMLElement;
+    expect(within(review).getByText("Which attempt should ship?")).toBeVisible();
+    expect(
+      within(review).getByText("Each coding agent reviewed the other's attempt"),
+    ).toBeVisible();
+    expect(within(review).getByText("Needs you")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Hide the flow" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  test("opens any other stage from its card", async () => {
+    const onStage = vi.fn();
+    render(<Harness id="empty-state" stage="review" onStage={onStage} />);
+    await userEvent.click(screen.getByRole("button", { name: "Show the flow" }));
+    expect(screen.queryByRole("button", { name: "Open Review" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Open Build" }));
+    expect(onStage).toHaveBeenCalledWith("build");
   });
 });
 
@@ -165,9 +206,7 @@ describe("Preview", () => {
   test("what the change touches opens Preview", async () => {
     render(<Harness id="empty-state" stage="review" />);
     await userEvent.click(screen.getByRole("tab", { name: "Intent" }));
-    await userEvent.click(
-      screen.getByRole("button", { name: "4 files across 2 attempts · 1 screen" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Open Preview" }));
     expect(preview()).toHaveAttribute("aria-selected", "true");
   });
 
@@ -185,7 +224,7 @@ describe("Preview", () => {
   test("a change with no screens has no Preview", () => {
     render(<Harness id="deny-scopes" stage="build" />);
     expect(screen.queryByRole("tab", { name: "Preview" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /1 file/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open Preview" })).toBeNull();
   });
 
   test("arrow keys move between the tabs", async () => {
@@ -228,7 +267,7 @@ describe("Trace", () => {
 
   test("the evidence opens Trace", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    await userEvent.click(screen.getByRole("button", { name: "3 of 4 proven" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open Trace" }));
     expect(trace()).toHaveAttribute("aria-selected", "true");
   });
 
