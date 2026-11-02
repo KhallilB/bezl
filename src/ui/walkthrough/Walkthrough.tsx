@@ -22,7 +22,7 @@ import { SetupConfirm } from "../newtask/SetupConfirm";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
 import {
   claudeFound,
-  codexProbed,
+  codexReady,
   githubSignedIn,
   githubSignedOut,
   noWriter,
@@ -291,8 +291,8 @@ const preflight: Record<
   Exclude<Preflight, "checking">,
   { checks: ProviderCheck[]; github: GitHubCheck }
 > = {
-  ready: { checks: [claudeFound, codexProbed], github: githubSignedIn },
-  noGitHub: { checks: [claudeFound, codexProbed], github: githubSignedOut },
+  ready: { checks: [claudeFound, codexReady], github: githubSignedIn },
+  noGitHub: { checks: [claudeFound, codexReady], github: githubSignedOut },
   impostor: { checks: thisMachine, github: githubSignedIn },
   noWriter: { checks: noWriter, github: githubSignedIn },
 };
