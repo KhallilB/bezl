@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { keptTasks, tasks } from "./fixtures";
+import { keptTasks, shippedTasks, tasks } from "./fixtures";
 import type { JourneyTask, StageId } from "./model";
 import { TaskPage } from "./TaskPage";
 
@@ -50,10 +50,13 @@ describe("Check", () => {
     expect(screen.getByText(/No test reaches it/)).toBeVisible();
   });
 
-  test("a problem goes to the writer with its evidence", async () => {
+  test("every problem goes to the writer together, with its evidence", async () => {
     open(tasks, "snapshot", "check");
-    await userEvent.click(screen.getByRole("button", { name: "Send to Codex" }));
-    expect(screen.getByText(/Sent to Codex/)).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /^Send/ })).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Send 2 problems to Codex" }));
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Sent 2 problems to Codex with what Bezl saw.",
+    );
   });
 
   test("passed checks stay folded until asked for", async () => {
@@ -111,5 +114,51 @@ describe("Ship", () => {
     expect(screen.queryByRole("button", { name: "Back to review" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "New task" }));
     expect(onNewTask).toHaveBeenCalledOnce();
+  });
+
+  test("once opened, Ship shows the pull request's checks as GitHub reports them", async () => {
+    open(keptTasks, "empty-state", "ship");
+    await userEvent.click(screen.getByRole("button", { name: "Open pull request" }));
+    const checks = screen.getByRole("list", { name: "Checks on GitHub" });
+    expect(within(checks).getByText("Browser tests")).toBeVisible();
+    expect(within(checks).getByText("Running")).toBeVisible();
+    expect(screen.getByText("2 of 3 checks have passed, and 1 is still running.")).toBeVisible();
+  });
+
+  test("a failing check links to its log and stops nothing", async () => {
+    const task = keptTasks.find((t) => t.id === "empty-state");
+    const ship = task?.views.ship.ship;
+    if (!task || !ship) throw new Error("no fixture empty-state");
+    const failing: JourneyTask = {
+      ...task,
+      views: {
+        ...task.views,
+        ship: {
+          ...task.views.ship,
+          ship: {
+            ...ship,
+            ci: {
+              on: "pullRequest",
+              checks: [{ name: "Browser tests", state: "failed", url: "https://ci.example/run/7" }],
+            },
+          },
+        },
+      },
+    };
+    const onNewTask = vi.fn();
+    render(<TaskPage task={failing} stage="ship" onStage={vi.fn()} onNewTask={onNewTask} />);
+    await userEvent.click(screen.getByRole("button", { name: "Open pull request" }));
+    expect(screen.getByRole("link", { name: "View log for Browser tests" })).toHaveAttribute(
+      "href",
+      "https://ci.example/run/7",
+    );
+    expect(screen.getByRole("button", { name: "New task" })).toBeEnabled();
+  });
+
+  test("after the merge, Ship opens on the merged commit's checks", () => {
+    open(shippedTasks.merged, "empty-state", "ship");
+    expect(screen.queryByRole("button", { name: "Open pull request" })).toBeNull();
+    expect(screen.getByRole("list", { name: "Checks on the merged commit" })).toBeVisible();
+    expect(screen.getByText("All 3 checks passed on the merged commit 3f9c2ab.")).toBeVisible();
   });
 });

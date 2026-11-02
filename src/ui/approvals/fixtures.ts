@@ -13,6 +13,8 @@ export const needsYou: NeedsYouItem[] = [
     prompt:
       "src/policy.rs has edits you haven't committed. Should I overwrite them, or work around them?",
     context: "src/policy.rs · 3 uncommitted lines",
+    blocks: "attempt A",
+    recommended: "around",
     waited: "6 min",
     choices: [
       {
@@ -41,6 +43,7 @@ export const needsYou: NeedsYouItem[] = [
     from: "Codex",
     prompt: "Codex is asking for internet access so it can download one new crate.",
     context: "cargo add thiserror",
+    blocks: "the error type change",
     waited: "4 min",
     choices: [
       {
@@ -59,8 +62,9 @@ export const needsYou: NeedsYouItem[] = [
     kind: "dispute",
     from: "Claude Code",
     prompt:
-      "Claude Code disagrees with an issue Codex raised. It says the brief asks for one clear action, so the import link isn't part of this task.",
+      "Claude Code disagrees with an issue Codex raised. It says the goal asks for one clear action, so the import link isn't part of this task.",
     context: "Codex: The Import from GitHub link does nothing yet · Projects.tsx:41",
+    blocks: "Ship",
     waited: "12 min",
     choices: [
       {

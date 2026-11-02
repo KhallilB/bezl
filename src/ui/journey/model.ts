@@ -1,10 +1,11 @@
 // View models for the task journey; M5 fills them from the task's event log.
+import type { NeedsYouItem } from "../approvals/model";
 
-export const stageIds = ["brief", "plan", "build", "check", "review", "ship"] as const;
+export const stageIds = ["define", "plan", "build", "check", "review", "ship"] as const;
 export type StageId = (typeof stageIds)[number];
 
 export const stageLabel: Record<StageId, string> = {
-  brief: "Brief",
+  define: "Define",
   plan: "Plan",
   build: "Build",
   check: "Check",
@@ -95,9 +96,40 @@ export type ShipSummary = {
   history: { stage: StageId; text: string }[];
   /** Where Open lands the pull request. */
   pullRequest: { number: number; url: string };
+  /** Shown once the pull request is open. */
+  ci?: CiStatus;
 };
 
+export type CiCheck = { name: string; state: "passed" | "failed" | "running"; url: string };
+
+/** The pull request's checks, then the merged commit's; shown, never a gate. */
+export type CiStatus = { checks: CiCheck[] } & (
+  | { on: "pullRequest" }
+  | { on: "merge"; commit: string }
+);
+
+const checks = (n: number) => (n === 1 ? "1 check" : `${n} checks`);
+
+/** Failures first, then what is still running, then where everything passed. */
+export function ciText(ci: CiStatus): string {
+  const count = (state: CiCheck["state"]) => ci.checks.filter((c) => c.state === state).length;
+  const [all, passed, failed, running] = [
+    ci.checks.length,
+    count("passed"),
+    count("failed"),
+    count("running"),
+  ];
+  if (failed > 0)
+    return `${failed} of ${checks(all)} failed. Open ${failed === 1 ? "its log" : "their logs"} to see why.`;
+  if (running > 0)
+    return `${passed} of ${checks(all)} ${passed === 1 ? "has" : "have"} passed, and ${running} ${running === 1 ? "is" : "are"} still running.`;
+  const where = ci.on === "merge" ? `the merged commit ${ci.commit}` : "the pull request";
+  return `${all === 1 ? "The check" : `All ${checks(all)}`} passed on ${where}.`;
+}
+
 export type StageView = {
+  /** Questions Bezl answered, sent back or merged, so they never reached you. */
+  handled?: Handled[];
   /** The status sentence: a bold lead, then the rest. */
   lead: string;
   rest?: string;
@@ -119,6 +151,60 @@ export type JourneyTask = {
   /** Where the task stands now; opens first. */
   current: StageId;
   views: Record<StageId, StageView>;
+  /** Define's done-when lines, lit by what Bezl has proven so far. */
+  doneWhen?: DoneWhen[];
+  /** Answers you gave earlier, kept with the stage that asked. */
+  decisions?: Decision[];
+  assumptions?: Assumption[];
 };
+
+export type DoneWhen = { text: string; checker: string; light: Light; status: string };
+
+export type Decision = { stage: StageId; text: string };
+
+/** A guess the agents made instead of asking; changing it asks you. */
+export type Assumption = {
+  id: string;
+  text: string;
+  question: Pick<NeedsYouItem, "prompt" | "blocks" | "choices" | "recommended">;
+};
+
+/** A question Bezl kept from you, and why. */
+export type Handled = {
+  text: string;
+  outcome: string;
+  by: "answered" | "returned" | "merged" | "dropped";
+};
+
+export type TaskContext = { goal: string; touches: string; evidence: string };
+
+const files = (n: number) => (n === 1 ? "1 file" : `${n} files`);
+
+/** Ship's kept attempt wins; otherwise the latest stage with attempts. */
+function changed(task: JourneyTask): string {
+  const kept = task.views.ship.ship?.files;
+  const takes = task.views.review.takes ?? task.views.build.takes ?? [];
+  const sets = kept ? [kept] : takes.map((t) => t.files ?? []).filter((f) => f.length > 0);
+  if (sets.length === 0) return "Nothing changed yet";
+  const paths = new Set(sets.flat().map((f) => f.path));
+  if (sets.length > 1) return `${files(paths.size)} across ${sets.length} attempts`;
+  const [added, removed] = (sets[0] ?? []).reduce(
+    ([a, r], f) => [a + f.added, r + f.removed],
+    [0, 0],
+  );
+  return `${files(paths.size)} · ${diffLabel({ path: "", added, removed })}`;
+}
+
+/** The line under the stages: what it's for, how big, how sure. */
+export function contextOf(task: JourneyTask): TaskContext {
+  const lines = task.doneWhen ?? [];
+  const proven = lines.filter((l) => l.light === "done").length;
+  const checked = lines.some((l) => l.light !== "waiting");
+  return {
+    goal: task.views.define.quote ?? task.title,
+    touches: changed(task),
+    evidence: checked ? `${proven} of ${lines.length} proven` : "Not checked yet",
+  };
+}
 
 export type ProviderUsage = { name: string; used: string };

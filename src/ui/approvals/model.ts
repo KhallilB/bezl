@@ -1,4 +1,4 @@
-import type { StageId } from "../journey/model";
+import type { Assumption, JourneyTask, StageId } from "../journey/model";
 
 // Needs-you items: everything that waits on you, in one queue (J4).
 
@@ -24,6 +24,10 @@ export type NeedsYouItem = {
   prompt: string;
   /** The file, command or finding it is about. */
   context?: string;
+  /** What waits on the answer. */
+  blocks?: string;
+  /** The choice id Bezl would pick; you still decide. */
+  recommended?: string;
   waited: string;
   choices: NeedsYouChoice[];
 };
@@ -46,5 +50,23 @@ export function answer(
   return {
     items: items.filter((i) => i !== item),
     answered: { taskTitle: item.taskTitle, label: choice.label, next: choice.next },
+  };
+}
+
+/** Changing an assumption turns it into a question in the stage you're on. */
+export function raise(
+  task: Pick<JourneyTask, "id" | "title">,
+  stage: StageId,
+  { id, question }: Assumption,
+): NeedsYouItem {
+  return {
+    id: `${task.id}-${id}`,
+    taskId: task.id,
+    taskTitle: task.title,
+    stage,
+    kind: "question",
+    from: "you",
+    ...question,
+    waited: "just now",
   };
 }

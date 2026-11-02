@@ -3,9 +3,11 @@ import { useId, useState } from "react";
 import { LightIcon } from "../journey/icons";
 import {
   type BriefDraft,
+  briefFromIssue,
   type CheckId,
   type Choice,
   type CrewProvider,
+  type GitHubIssue,
   readiness,
   reviewerChoices,
   type Suggestion,
@@ -35,6 +37,11 @@ export type NewTaskProps = {
   onStart: (task: StartedTask) => void;
   /** Scrolls a part into view, for the walkthrough. */
   focus?: "crew";
+  /** Open issues from your `gh` session; absent without a GitHub sign-in or remote. */
+  issues?: GitHubIssue[];
+  /** For the walkthrough: the list starts open, or with this issue already picked. */
+  issuesOpen?: boolean;
+  pickedIssue?: number;
 };
 
 const firstOpen = (choices: Choice[]) => choices.find((c) => !c.disabled)?.id ?? "";
@@ -63,7 +70,7 @@ function Readiness({
   return (
     <aside className="newtask-readiness" aria-labelledby={`${id}-title`}>
       <div className="newtask-readiness-head">
-        <h2 id={`${id}-title`}>Is the brief ready?</h2>
+        <h2 id={`${id}-title`}>Is the task ready?</h2>
         <span>{gaps === 0 ? "Ready" : `${checks.length - gaps} of ${checks.length}`}</span>
       </div>
       <ul aria-labelledby={`${id}-title`}>
@@ -172,7 +179,86 @@ function Choices({
   );
 }
 
-/** New task: the brief in your words, checked as you type, then who writes and who reviews. */
+const emptyBrief: BriefDraft = { text: "", doneWhen: [] };
+
+function IssuePicker({
+  repo,
+  issues,
+  initialOpen,
+  picked,
+  onPick,
+  onClear,
+}: {
+  repo: string;
+  issues: GitHubIssue[];
+  initialOpen: boolean;
+  picked: BriefDraft["issue"];
+  onPick: (issue: GitHubIssue) => void;
+  onClear: () => void;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(initialOpen);
+  if (picked)
+    return (
+      <div className="newtask-issue-picked">
+        <p role="status">
+          {`Filled in from issue #${picked.number}. Change anything you like before you start. `}
+          <a href={picked.url} target="_blank" rel="noreferrer">
+            {`View issue #${picked.number}`}
+          </a>
+        </p>
+        <Button size="sm" variant="ghost" onClick={onClear}>
+          Start from scratch
+        </Button>
+      </div>
+    );
+  return (
+    <div className="newtask-issues">
+      <Button
+        size="sm"
+        variant="secondary"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        Start from a GitHub issue
+      </Button>
+      {open ? (
+        <section id={id} className="newtask-issue-list" aria-labelledby={`${id}-title`}>
+          <h2 id={`${id}-title`} className="page-label">
+            {`Open issues in ${repo}`}
+          </h2>
+          <p>
+            Pick one and Bezl fills in the goal from it. You can still change anything before you
+            start.
+          </p>
+          <ul aria-labelledby={`${id}-title`}>
+            {issues.map((issue) => (
+              <li key={issue.number}>
+                <button
+                  type="button"
+                  className="newtask-issue"
+                  onClick={() => {
+                    setOpen(false);
+                    onPick(issue);
+                  }}
+                >
+                  <span className="newtask-issue-number">{`#${issue.number}`}</span>
+                  <span>{issue.title}</span>
+                  {issue.labels?.length ? (
+                    <span className="newtask-issue-labels">{issue.labels.join(", ")}</span>
+                  ) : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+/** New task: the goal in your words, checked as you type, then who writes and who reviews. */
 export function NewTask({
   repo,
   branch,
@@ -182,8 +268,14 @@ export function NewTask({
   paths,
   onStart,
   focus,
+  issues,
+  issuesOpen = false,
+  pickedIssue,
 }: NewTaskProps) {
-  const [draft, setDraft] = useState(initial);
+  const [draft, setDraft] = useState(() => {
+    const picked = issues?.find((i) => i.number === pickedIssue);
+    return picked ? briefFromIssue(picked) : initial;
+  });
   const writers = writerChoices(providers);
   const [writer, setWriter] = useState(() => firstOpen(writers));
   const reviewers = reviewerChoices(providers, writer);
@@ -207,10 +299,20 @@ export function NewTask({
         <span className="page-tag">{`${repo} · ${branch}`}</span>
       </header>
 
-      <div className="newtask-brief">
+      <div className="newtask-define">
         <div className="newtask-main">
+          {issues?.length ? (
+            <IssuePicker
+              repo={repo}
+              issues={issues}
+              initialOpen={issuesOpen}
+              picked={draft.issue}
+              onPick={(issue) => setDraft(briefFromIssue(issue))}
+              onClear={() => setDraft(emptyBrief)}
+            />
+          ) : null}
           <Textarea
-            label="Brief"
+            label="Goal"
             description="Write it in your own words, and Bezl keeps it exactly as you wrote it."
             rows={4}
             value={draft.text}

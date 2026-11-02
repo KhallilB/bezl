@@ -15,7 +15,7 @@ export const history: TaskHistory = {
     { label: "Tokens", value: "1.2M" },
   ],
   events: [
-    { at: "10:02", stage: "brief", who: "You", text: "Started the task with 4 things to be done" },
+    { at: "10:02", stage: "define", who: "You", text: "Started the task with 4 things to be done" },
     {
       at: "10:03",
       stage: "plan",

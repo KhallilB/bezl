@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { answer, itemsFor, type NeedsYouItem } from "./model";
+import { answer, itemsFor, type NeedsYouItem, raise } from "./model";
 
 const item = (id: string, taskId: string, stage: NeedsYouItem["stage"]): NeedsYouItem => ({
   id,
@@ -35,5 +35,33 @@ describe("answer", () => {
   test("an unknown item or choice changes nothing", () => {
     expect(answer(queue, "q9", "yes")).toBeNull();
     expect(answer(queue, "q1", "maybe")).toBeNull();
+  });
+});
+
+describe("raise", () => {
+  test("changing an assumption asks you in the stage you changed it from", () => {
+    const raised = raise({ id: "t", title: "Task" }, "plan", {
+      id: "route",
+      text: "It stays on Projects",
+      question: {
+        prompt: "Where should a new person land?",
+        blocks: "the plan",
+        recommended: "projects",
+        choices: [{ id: "projects", label: "On Projects", next: "No routing change." }],
+      },
+    });
+    expect(raised).toEqual({
+      id: "t-route",
+      taskId: "t",
+      taskTitle: "Task",
+      stage: "plan",
+      kind: "question",
+      from: "you",
+      prompt: "Where should a new person land?",
+      blocks: "the plan",
+      recommended: "projects",
+      choices: [{ id: "projects", label: "On Projects", next: "No routing change." }],
+      waited: "just now",
+    });
   });
 });

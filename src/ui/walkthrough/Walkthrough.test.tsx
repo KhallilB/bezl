@@ -37,6 +37,16 @@ describe("Walkthrough tour", () => {
     ).toBeVisible();
   });
 
+  test("the context step keeps the goal, the change and its proof beside the stage", async () => {
+    at("?screen=walkthrough&step=context");
+    render(<Walkthrough />);
+    expect(within(dock()).getByText("What it's for, how big, how sure")).toBeVisible();
+    const context = screen.getByRole("list", { name: "This task" });
+    await userEvent.click(within(context).getByRole("button", { name: "3 of 4 proven" }));
+    expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("list", { name: "Decided" })).toBeVisible();
+  });
+
   test("starts at the first step, where Back is off", () => {
     at("?screen=walkthrough");
     render(<Walkthrough />);
@@ -49,7 +59,7 @@ describe("Walkthrough tour", () => {
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(within(dock()).getByText(position("stages"))).toBeVisible();
     expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(
-      "Brief, done",
+      "Define, done",
     );
     expect(window.location.search).toBe("?screen=walkthrough&step=stages&theme=dark");
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
@@ -59,7 +69,7 @@ describe("Walkthrough tour", () => {
   test("arrow keys step, T flips the theme, modifiers are left alone", async () => {
     render(<Walkthrough />);
     await userEvent.keyboard("{ArrowRight}{ArrowRight}");
-    expect(within(dock()).getByText(position("working"))).toBeVisible();
+    expect(within(dock()).getByText(position("context"))).toBeVisible();
     await userEvent.keyboard("{ArrowLeft}");
     expect(within(dock()).getByText(position("stages"))).toBeVisible();
     await userEvent.keyboard("t");
@@ -197,13 +207,13 @@ describe("Walkthrough getting started", () => {
 });
 
 describe("Walkthrough start a task", () => {
-  test("denying setup stops, and Edit the brief goes back to it", async () => {
+  test("denying setup stops, and Edit the goal goes back to it", async () => {
     at("?screen=walkthrough&step=setup");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Deny" }));
     expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Edit the brief" }));
-    expect(within(dock()).getByText(position("brief-ready"))).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Edit the goal" }));
+    expect(within(dock()).getByText(position("define-ready"))).toBeVisible();
   });
 
   test("after the pull request opens, New task starts the next one", async () => {
@@ -214,19 +224,43 @@ describe("Walkthrough start a task", () => {
     expect(within(dock()).getByText(position("new-task"))).toBeVisible();
   });
 
-  test("each brief step shows the form further filled in", () => {
+  test("a task can start from a GitHub issue", async () => {
+    at("?screen=walkthrough&step=from-issue");
+    const picker = render(<Walkthrough />);
+    const list = screen.getByRole("list", { name: "Open issues in studio-web" });
+    await userEvent.click(within(list).getByRole("button", { name: /#128/ }));
+    expect(screen.getByRole("link", { name: "View issue #128" })).toBeVisible();
+    picker.unmount();
+    at("?screen=walkthrough&step=issue-filled");
+    render(<Walkthrough />);
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveDisplayValue(
+      /^Projects page shows an empty table/,
+    );
+  });
+
+  test("after Ship, the pull request's checks and then the merged commit's", () => {
+    at("?screen=walkthrough&step=pr-checks");
+    const open = render(<Walkthrough />);
+    expect(screen.getByRole("list", { name: "Checks on GitHub" })).toBeVisible();
+    open.unmount();
+    at("?screen=walkthrough&step=merged");
+    render(<Walkthrough />);
+    expect(screen.getByRole("list", { name: "Checks on the merged commit" })).toBeVisible();
+  });
+
+  test("each Define step shows the form further filled in", () => {
     at("?screen=walkthrough&step=new-task");
     const blank = render(<Walkthrough />);
-    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     blank.unmount();
-    at("?screen=walkthrough&step=brief-ready");
+    at("?screen=walkthrough&step=define-ready");
     render(<Walkthrough />);
     expect(screen.getByRole("button", { name: "Start task" })).toBeVisible();
     expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
   });
 
   test("starting asks about setup, and Allow prepares the first task", async () => {
-    at("?screen=walkthrough&step=brief-ready");
+    at("?screen=walkthrough&step=define-ready");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Start task" }));
     expect(within(dock()).getByText(position("setup"))).toBeVisible();

@@ -1,18 +1,88 @@
-import type { JourneyTask, ProviderUsage, StageView, Take } from "./model";
+import type {
+  Assumption,
+  CiCheck,
+  CiStatus,
+  DoneWhen,
+  JourneyTask,
+  ProviderUsage,
+  StageView,
+  Take,
+} from "./model";
 
 // Sample data only; shapes match what M5 projects from the task log.
 
-const brief = (quote: string, done: [string, string][]): StageView => ({
+const define = (quote: string, done: DoneWhen[]): StageView => ({
   lead: "Ready to start.",
-  rest: "The brief covers everything a coding agent needs.",
+  rest: "The goal covers everything a coding agent needs.",
   quote,
   sections: [
     {
       title: "It's done when",
-      rows: done.map(([text, meta]) => ({ text, meta, light: "done" })),
+      rows: done.map(({ text, checker }) => ({ text, meta: checker, light: "done" })),
     },
   ],
 });
+
+const line = (text: string, checker: string, light: DoneWhen["light"], status: string) => ({
+  text,
+  checker,
+  light,
+  status,
+});
+const unchecked = (text: string, checker: string) => line(text, checker, "waiting", "after Build");
+
+const emptyDone: DoneWhen[] = [
+  line("The empty state shows when there are no projects", "Tests check", "done", "proven"),
+  line(
+    "There's one clear way to create the first project",
+    "You check",
+    "needsYou",
+    "You check in Review",
+  ),
+  line("The page passes accessibility checks", "Bezl checks", "done", "0 issues"),
+  line("Existing tests still pass", "Bezl checks", "done", "48 passed"),
+];
+
+const emptyAssumed: Assumption[] = [
+  {
+    id: "tone",
+    text: "The copy follows the app's existing tone",
+    question: {
+      prompt: "What should the empty state say?",
+      blocks: "the empty state's copy",
+      recommended: "plain",
+      choices: [
+        {
+          id: "plain",
+          label: "No projects yet",
+          next: "Matches the other empty states in the app.",
+        },
+        {
+          id: "warm",
+          label: "Let's start your first project",
+          next: "Stands out, since the other empty states read plainly.",
+        },
+      ],
+    },
+  },
+  {
+    id: "route",
+    text: "It stays on the existing Projects page",
+    question: {
+      prompt: "Where should someone with no projects land?",
+      blocks: "the plan",
+      recommended: "projects",
+      choices: [
+        { id: "projects", label: "On Projects", next: "No routing change." },
+        {
+          id: "home",
+          label: "On a new welcome page",
+          next: "Adds a route and a redirect, so both attempts grow.",
+        },
+      ],
+    },
+  },
+];
 
 const takeA: Take = {
   id: "A",
@@ -74,8 +144,14 @@ const emptyState: JourneyTask = {
   title: "Empty state for Projects",
   repo: "studio-web",
   current: "review",
+  doneWhen: emptyDone,
+  decisions: [
+    { stage: "define", text: "A filtered list with no matches says so and offers Clear filter." },
+    { stage: "plan", text: "Build both approaches and choose in Review." },
+  ],
+  assumptions: emptyAssumed,
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "done",
     check: "done",
@@ -83,14 +159,9 @@ const emptyState: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief(
+    define: define(
       "When someone has no projects yet, the Projects page should help them start one instead of showing an empty table.",
-      [
-        ["The empty state shows when there are no projects", "Tests check"],
-        ["There's one clear way to create the first project", "You check"],
-        ["The page passes accessibility checks", "Bezl checks"],
-        ["Existing tests still pass", "Bezl checks"],
-      ],
+      emptyDone,
     ),
     plan: {
       lead: "The plan is done.",
@@ -139,6 +210,13 @@ const emptyState: JourneyTask = {
       rest: "Each one has been reviewed by the other coding agent, so you can compare them before you choose.",
       sections: [],
       takes: reviewed("Ready", "Ready"),
+      handled: [
+        {
+          text: "Claude Code on attempt B: two naming nits",
+          outcome: "Dropped, because nothing in the changed lines backs them up.",
+          by: "dropped",
+        },
+      ],
     },
     ship: {
       lead: "Nothing to ship yet.",
@@ -148,13 +226,19 @@ const emptyState: JourneyTask = {
   },
 };
 
+const denyDone = [
+  unchecked("An empty scope list is refused with a reason", "Tests check"),
+  unchecked("Existing grants keep working", "Bezl checks"),
+];
+
 const denyScopes: JourneyTask = {
   id: "deny-scopes",
   title: "Refuse tokens with no scopes",
   repo: "bezl",
   current: "build",
+  doneWhen: denyDone,
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "needsYou",
     check: "waiting",
@@ -162,10 +246,10 @@ const denyScopes: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief("A token request with no scopes should be refused, not granted everything.", [
-      ["An empty scope list is refused with a reason", "Tests check"],
-      ["Existing grants keep working", "Bezl checks"],
-    ]),
+    define: define(
+      "A token request with no scopes should be refused, not granted everything.",
+      denyDone,
+    ),
     plan: {
       lead: "The plan is ready.",
       rest: "Step 2 of 3 is waiting on you.",
@@ -194,6 +278,14 @@ const denyScopes: JourneyTask = {
           files: [{ path: "crates/bezl-domain/tests/policy.rs", added: 22, removed: 0 }],
         },
       ],
+      handled: [
+        {
+          text: "Codex asked which error type to use",
+          outcome:
+            "Sent back to Codex: it's a code choice, and policy.rs already has a pattern for it.",
+          by: "returned",
+        },
+      ],
     },
     check: {
       lead: "Checks haven't run yet.",
@@ -213,13 +305,19 @@ const denyScopes: JourneyTask = {
   },
 };
 
+const debounceDone = [
+  unchecked("Each pane resizes at most once every 100 ms", "Tests check"),
+  unchecked("The final size is always applied", "Tests check"),
+];
+
 const debounce: JourneyTask = {
   id: "debounce",
   title: "Debounce terminal resize",
   repo: "bezl",
   current: "build",
+  doneWhen: debounceDone,
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "working",
     check: "waiting",
@@ -227,10 +325,10 @@ const debounce: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief("Dragging the window should not resize every terminal on every frame.", [
-      ["Each pane resizes at most once every 100 ms", "Tests check"],
-      ["The final size is always applied", "Tests check"],
-    ]),
+    define: define(
+      "Dragging the window should not resize every terminal on every frame.",
+      debounceDone,
+    ),
     plan: {
       lead: "Working through the plan.",
       rest: "It's on step 2 of 3.",
@@ -278,13 +376,24 @@ const debounce: JourneyTask = {
   },
 };
 
+const snapshotDone = [
+  line(
+    "A snapshot restores the colours and the cursor position",
+    "Tests check",
+    "failed",
+    "1 failing",
+  ),
+  line("Snapshots stay in .git/bezl", "Bezl checks", "done", "proven"),
+];
+
 const snapshot: JourneyTask = {
   id: "snapshot",
   title: "Terminal snapshot",
   repo: "bezl",
   current: "check",
+  doneWhen: snapshotDone,
   stages: {
-    brief: "done",
+    define: "done",
     plan: "done",
     build: "done",
     check: "failed",
@@ -292,10 +401,10 @@ const snapshot: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    brief: brief("Save a terminal's screen so it opens again after the pane closes.", [
-      ["A snapshot restores the colours and the cursor position", "Tests check"],
-      ["Snapshots stay in .git/bezl", "Bezl checks"],
-    ]),
+    define: define(
+      "Save a terminal's screen so it opens again after the pane closes.",
+      snapshotDone,
+    ),
     plan: {
       lead: "The plan is done.",
       rest: "All 3 steps are finished.",
@@ -384,10 +493,27 @@ export const usage: ProviderUsage[] = [
   { name: "Codex", used: "22%" },
 ];
 
+const ciNames = ["Lint", "Unit tests", "Browser tests"];
+const ci = (states: CiCheck["state"][]): CiCheck[] =>
+  ciNames.map((name, i) => ({
+    name,
+    state: states[i] ?? "running",
+    url: `https://github.com/acme/studio-web/actions/runs/${9120 + i}`,
+  }));
+
+const prChecks: CiStatus = { on: "pullRequest", checks: ci(["passed", "passed", "running"]) };
+
 /** Same list after you keep attempt A: Review done, Ship waits on you. */
 const kept: JourneyTask = {
   ...emptyState,
   current: "ship",
+  doneWhen: emptyDone.map((l) =>
+    l.light === "needsYou" ? { ...l, light: "done", status: "You kept attempt A" } : l,
+  ),
+  decisions: [
+    ...(emptyState.decisions ?? []),
+    { stage: "review", text: "Keep attempt A, with one clear create button." },
+  ],
   stages: { ...emptyState.stages, review: "done", ship: "needsYou" },
   views: {
     ...emptyState.views,
@@ -409,7 +535,7 @@ const kept: JourneyTask = {
         files: takeA.files ?? [],
         history: [
           {
-            stage: "brief",
+            stage: "define",
             text: "Help new users start a project by reusing EmptyState with one clear action",
           },
           { stage: "plan", text: "Claude Code planned 4 steps and Codex planned 3" },
@@ -421,9 +547,44 @@ const kept: JourneyTask = {
           { stage: "review", text: "Codex said “Clear, and it reuses EmptyState”" },
         ],
         pullRequest: { number: 42, url: "https://github.com/acme/studio-web/pull/42" },
+        ci: prChecks,
       },
     },
   },
 };
 
 export const keptTasks: JourneyTask[] = tasks.map((t) => (t.id === kept.id ? kept : t));
+
+/** Kept task after Open: GitHub runs the pull request's checks, then the merged commit's. */
+function shipped(
+  light: "working" | "done",
+  lead: string,
+  rest: string,
+  status: CiStatus,
+): JourneyTask[] {
+  const ship = kept.views.ship;
+  const task: JourneyTask = {
+    ...kept,
+    stages: { ...kept.stages, ship: light },
+    views: {
+      ...kept.views,
+      ship: { ...ship, lead, rest, ...(ship.ship ? { ship: { ...ship.ship, ci: status } } : {}) },
+    },
+  };
+  return keptTasks.map((t) => (t.id === task.id ? task : t));
+}
+
+export const shippedTasks = {
+  checking: shipped(
+    "working",
+    "Pull request #42 is open.",
+    "GitHub is running its checks, and Bezl shows them here as they finish.",
+    prChecks,
+  ),
+  merged: shipped(
+    "done",
+    "Merged.",
+    "GitHub ran every check again on the merged commit, so you know the change works where it landed.",
+    { on: "merge", commit: "3f9c2ab", checks: ci(["passed", "passed", "passed"]) },
+  ),
+};

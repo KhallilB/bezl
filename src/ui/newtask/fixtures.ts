@@ -1,5 +1,5 @@
 import type { JourneyTask, StageView } from "../journey/model";
-import type { BriefDraft, CheckId, CrewProvider, DoneWhen, Suggestion } from "./model";
+import type { BriefDraft, CheckId, CrewProvider, DoneWhen, GitHubIssue, Suggestion } from "./model";
 
 // Sample data; from M6 the code map supplies the suggestions.
 
@@ -34,10 +34,34 @@ export const drafts = {
   ready: { text, who, doneWhen, avoid, example },
 } satisfies Record<string, BriefDraft>;
 
+export const issues: GitHubIssue[] = [
+  {
+    number: 128,
+    title: "Projects page shows an empty table for new users",
+    body: "New users land on Projects right after sign-up and see an empty table with no way forward. Several have asked support how to create their first project.\n\n- [ ] The empty state shows when there are no projects\n- [ ] There's one clear way to create the first project\n",
+    url: "https://github.com/acme/studio-web/issues/128",
+    labels: ["onboarding"],
+  },
+  {
+    number: 131,
+    title: "Search drops the last character when typing fast",
+    body: "Typing quickly into the project search loses the final keystroke about one time in five.",
+    url: "https://github.com/acme/studio-web/issues/131",
+    labels: ["bug"],
+  },
+  {
+    number: 117,
+    title: "Settings page has no keyboard focus outline",
+    body: "Tabbing through Settings gives no visible focus, so keyboard users can't tell where they are.",
+    url: "https://github.com/acme/studio-web/issues/117",
+    labels: ["accessibility"],
+  },
+];
+
 export const paths = ["src/pages/Projects.tsx", "src/pages/Projects.test.tsx"];
 
-const briefView: StageView = {
-  lead: "Your brief is saved exactly as you wrote it.",
+const defineView: StageView = {
+  lead: "Your goal is saved exactly as you wrote it.",
   quote: text,
   sections: [
     {
@@ -60,7 +84,7 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
     repo: "studio-web",
     current: "plan",
     stages: {
-      brief: "done",
+      define: "done",
       plan: asking ? "needsYou" : "working",
       build: "waiting",
       check: "waiting",
@@ -68,7 +92,7 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
       ship: "waiting",
     },
     views: {
-      brief: briefView,
+      define: defineView,
       plan: {
         lead: asking ? "Setup needs your go-ahead." : "Getting things ready.",
         rest: asking

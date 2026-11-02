@@ -20,11 +20,18 @@ export type TourView =
   | { kind: "choose"; refused?: boolean }
   | { kind: "providers"; result: Preflight }
   | { kind: "empty" }
-  | { kind: "newTask"; draft: Draft; focus?: "crew" }
+  /** `issues`: the GitHub issue list starts open, or with #128 picked. */
+  | { kind: "newTask"; draft: Draft; focus?: "crew"; issues?: "open" | "picked" }
   | { kind: "setup" }
   | { kind: "started" }
-  /** `kept`: the list after take A was kept on Review. */
-  | { kind: "task"; taskId: string; stage: StageId; kept?: boolean }
+  /** `kept`: the list after take A was kept on Review; `shipped`, after its pull request opened. */
+  | {
+      kind: "task";
+      taskId: string;
+      stage: StageId;
+      kept?: boolean;
+      shipped?: "checking" | "merged";
+    }
   | { kind: "approvals"; cleared?: boolean }
   | { kind: "history" }
   | { kind: "state"; scene: Scene }
@@ -92,9 +99,23 @@ export const steps: Step[] = [
   {
     id: "new-task",
     chapter: "Start a task",
-    title: "Write the brief",
-    note: "Describe the change in your own words. As you type, Bezl looks for five things a good brief usually covers, but you can start without them.",
+    title: "Define the task",
+    note: "Describe the change in your own words. As you type, Bezl looks for five things a good goal usually covers, but you can start without them.",
     view: { kind: "newTask", draft: "blank" },
+  },
+  {
+    id: "from-issue",
+    chapter: "Start a task",
+    title: "Start from a GitHub issue",
+    note: "If the work is already written up as an issue, pick it instead of starting from scratch. Bezl reads your open issues through your own GitHub sign-in.",
+    view: { kind: "newTask", draft: "blank", issues: "open" },
+  },
+  {
+    id: "issue-filled",
+    chapter: "Start a task",
+    title: "The issue fills in the goal",
+    note: "The issue's title and description become the goal, and its checklist becomes the list of things to be done. Bezl checks it like any goal you wrote yourself, so the gaps still show.",
+    view: { kind: "newTask", draft: "blank", issues: "picked" },
   },
   {
     id: "readiness",
@@ -104,7 +125,7 @@ export const steps: Step[] = [
     view: { kind: "newTask", draft: "partial" },
   },
   {
-    id: "brief-ready",
+    id: "define-ready",
     chapter: "Start a task",
     title: "It's done when, and who checks",
     note: "Bezl checks each of these after every step, and the ones marked for you wait until Review.",
@@ -141,9 +162,16 @@ export const steps: Step[] = [
   {
     id: "stages",
     chapter: "Your tasks",
-    title: "Brief to Ship",
-    note: "Each stage has a light that shows how it's going, and you can click any stage to open it. Brief holds your own words and the list of things to be done.",
-    view: { kind: "task", taskId: "empty-state", stage: "brief" },
+    title: "Define to Ship",
+    note: "Each stage has a light that shows how it's going, and you can click any stage to open it. Define holds your goal in your own words and the list of things to be done.",
+    view: { kind: "task", taskId: "empty-state", stage: "define" },
+  },
+  {
+    id: "context",
+    chapter: "Your tasks",
+    title: "What it's for, how big, how sure",
+    note: "The line under the stages keeps your goal, how much the change touches and how many done-when lines are proven in view. Beside every stage, Intent holds what you decided and what the agents assumed, and changing an assumption asks you about it.",
+    view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
     id: "working",
@@ -156,14 +184,14 @@ export const steps: Step[] = [
     id: "question",
     chapter: "Your tasks",
     title: "A question waits on you",
-    note: "When a coding agent stops to ask you something, the task turns amber and the question waits in that stage until you answer it there.",
+    note: "When a coding agent stops to ask you something, the task turns amber and the question opens in that stage, with what it holds up, Bezl's recommendation and what each answer leads to. Questions Bezl could answer itself are folded away under Bezl handled.",
     view: { kind: "task", taskId: "deny-scopes", stage: "build" },
   },
   {
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw. Checks that passed stay folded away.",
+    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw, and one button sends them all to the writer together. Checks that passed stay folded away.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {
@@ -179,6 +207,20 @@ export const steps: Step[] = [
     title: "Ready to ship",
     note: "You see the pull request next to the history of how it got here, and Bezl puts that history in the pull request's description.",
     view: { kind: "task", taskId: "empty-state", stage: "ship", kept: true },
+  },
+  {
+    id: "pr-checks",
+    chapter: "Your tasks",
+    title: "Checks on the pull request",
+    note: "Once the pull request is open, Ship shows GitHub's checks as they finish. A failing check links to its log, but nothing here stops you, because merging is your call.",
+    view: { kind: "task", taskId: "empty-state", stage: "ship", shipped: "checking" },
+  },
+  {
+    id: "merged",
+    chapter: "Your tasks",
+    title: "Checked where it landed",
+    note: "After you merge, GitHub runs the checks again on the merged commit. Ship shows that result, so you know the change works on the branch it joined.",
+    view: { kind: "task", taskId: "empty-state", stage: "ship", shipped: "merged" },
   },
   {
     id: "approvals",
