@@ -1,7 +1,7 @@
 import type { StageId } from "../journey/model";
 import type { SideTab } from "../journey/Workbench";
 import type { drafts } from "../newtask/fixtures";
-import { oneOf, type Scene, type Theme, themes } from "./states";
+import { oneOf, type Theme, themes } from "./states";
 
 export const chapters = [
   "Getting started",
@@ -9,7 +9,6 @@ export const chapters = [
   "Your tasks",
   "Needs you",
   "Look back",
-  "Design states",
 ] as const;
 export type Chapter = (typeof chapters)[number];
 
@@ -40,9 +39,7 @@ export type TourView =
       interrupted?: boolean;
     }
   | { kind: "approvals"; cleared?: boolean }
-  | { kind: "history" }
-  | { kind: "state"; scene: Scene }
-  | { kind: "overview" };
+  | { kind: "history" };
 
 export type Step = { id: string; chapter: Chapter; title: string; note: string; view: TourView };
 
@@ -65,7 +62,7 @@ export const steps: Step[] = [
     id: "preflight",
     chapter: "Getting started",
     title: "Agent check",
-    note: "Bezl looks for each coding agent on this computer and checks that it's signed in, with a single line showing progress while it works.",
+    note: "Bezl looks for each coding agent on this computer and checks that it's signed in, and checks your GitHub sign-in too, with a single line showing progress while it works.",
     view: { kind: "providers", result: "checking" },
   },
   {
@@ -79,7 +76,7 @@ export const steps: Step[] = [
     id: "github",
     chapter: "Getting started",
     title: "No GitHub sign-in",
-    note: "Preflight also asks gh for your GitHub sign-in. Without one, Ship can't open a pull request; nothing else waits on it.",
+    note: "Without a GitHub sign-in, Bezl hides the issue picker and Ship can't open a pull request, so the task finishes on a local branch. Nothing else waits on it, so you can still start.",
     view: { kind: "providers", result: "noGitHub" },
   },
   {
@@ -142,7 +139,7 @@ export const steps: Step[] = [
     id: "crew",
     chapter: "Start a task",
     title: "Choose who works on it",
-    note: "You can only pick coding agents that passed the agent check. A reviewer from the same company as the writer is allowed, but Bezl labels it so you know.",
+    note: "You can only pick coding agents that passed the agent check. A reviewer from the same company as the writer is allowed, but Bezl labels it so you know. Limits lists the paths the attempt may change, and can hold Ship while problems are open.",
     view: { kind: "newTask", draft: "ready", focus: "crew" },
   },
   {
@@ -177,14 +174,14 @@ export const steps: Step[] = [
     id: "context",
     chapter: "Your tasks",
     title: "What it's for, how big, how sure",
-    note: "One line under the stages: how much of the goal is done, how far the change reaches and how risky it is, and how much of it ran in a test. Each opens in the workspace beside the stage. Point at a stage to see what happened there and who acted.",
+    note: "One line under the stages: how much of the goal is done, how far the change reaches and how risky it is, and how much of it ran in a test. Point at the risk to see what it was measured from; each part opens in the workspace beside the stage. Point at a stage to see what happened there and who acted.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
     id: "preview",
     chapter: "Your tasks",
     title: "See it before you decide",
-    note: "Design takes half the page, so a phone screenshot shows at its own width, with each finding pinned where it is. Click a spot to leave a note. Full screen gives the screenshots the window, another beside it to compare, and your path to the goal down the side.",
+    note: "Design shows only when Bezl captured screenshots of your app; without them the workspace opens on Evidence. Design takes half the page, so a phone screenshot shows at its own width, with each finding pinned where it is. Click a spot to leave a note. Full screen gives the screenshots the window, another beside it to compare, and your path to the goal down the side.",
     view: { kind: "task", taskId: "empty-state", stage: "check" },
   },
   {
@@ -193,13 +190,6 @@ export const steps: Step[] = [
     title: "Work in progress",
     note: "The attempt works in its own copy of your code. A single line tells you what it's doing right now, and you can send it a message while it works.",
     view: { kind: "task", taskId: "debounce", stage: "build" },
-  },
-  {
-    id: "come-back",
-    chapter: "Your tasks",
-    title: "Coming back after a restart",
-    note: "If Bezl quits mid-step, after a crash or a restart, the task comes back amber as Interrupted, with its copy of your code as it was left and the last terminal snapshot. Bezl never picks the step back up on its own: you run it again with a fresh coding agent, or stop.",
-    view: { kind: "task", taskId: "debounce", stage: "build", interrupted: true },
   },
   {
     id: "question",
@@ -219,11 +209,11 @@ export const steps: Step[] = [
     id: "trace",
     chapter: "Your tasks",
     title: "Follow the evidence",
-    note: "Evidence follows a problem back through the code it's about to the line of your goal it puts at risk, with every changed line accounted for. Why Bezl asks, beside a question, opens it at that question. Full screen draws it as a map; a finding pinned on a screenshot traces back to it, and See it goes the other way.",
+    note: "Evidence follows a problem back through the code it's about to the line of your goal it puts at risk, with every changed line accounted for. A link from changed code to your goal is the plan's claim, and says so; Bezl hasn't measured it. Why Bezl asks, beside a question, opens it at that question. Full screen draws it as a map; a finding pinned on a screenshot traces back to it, and See it goes the other way.",
     view: { kind: "task", taskId: "snapshot", stage: "check", side: "evidence" },
   },
   {
-    id: "review-takes",
+    id: "review",
     chapter: "Your tasks",
     title: "Reviewed, before and after",
     note: "Another coding agent reviews the attempt. Each done-when line shows how it is on main and after the change. Once you have answered the review's question, the bar at the bottom says why it's ready and ships it.",
@@ -258,6 +248,13 @@ export const steps: Step[] = [
     view: { kind: "task", taskId: "empty-state", stage: "ship", shipped: "merged" },
   },
   {
+    id: "come-back",
+    chapter: "Your tasks",
+    title: "Coming back after a restart",
+    note: "If Bezl quits mid-step, after a crash or a restart, the task comes back amber as Interrupted, with its copy of your code as it was left and the last terminal snapshot. Bezl never picks the step back up on its own: you run it again with a fresh coding agent, or stop.",
+    view: { kind: "task", taskId: "debounce", stage: "build", interrupted: true },
+  },
+  {
     id: "approvals",
     chapter: "Needs you",
     title: "One queue for you",
@@ -277,41 +274,6 @@ export const steps: Step[] = [
     title: "How it got here",
     note: "Look back over every event, open the terminal snapshots and see what changed, with the time you spent shown next to the agents' time.",
     view: { kind: "history" },
-  },
-  {
-    id: "state-idle",
-    chapter: "Design states",
-    title: "Idle",
-    note: "This is the interim Task screen while no task is running.",
-    view: { kind: "state", scene: "idle" },
-  },
-  {
-    id: "state-running",
-    chapter: "Design states",
-    title: "Running",
-    note: "While the writer works, its panel lights up and a dot travels along its line in the map.",
-    view: { kind: "state", scene: "running" },
-  },
-  {
-    id: "state-blocked",
-    chapter: "Design states",
-    title: "Blocked",
-    note: "When the writer stops to wait for your answer, its panel glows as a warning.",
-    view: { kind: "state", scene: "blocked" },
-  },
-  {
-    id: "state-long",
-    chapter: "Design states",
-    title: "Long content",
-    note: "Long output scrolls inside its own panel, so it never spills onto the rest of the screen.",
-    view: { kind: "state", scene: "longContent" },
-  },
-  {
-    id: "overview",
-    chapter: "Design states",
-    title: "Every state, both themes",
-    note: "Click any screen to open it full size.",
-    view: { kind: "overview" },
   },
 ];
 

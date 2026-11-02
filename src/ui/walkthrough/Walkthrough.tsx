@@ -1,12 +1,10 @@
 import { Button, Menu, Tooltip } from "@kb.ui/react";
 import {
-  type CSSProperties,
   type ReactElement,
   type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
-  useRef,
   useState,
 } from "react";
 import { Approvals } from "../approvals/Approvals";
@@ -38,16 +36,7 @@ import type { WorkerView } from "../task/model";
 import { Task } from "../task/Task";
 import { usePortalRoot } from "../theme/AppTheme";
 import { BackIcon, ContentsIcon, MoonIcon, NextIcon, SunIcon } from "./icons";
-import {
-  frameSrc,
-  type Scene,
-  sceneLabel,
-  sceneNote,
-  scenes,
-  sceneWorkers,
-  type Theme,
-  themes,
-} from "./states";
+import { type Scene, sceneWorkers, type Theme } from "./states";
 import {
   chapters,
   keyAction,
@@ -61,9 +50,6 @@ import {
   tourSearch,
 } from "./tour";
 import "./walkthrough.css";
-
-// Overview frames render the screen at a real window size, then scale to fit.
-const FRAME = { width: 1280, height: 800 };
 
 /** Puts the theme on <html> so portals and the page canvas follow; restores it on leave. */
 export function useDocumentTheme(theme: Theme) {
@@ -93,83 +79,6 @@ export function StateScene({ scene }: { scene: Scene }) {
         )
       }
     />
-  );
-}
-
-/** Scales a fixed-size frame to its cell's width. */
-function useFitScale() {
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const measure = () =>
-      el.style.setProperty("--walkthrough-scale", String(el.clientWidth / FRAME.width));
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    measure();
-    return () => observer.disconnect();
-  }, []);
-  return ref;
-}
-
-type OpenState = (scene: Scene, theme: Theme) => void;
-
-function Cell({ scene, theme, onOpen }: { scene: Scene; theme: Theme; onOpen: OpenState }) {
-  const frame = useFitScale();
-  const name = `${sceneLabel[scene]}, ${theme}`;
-  return (
-    <li className="walkthrough-cell">
-      <div
-        ref={frame}
-        className="walkthrough-frame"
-        style={{ "--walkthrough-ratio": `${FRAME.width} / ${FRAME.height}` } as CSSProperties}
-      >
-        <iframe
-          src={frameSrc(scene, theme)}
-          title={`Task screen, ${name}`}
-          width={FRAME.width}
-          height={FRAME.height}
-          loading="lazy"
-          tabIndex={-1}
-          aria-hidden="true"
-          inert
-        />
-      </div>
-      <div className="walkthrough-caption">
-        <span className="walkthrough-caption-name">{sceneLabel[scene]}</span>
-        <span className="walkthrough-caption-note">{sceneNote[scene]}</span>
-      </div>
-      <button
-        type="button"
-        className="walkthrough-open"
-        aria-label={`Open ${name}`}
-        onClick={() => onOpen(scene, theme)}
-      />
-    </li>
-  );
-}
-
-function Overview({ onOpen }: { onOpen: OpenState }) {
-  return (
-    <main className="walkthrough-overview" aria-labelledby="walkthrough-overview-title">
-      <header className="walkthrough-intro">
-        <h1 id="walkthrough-overview-title">Every state, both themes</h1>
-        <p>
-          These are the interim Task screen's states, shown with sample data. Click any screen to
-          open it.
-        </p>
-      </header>
-      {themes.map((theme) => (
-        <section key={theme} className="walkthrough-row" aria-labelledby={`walkthrough-${theme}`}>
-          <h2 id={`walkthrough-${theme}`}>{theme === "dark" ? "Dark" : "Light"}</h2>
-          <ul className="walkthrough-grid">
-            {scenes.map((scene) => (
-              <Cell key={scene} scene={scene} theme={theme} onOpen={onOpen} />
-            ))}
-          </ul>
-        </section>
-      ))}
-    </main>
   );
 }
 
@@ -392,7 +301,6 @@ function View({
   view,
   place,
   onPlace,
-  onOpen,
   onGoTo,
   queue,
   onQueue,
@@ -400,7 +308,6 @@ function View({
   view: TourView;
   place: Place | null;
   onPlace: (place: Place) => void;
-  onOpen: OpenState;
   /** Answers made on this step; null until the first. */
   queue: NeedsYouItem[] | null;
   onQueue: (items: NeedsYouItem[]) => void;
@@ -522,10 +429,6 @@ function View({
           <HistoryPage history={history} onBack={() => onGoTo("ship")} />
         </TasksShell>
       );
-    case "state":
-      return <StateScene key={view.scene} scene={view.scene} />;
-    case "overview":
-      return <Overview onOpen={onOpen} />;
   }
 }
 
@@ -569,13 +472,6 @@ export function Walkthrough() {
     return () => window.removeEventListener("keydown", onKey);
   }, [act]);
 
-  const openState: OpenState = (scene, theme) => {
-    const index = steps.findIndex((s) => s.view.kind === "state" && s.view.scene === scene);
-    setPlace(null);
-    setQueue(null);
-    setTour({ index: Math.max(index, 0), theme });
-  };
-
   const current = steps[tour.index] ?? steps[0];
   return (
     <div className="walkthrough">
@@ -585,7 +481,6 @@ export function Walkthrough() {
             view={current.view}
             place={place}
             onPlace={setPlace}
-            onOpen={openState}
             queue={queue}
             onQueue={setQueue}
             onGoTo={(id) =>
