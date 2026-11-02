@@ -13,7 +13,7 @@ export const needsYou: NeedsYouItem[] = [
     prompt:
       "src/policy.rs has edits you haven't committed. Should I overwrite them, or work around them?",
     context: "src/policy.rs · 3 uncommitted lines",
-    blocks: "attempt A",
+    blocks: "the attempt",
     recommended: "around",
     waited: "6 min",
     choices: [

@@ -51,11 +51,11 @@ describe("Walkthrough tour", () => {
     at("?screen=walkthrough&step=preview");
     render(<Walkthrough />);
     expect(within(dock()).getByText("See it before you decide")).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(screen.getByRole("button", { name: "A, loading" }));
-    expect(screen.getByRole("img", { name: "Projects, A, loading, at 375 px" })).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
-    expect(screen.getByRole("dialog", { name: "Design review · Projects" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Design" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(screen.getByRole("button", { name: "After, loading" }));
+    expect(screen.getByRole("img", { name: "Projects, After, loading, at 375 px" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(screen.getByRole("dialog", { name: "Empty state for Projects" })).toBeVisible();
   });
 
   test("the trace step follows a problem back to the goal, arriving from the step before", async () => {
@@ -63,7 +63,7 @@ describe("Walkthrough tour", () => {
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(within(dock()).getByText("Follow the evidence")).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Trace" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("list", { name: "How it connects" })).toBeVisible();
   });
 
@@ -297,10 +297,12 @@ describe("Walkthrough start a task", () => {
 });
 
 describe("Walkthrough stage details", () => {
-  test("keeping an attempt on Review moves the tour to Ship", async () => {
+  test("answering Review's question, then Ship it, moves the tour to Ship", async () => {
     at("?screen=walkthrough&step=review-takes");
     render(<Walkthrough />);
-    await userEvent.click(screen.getByRole("button", { name: "Keep attempt A" }));
+    expect(screen.queryByRole("button", { name: "Ship it" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Side with Claude Code" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ship it" }));
     expect(within(dock()).getByText(position("ship"))).toBeVisible();
     expect(screen.getByText("Ready to ship.")).toBeVisible();
     expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(

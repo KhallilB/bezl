@@ -5,7 +5,6 @@ import type {
   Comparison,
   DoneWhen,
   JourneyTask,
-  Light,
   ProviderUsage,
   Shot,
   StageView,
@@ -13,8 +12,6 @@ import type {
   Trace,
   TraceNode,
 } from "./model";
-import checklistDesktop from "./samples/projects-checklist-desktop.jpg";
-import checklistPhone from "./samples/projects-checklist-phone.jpg";
 import emptyDesktop from "./samples/projects-empty-desktop.jpg";
 import emptyPhone from "./samples/projects-empty-phone.jpg";
 import loadingDesktop from "./samples/projects-loading-desktop.jpg";
@@ -70,12 +67,11 @@ const projects = (
   more: Partial<Shot> = {},
 ): Shot => ({ id, name, screen: "Projects", from, commit, images: { phone, desktop }, ...more });
 
-const today = projects("today", "Today", "main", "9b0f3d1", tablePhone, tableDesktop);
-const shotA = projects("a", "Attempt A", "Claude Code", "4e1c2b9", emptyPhone, emptyDesktop);
-const shotB = projects("b", "Attempt B", "Codex", "7d2a610", checklistPhone, checklistDesktop);
+const today = projects("today", "Before", "main", "9b0f3d1", tablePhone, tableDesktop);
+const shotA = projects("a", "After", "Claude Code", "4e1c2b9", emptyPhone, emptyDesktop);
 const loadingA = projects(
   "a-loading",
-  "A, loading",
+  "After, loading",
   "Claude Code",
   "4e1c2b9",
   loadingPhone,
@@ -85,8 +81,8 @@ const importLink = "The Import from GitHub link does nothing yet";
 const reviewedA: Shot = {
   ...shotA,
   findings: [
-    { size: "phone", x: 50, y: 62.8, text: importLink },
-    { size: "desktop", x: 50, y: 59.2, text: importLink },
+    { size: "phone", x: 50, y: 62.8, text: importLink, node: "import" },
+    { size: "desktop", x: 50, y: 59.2, text: importLink, node: "import" },
   ],
 };
 const warm = projects(
@@ -109,7 +105,7 @@ const node = (
   light: TraceNode["light"] = "done",
 ): TraceNode => ({ id, column, title, meta, light });
 
-// Attempt A, as Bezl measured it in Check and Codex reviewed it.
+// The attempt, as Bezl measured it in Check and Codex reviewed it.
 const emptyTrace: Trace = {
   nodes: [
     node("i1", "intent", "Shows when there are no projects", "Tests check"),
@@ -120,16 +116,19 @@ const emptyTrace: Trace = {
     node("link", "change", "ImportLink", "Projects.tsx:41", "needsYou"),
     node("tests", "measured", "bun run test", "48 passed"),
     node("axe", "measured", "Accessibility", "0 issues"),
-    node("shots", "measured", "Screenshots", "375 and 1280 px"),
+    { ...node("shots", "measured", "Screenshots", "375 and 1280 px"), shot: "a" },
     node("review", "measured", "Codex review", "1 issue", "needsYou"),
-    node(
-      "import",
-      "decide",
-      "Import from GitHub does nothing yet",
-      "Codex vs Claude Code",
-      "needsYou",
-    ),
-    node("look", "decide", "Does it look right?", "your call", "needsYou"),
+    {
+      ...node(
+        "import",
+        "decide",
+        "Import from GitHub does nothing yet",
+        "Codex vs Claude Code",
+        "needsYou",
+      ),
+      shot: "a",
+    },
+    { ...node("look", "decide", "Does it look right?", "your call", "needsYou"), shot: "a" },
   ],
   links: [
     { from: "i1", to: "projects" },
@@ -184,7 +183,7 @@ const emptyAssumed: Assumption[] = [
         {
           id: "home",
           label: "On a new welcome page",
-          next: "Adds a route and a redirect, so both attempts grow.",
+          next: "Adds a route and a redirect, so the change grows.",
         },
       ],
     },
@@ -203,22 +202,11 @@ const takeA: Take = {
   ],
 };
 
-const takeB: Take = {
-  id: "B",
-  model: "Codex",
-  state: "Ready",
-  light: "done",
-  files: [
-    { path: "src/pages/Projects.tsx", added: 58, removed: 4 },
-    { path: "src/pages/ProjectsChecklist.tsx", added: 74, removed: 0 },
-  ],
-};
-
-// Each attempt is reviewed by the other coding agent.
-const reviewed = (a: string, b: string): Take[] => [
+// Codex reviews the attempt Claude Code wrote.
+const reviewed = (state: string): Take[] => [
   {
     ...takeA,
-    state: a,
+    state,
     verdict: {
       by: "Codex",
       text: "Clear, and it reuses EmptyState. The import link does nothing yet.",
@@ -231,66 +219,47 @@ const reviewed = (a: string, b: string): Take[] => [
       },
     ],
   },
-  {
-    ...takeB,
-    state: b,
-    verdict: { by: "Claude Code", text: "Helpful, but the checklist text is too faint to read." },
-    findings: [
-      {
-        text: "Checklist text is too faint, with 2.6:1 contrast where 4.5:1 is needed",
-        where: "ProjectsChecklist.tsx:18",
-        light: "needsYou",
-      },
-      { text: "Adds a new card instead of reusing EmptyState", where: "fixed", light: "done" },
-    ],
-  },
 ];
 
-const both = (light: Light, text: string) => ({ A: { light, text }, B: { light, text } });
+const same = (light: DoneWhen["light"], text: string) => ({
+  before: { light, text },
+  after: { light, text },
+});
 
 const emptyCompare: Comparison = {
-  lean: {
-    take: "A",
-    why: "it meets the goal once the import link goes, and more of its lines run in a test.",
-  },
+  summary: "it meets the goal once the import link goes, and 29 of 31 changed lines run in a test.",
+  columns: [
+    { id: "before", name: "On main" },
+    { id: "after", name: "After" },
+  ],
   rows: [
-    { group: "Done when", label: emptyDone[0]?.text ?? "", cells: both("done", "Proven") },
+    {
+      group: "Done when",
+      label: emptyDone[0]?.text ?? "",
+      cells: {
+        before: { light: "failed", text: "An empty table shows" },
+        after: { light: "done", text: "Proven" },
+      },
+    },
     {
       group: "Done when",
       label: emptyDone[1]?.text ?? "",
       cells: {
-        A: { light: "needsYou", text: "The import link does nothing yet" },
-        B: { light: "needsYou", text: "A checklist adds a second way in" },
+        before: { light: "failed", text: "An empty table, no way in" },
+        after: { light: "needsYou", text: "The import link does nothing yet" },
       },
     },
-    {
-      group: "Done when",
-      label: emptyDone[2]?.text ?? "",
-      cells: {
-        A: { light: "done", text: "0 issues" },
-        B: { light: "failed", text: "Contrast 2.6:1, needs 4.5:1" },
-      },
-    },
-    { group: "Done when", label: emptyDone[3]?.text ?? "", cells: both("done", "48 passed") },
+    { group: "Done when", label: emptyDone[2]?.text ?? "", cells: same("done", "0 issues") },
+    { group: "Done when", label: emptyDone[3]?.text ?? "", cells: same("done", "All 47 pass") },
     {
       group: "Checks",
-      label: "Changed lines run in a test",
-      cells: { A: { light: "done", text: "29 of 31" }, B: { light: "needsYou", text: "12 of 20" } },
-    },
-    { group: "Checks", label: "New dependencies", cells: both("done", "None") },
-    {
-      group: "Cost",
-      label: "Time",
-      cells: { A: { light: "done", text: "6 min" }, B: { light: "done", text: "9 min" } },
-    },
-    {
-      group: "Cost",
-      label: "Usage",
+      label: "Tests",
       cells: {
-        A: { light: "done", text: "3% of Claude Code" },
-        B: { light: "done", text: "5% of Codex" },
+        before: { light: "done", text: "47" },
+        after: { light: "done", text: "48, one for zero projects" },
       },
     },
+    { group: "Checks", label: "New dependencies", cells: same("done", "None") },
   ],
 };
 
@@ -303,7 +272,7 @@ const emptyState: JourneyTask = {
   doneWhen: emptyDone,
   decisions: [
     { stage: "define", text: "A filtered list with no matches says so and offers Clear filter." },
-    { stage: "plan", text: "Build both approaches and choose in Review." },
+    { stage: "plan", text: "Reuse EmptyState with one primary action." },
   ],
   assumptions: emptyAssumed,
   examples: [warm],
@@ -326,23 +295,15 @@ const emptyState: JourneyTask = {
     },
     plan: {
       lead: "The plan is done.",
-      by: "Claude Code and Codex",
+      by: "Claude Code",
       rest: "All 4 steps are finished.",
       shots: [today],
       sections: [
         {
-          title: "Attempt A · Claude Code",
+          title: "Claude Code's plan",
           rows: [
             { text: "Find where Projects renders its table", light: "done" },
             { text: "Reuse EmptyState with one primary action", light: "done" },
-            { text: "Add a test for zero projects", light: "done" },
-            { text: "Run the accessibility check", light: "done" },
-          ],
-        },
-        {
-          title: "Attempt B · Codex",
-          rows: [
-            { text: "Add a first-project checklist to Projects", light: "done" },
             { text: "Add a test for zero projects", light: "done" },
             { text: "Run the accessibility check", light: "done" },
           ],
@@ -351,20 +312,17 @@ const emptyState: JourneyTask = {
     },
     build: {
       lead: "Build is done.",
-      by: "Claude Code and Codex, one attempt each",
-      rest: "Both attempts have finished.",
-      shots: [shotA, shotB],
+      by: "Claude Code",
+      rest: "The attempt has finished.",
+      shots: [shotA],
       sections: [],
-      takes: [
-        { ...takeA, state: "Finished", light: "done", activity: "Finished in 6 minutes" },
-        { ...takeB, state: "Finished", light: "done", activity: "Finished in 9 minutes" },
-      ],
+      takes: [{ ...takeA, state: "Finished", light: "done", activity: "Finished in 6 minutes" }],
     },
     check: {
       lead: "Everything passed.",
       by: "Bezl ran 3 checks",
-      shots: [shotA, loadingA, shotB],
-      rest: "Attempt B had two problems at first, but Codex fixed them once they were sent back.",
+      shots: [shotA, loadingA],
+      rest: "Two problems at first, but Claude Code fixed them once they were sent back.",
       sections: [],
       passed: [
         { text: "bun run test", meta: "48 passed", mono: true, light: "done" },
@@ -373,16 +331,16 @@ const emptyState: JourneyTask = {
       ],
     },
     review: {
-      lead: "Which attempt should ship?",
-      by: "Each coding agent reviewed the other's attempt",
-      rest: "Each one has been reviewed by the other coding agent, so you can compare them before you choose.",
+      lead: "Ready to ship?",
+      by: "Codex reviewed Claude Code's attempt",
+      rest: "Codex reviewed it against your done-when lines. Each line shows how it is on main and after the change.",
       sections: [],
-      takes: reviewed("Ready", "Ready"),
+      takes: reviewed("Ready"),
       compare: emptyCompare,
-      shots: [reviewedA, shotB],
+      shots: [reviewedA, today],
       handled: [
         {
-          text: "Claude Code on attempt B: two naming nits",
+          text: "Codex: two naming nits",
           outcome: "Dropped, because nothing in the changed lines backs them up.",
           by: "dropped",
         },
@@ -390,8 +348,8 @@ const emptyState: JourneyTask = {
     },
     ship: {
       lead: "Nothing to ship yet.",
-      by: "Waits on your pick",
-      rest: "Ship opens once you choose which attempt to keep.",
+      by: "Waits on your review",
+      rest: "Ship opens once you approve the attempt in Review.",
       sections: [],
     },
   },
@@ -428,7 +386,7 @@ const denyScopes: JourneyTask = {
       rest: "Step 2 of 3 is waiting on you.",
       sections: [
         {
-          title: "Attempt A · Codex",
+          title: "Codex's plan",
           rows: [
             { text: "Add a failing test for an empty scope list", light: "done" },
             { text: "Refuse empty scopes in the policy engine", light: "needsYou" },
@@ -513,7 +471,7 @@ const debounce: JourneyTask = {
       rest: "It's on step 2 of 3.",
       sections: [
         {
-          title: "Attempt A · Claude Code",
+          title: "Claude Code's plan",
           rows: [
             { text: "Measure resize calls during a drag", light: "done" },
             { text: "Debounce the code that resizes the terminal", light: "working" },
@@ -623,7 +581,7 @@ const snapshot: JourneyTask = {
       rest: "All 3 steps are finished.",
       sections: [
         {
-          title: "Attempt A · Codex",
+          title: "Codex's plan",
           rows: [
             { text: "Save the terminal's screen as text", light: "done" },
             { text: "Store snapshots in .git/bezl", light: "done" },
@@ -635,7 +593,7 @@ const snapshot: JourneyTask = {
     build: {
       lead: "Build is done.",
       by: "Codex",
-      rest: "Attempt A finished in 11 minutes.",
+      rest: "The attempt finished in 11 minutes.",
       sections: [],
       takes: [
         {
@@ -739,54 +697,48 @@ const ci = (states: CiCheck["state"][]): CiCheck[] =>
 
 const prChecks: CiStatus = { on: "pullRequest", checks: ci(["passed", "passed", "running"]) };
 
-/** Same list after you keep attempt A: Review done, Ship waits on you. */
+/** Same list after you approve the attempt: Review done, Ship waits on you. */
 const kept: JourneyTask = {
   ...emptyState,
   current: "ship",
   doneWhen: emptyDone.map((l) =>
-    l.light === "needsYou" ? { ...l, light: "done", status: "You kept attempt A" } : l,
+    l.light === "needsYou" ? { ...l, light: "done", status: "You approved it" } : l,
   ),
   decisions: [
     ...(emptyState.decisions ?? []),
-    { stage: "review", text: "Keep attempt A, with one clear create button." },
+    { stage: "review", text: "Ship it, with one clear create button." },
   ],
   stages: { ...emptyState.stages, review: "done", ship: "needsYou" },
   views: {
     ...emptyState.views,
     review: {
-      lead: "You kept attempt A.",
-      by: "You kept it",
-      rest: "Attempt B is set aside rather than deleted, in case you want it later.",
+      lead: "You approved it.",
+      by: "You approved it",
+      rest: "Ship has the pull request ready.",
       sections: [],
-      shots: [reviewedA, shotB],
-      takes: reviewed("Kept", "Set aside"),
+      shots: [reviewedA, today],
+      takes: reviewed("Approved"),
     },
     ship: {
       lead: "Ready to ship.",
       by: "Bezl opens the pull request",
       rest: "Open the pull request when you are.",
       sections: [],
-      shots: [
-        { ...today, name: "Before" },
-        { ...shotA, name: "After" },
-      ],
+      shots: [shotA, today],
       ship: {
         title: "Add an empty state to the Projects page",
         summary:
-          "Claude Code wrote attempt A and Codex reviewed it. It reuses EmptyState with a single action, “Create your first project”.",
-        facts: ["12 of 12 checks passed", "Reviewed by Codex", "Attempt A of 2"],
+          "Claude Code wrote it and Codex reviewed it. It reuses EmptyState with a single action, “Create your first project”.",
+        facts: ["12 of 12 checks passed", "Reviewed by Codex"],
         files: takeA.files ?? [],
         history: [
           {
             stage: "define",
             text: "Help new users start a project by reusing EmptyState with one clear action",
           },
-          { stage: "plan", text: "Claude Code planned 4 steps and Codex planned 3" },
-          { stage: "build", text: "Claude Code and Codex each built one attempt" },
-          {
-            stage: "check",
-            text: "Attempt A passed all 12 checks, and attempt B's 2 problems are now fixed",
-          },
+          { stage: "plan", text: "Claude Code planned 4 steps" },
+          { stage: "build", text: "Claude Code built it in 6 minutes" },
+          { stage: "check", text: "Passed all 12 checks once its 2 problems were fixed" },
           { stage: "review", text: "Codex said “Clear, and it reuses EmptyState”" },
         ],
         pullRequest: { number: 42, url: "https://github.com/acme/studio-web/pull/42" },

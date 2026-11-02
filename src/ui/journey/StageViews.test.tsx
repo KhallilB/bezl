@@ -8,9 +8,9 @@ import { TaskPage } from "./TaskPage";
 function open(list: JourneyTask[], id: string, stage: StageId) {
   const task = list.find((t) => t.id === id);
   if (!task) throw new Error(`no fixture ${id}`);
-  const onKeep = vi.fn();
-  render(<TaskPage task={task} stage={stage} onStage={vi.fn()} onKeep={onKeep} />);
-  return { onKeep };
+  const onShip = vi.fn();
+  render(<TaskPage task={task} stage={stage} onStage={vi.fn()} onShip={onShip} />);
+  return { onShip };
 }
 
 const take = (name: RegExp) => screen.getByRole("article", { name });
@@ -33,9 +33,9 @@ describe("Next step", () => {
 });
 
 describe("Build", () => {
-  test("each attempt shows its model, state and one activity line", () => {
+  test("the attempt shows its coding agent, state and one activity line", () => {
     open(tasks, "debounce", "build");
-    const a = take(/Attempt A, Claude Code/);
+    const a = take(/Claude Code's attempt/);
     expect(within(a).getByText("Writing")).toBeVisible();
     expect(within(a).getByText("Editing src/ui/terminals/xterm.ts")).toBeVisible();
   });
@@ -118,42 +118,39 @@ describe("Check", () => {
 });
 
 describe("Review", () => {
-  const table = () => screen.getByRole("table", { name: "Compare the attempts" });
+  const table = () => screen.getByRole("table", { name: "Before and after" });
   const row = (name: RegExp) => within(table()).getByRole("row", { name });
 
-  test("attempts compare line by line, with each other agent's verdict", () => {
+  test("one attempt, with the other coding agent's review", () => {
     open(tasks, "empty-state", "review");
-    expect(within(table()).getByRole("columnheader", { name: /A · Claude Code/ })).toBeVisible();
-    expect(within(table()).getByRole("columnheader", { name: /B · Codex/ })).toBeVisible();
-    expect(
-      within(row(/one clear way to create the first project/)).getByText(
-        "The import link does nothing yet",
-      ),
-    ).toBeVisible();
-    expect(
-      within(row(/The other agent said/)).getByText(/Clear, and it reuses EmptyState/),
-    ).toBeVisible();
-    expect(within(row(/^Changed .*files/)).getByText("3 files · +86 −4")).toBeVisible();
+    expect(screen.getAllByRole("article", { name: /attempt/ })).toHaveLength(1);
+    const a = take(/Claude Code's attempt/);
+    expect(within(a).getByText(/Clear, and it reuses EmptyState/)).toBeVisible();
+    expect(within(a).queryByRole("button", { name: /Keep/ })).toBeNull();
   });
 
-  test("only what differs hides the lines where both agree", async () => {
+  test("each done-when line as it is on main and after the attempt", () => {
+    open(tasks, "empty-state", "review");
+    expect(within(table()).getByRole("columnheader", { name: "On main" })).toBeVisible();
+    expect(within(table()).getByRole("columnheader", { name: "After" })).toBeVisible();
+    const line = row(/one clear way to create the first project/);
+    expect(within(line).getByText("An empty table, no way in")).toBeVisible();
+    expect(within(line).getByText("The import link does nothing yet")).toBeVisible();
+  });
+
+  test("only what differs hides the lines main already met", async () => {
     open(tasks, "empty-state", "review");
     expect(row(/Existing tests still pass/)).toBeVisible();
     await userEvent.click(screen.getByRole("switch", { name: "Only what differs" }));
     expect(within(table()).queryByRole("row", { name: /Existing tests still pass/ })).toBeNull();
   });
 
-  test("the next step carries Bezl's lean, and keeping hands it to Ship", async () => {
-    const { onKeep } = open(tasks, "empty-state", "review");
-    expect(within(bar()).getByText(/Bezl leans to A/)).toBeVisible();
-    await userEvent.click(within(bar()).getByRole("button", { name: "Keep attempt A" }));
-    expect(onKeep).toHaveBeenCalledWith("A");
-  });
-
-  test("either attempt can be kept from its column", async () => {
-    const { onKeep } = open(tasks, "empty-state", "review");
-    await userEvent.click(within(table()).getByRole("button", { name: "Keep B" }));
-    expect(onKeep).toHaveBeenCalledWith("B");
+  test("the next step says why it's ready, and Ship it hands it to Ship", async () => {
+    const { onShip } = open(tasks, "empty-state", "review");
+    expect(within(bar()).getByText(/Ready to ship:/)).toBeVisible();
+    expect(within(bar()).queryByRole("button", { name: /Keep/ })).toBeNull();
+    await userEvent.click(within(bar()).getByRole("button", { name: "Ship it" }));
+    expect(onShip).toHaveBeenCalledOnce();
   });
 });
 

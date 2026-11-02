@@ -144,6 +144,8 @@ export type TraceNode = {
   title: string;
   meta: string;
   light: Light;
+  /** The screenshot it can be seen on. */
+  shot?: string;
 };
 
 /** `via` is the code a finding is about, so tracing it skips the rest of that run. */
@@ -153,6 +155,18 @@ export type Coverage = { covered: number; uncovered: number; unknown: number; ex
 
 /** How each done-when line reaches what Bezl measured and what needs you. */
 export type Trace = { nodes: TraceNode[]; links: TraceLink[]; coverage?: Coverage };
+
+/** A step toward the goal: something that needs you, and the done-when lines it blocks. */
+export type Step = { node: TraceNode; blocks: TraceNode[] };
+
+export function pathOf(trace: Trace): Step[] {
+  return trace.nodes
+    .filter((n) => n.column === "decide")
+    .map((node) => {
+      const lit = lineage(trace, node.id);
+      return { node, blocks: trace.nodes.filter((n) => n.column === "intent" && lit.has(n.id)) };
+    });
+}
 
 /** Everything upstream and downstream of one node. */
 export function lineage({ links }: Trace, start: string): Set<string> {
@@ -196,7 +210,14 @@ export type ShotSize = "phone" | "desktop";
 export const shotWidth: Record<ShotSize, number> = { phone: 375, desktop: 1280 };
 
 /** A finding Bezl placed on a screenshot; x and y are percentages of it. */
-export type ShotPin = { size: ShotSize; x: number; y: number; text: string };
+export type ShotPin = {
+  size: ShotSize;
+  x: number;
+  y: number;
+  text: string;
+  /** The trace node it is about, so the map can show where it comes from. */
+  node?: string;
+};
 
 /** One state of a screen Bezl captured at both sizes; an example is a choice not built yet. */
 export type Shot = {
@@ -228,7 +249,7 @@ export type StageView = {
   /** Checks that passed; folded away, since Check shows problems first. */
   passed?: Row[];
   ship?: ShipSummary;
-  /** Review's attempts line by line, and which one Bezl leans to. */
+  /** Review's lines before and after the attempt. */
   compare?: Comparison;
   /** How the stage's problems can go back; the first fixer is the writer. */
   sendBack?: SendBackOptions;
@@ -254,10 +275,15 @@ export function estimate(
 
 export type CompareCell = { light: Light; text: string };
 
-/** One line of a comparison: a cell per attempt, keyed by its letter. */
+/** One line of a comparison: a cell per column, keyed by the column's id. */
 export type CompareRow = { group: string; label: string; cells: Record<string, CompareCell> };
 
-export type Comparison = { lean: { take: string; why: string }; rows: CompareRow[] };
+/** Review's lines as they are on main and after the attempt; summary says why it's ready. */
+export type Comparison = {
+  summary: string;
+  columns: { id: string; name: string }[];
+  rows: CompareRow[];
+};
 
 export type JourneyTask = {
   id: string;
@@ -314,11 +340,10 @@ export type TaskContext = {
 const files = (n: number) => (n === 1 ? "1 file" : `${n} files`);
 
 /** One set of changes: its files, then lines added and removed. */
-export function sizeLabel(set: FileChange[]): string {
+function sizeLabel(set: FileChange[]): string {
   const [added, removed] = set.reduce(([a, r], f) => [a + f.added, r + f.removed], [0, 0]);
   return `${files(new Set(set.map((f) => f.path)).size)} · ${diffLabel({ path: "", added, removed })}`;
 }
-export const screenCount = (n: number) => (n === 1 ? "1 screen" : `${n} screens`);
 
 /** Ship's kept attempt wins; otherwise the latest stage with attempts. */
 function changed(task: JourneyTask): string {
@@ -331,7 +356,7 @@ function changed(task: JourneyTask): string {
   return sizeLabel(sets[0] ?? []);
 }
 
-/** The tiles under the stages: what it's for, how big, how sure. */
+/** The summary under the stages: what it's for, how big, how sure. */
 export function contextOf(task: JourneyTask): TaskContext {
   const lines = task.doneWhen ?? [];
   const proven = lines.filter((l) => l.light === "done").length;
