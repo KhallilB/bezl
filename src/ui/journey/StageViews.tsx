@@ -153,11 +153,15 @@ export function Takes({
   );
 }
 
-/** Problems first, one open at a time with what Bezl saw. */
+const problemCount = (n: number) => (n === 1 ? "1 problem" : `${n} problems`);
+
+/** Problems first, one open at a time with what Bezl saw; one send for all. */
 export function Problems({ problems }: { problems: Problem[] }) {
   const id = useId();
   const [open, setOpen] = useState(0);
-  const [sent, setSent] = useState<ReadonlySet<number>>(new Set());
+  const [sent, setSent] = useState(false);
+  const writers = [...new Set(problems.map((p) => p.writer))].join(" and ");
+  const what = problemCount(problems.length);
   return (
     <section className="journey-section" aria-labelledby={id}>
       <h2 id={id} className="page-label">
@@ -184,24 +188,22 @@ export function Problems({ problems }: { problems: Problem[] }) {
                 <p>{p.detail}</p>
                 <span className="journey-mono journey-problem-where">{p.where}</span>
                 <pre className="journey-evidence">{p.evidence.join("\n")}</pre>
-                {sent.has(i) ? (
-                  <p className="journey-steer-note" role="status">
-                    {`Sent to ${p.writer} with this evidence.`}
-                  </p>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setSent((s) => new Set(s).add(i))}
-                  >
-                    {`Send to ${p.writer}`}
-                  </Button>
-                )}
               </div>
             ) : null}
           </li>
         ))}
       </ul>
+      {sent ? (
+        <p className="journey-steer-note" role="status">
+          {`Sent ${what} to ${writers} with what Bezl saw.`}
+        </p>
+      ) : (
+        <span>
+          <Button variant="primary" onClick={() => setSent(true)}>
+            {`Send ${what} to ${writers}`}
+          </Button>
+        </span>
+      )}
     </section>
   );
 }

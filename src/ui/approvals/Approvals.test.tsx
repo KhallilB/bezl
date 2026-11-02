@@ -66,10 +66,12 @@ describe("Needs you inline", () => {
       );
     }
     render(<Page />);
-    expect(screen.getAllByRole("article", { name: /from Codex/ })).toHaveLength(2);
-    expect(screen.queryByRole("article", { name: /Disputed issue/ })).toBeNull();
+    const asks = () => within(screen.getByRole("list", { name: "Needs you" }));
+    expect(asks().getAllByText(/^needs you:/)).toHaveLength(2);
+    expect(screen.queryByText(/import link isn't part of this task/)).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Work around them" }));
-    expect(screen.getAllByRole("article", { name: /from Codex/ })).toHaveLength(1);
+    expect(asks().getAllByText(/^needs you:/)).toHaveLength(1);
     expect(screen.getByRole("status")).toHaveTextContent(/keeps your edits/);
+    expect(screen.getByRole("button", { name: /internet access/ })).toHaveFocus();
   });
 });

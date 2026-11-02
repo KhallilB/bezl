@@ -167,6 +167,13 @@ export const steps: Step[] = [
     view: { kind: "task", taskId: "empty-state", stage: "define" },
   },
   {
+    id: "context",
+    chapter: "Your tasks",
+    title: "What it's for, how big, how sure",
+    note: "The line under the stages keeps your goal, how much the change touches and how many done-when lines are proven in view. Beside every stage, Intent holds what you decided and what the agents assumed, and changing an assumption asks you about it.",
+    view: { kind: "task", taskId: "empty-state", stage: "review" },
+  },
+  {
     id: "working",
     chapter: "Your tasks",
     title: "Work in progress",
@@ -177,14 +184,14 @@ export const steps: Step[] = [
     id: "question",
     chapter: "Your tasks",
     title: "A question waits on you",
-    note: "When a coding agent stops to ask you something, the task turns amber and the question waits in that stage until you answer it there.",
+    note: "When a coding agent stops to ask you something, the task turns amber and the question opens in that stage, with what it holds up, Bezl's recommendation and what each answer leads to. Questions Bezl could answer itself are folded away under Bezl handled.",
     view: { kind: "task", taskId: "deny-scopes", stage: "build" },
   },
   {
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw. Checks that passed stay folded away.",
+    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw, and one button sends them all to the writer together. Checks that passed stay folded away.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {

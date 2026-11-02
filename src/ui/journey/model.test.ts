@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   ciText,
+  contextOf,
   diffLabel,
   type StageLights,
   stageIds,
@@ -106,4 +107,99 @@ test("the journey runs Define to Ship", () => {
     "Review",
     "Ship",
   ]);
+});
+
+describe("contextOf", () => {
+  const view = { lead: "", sections: [] };
+  const task = {
+    id: "t",
+    title: "T",
+    repo: "r",
+    current: "build" as const,
+    stages: quiet,
+    views: {
+      define: { ...view, quote: "Refuse empty scopes." },
+      plan: view,
+      build: view,
+      check: view,
+      review: view,
+      ship: view,
+    },
+  };
+  const take = (id: string, files: [string, number, number][]) => ({
+    id,
+    model: "Codex",
+    state: "",
+    light: "done" as const,
+    files: files.map(([path, added, removed]) => ({ path, added, removed })),
+  });
+
+  test("before any code changes, it says so and nothing is proven", () => {
+    expect(contextOf(task)).toEqual({
+      goal: "Refuse empty scopes.",
+      touches: "Nothing changed yet",
+      evidence: "Not checked yet",
+    });
+  });
+
+  test("one attempt shows its files and lines", () => {
+    const build = {
+      ...view,
+      takes: [
+        take("A", [
+          ["a.ts", 31, 4],
+          ["b.ts", 12, 0],
+        ]),
+      ],
+    };
+    expect(contextOf({ ...task, views: { ...task.views, build } }).touches).toBe(
+      "2 files · +43 −4",
+    );
+  });
+
+  test("several attempts count each file once", () => {
+    const review = {
+      ...view,
+      takes: [
+        take("A", [
+          ["a.ts", 1, 0],
+          ["b.ts", 1, 0],
+        ]),
+        take("B", [
+          ["a.ts", 1, 0],
+          ["c.ts", 1, 0],
+        ]),
+      ],
+    };
+    expect(contextOf({ ...task, views: { ...task.views, review } }).touches).toBe(
+      "3 files across 2 attempts",
+    );
+  });
+
+  test("Ship counts only the attempt you kept", () => {
+    const ship = {
+      ...view,
+      ship: {
+        title: "",
+        summary: "",
+        facts: [],
+        files: [{ path: "a.ts", added: 5, removed: 1 }],
+        history: [],
+        pullRequest: { number: 1, url: "" },
+      },
+    };
+    const review = { ...view, takes: [take("A", [["a.ts", 5, 1]]), take("B", [["z.ts", 9, 0]])] };
+    expect(contextOf({ ...task, views: { ...task.views, review, ship } }).touches).toBe(
+      "1 file · +5 −1",
+    );
+  });
+
+  test("evidence counts the done-when lines Bezl has proven", () => {
+    const doneWhen = [
+      { text: "a", checker: "Tests check", light: "done" as const, status: "proven" },
+      { text: "b", checker: "You check", light: "needsYou" as const, status: "you check" },
+      { text: "c", checker: "Tests check", light: "failed" as const, status: "1 failing" },
+    ];
+    expect(contextOf({ ...task, doneWhen }).evidence).toBe("1 of 3 proven");
+  });
 });
