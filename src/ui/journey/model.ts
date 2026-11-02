@@ -228,7 +228,16 @@ export type StageView = {
   /** Checks that passed; folded away, since Check shows problems first. */
   passed?: Row[];
   ship?: ShipSummary;
+  /** Review's attempts line by line, and which one Bezl leans to. */
+  compare?: Comparison;
 };
+
+export type CompareCell = { light: Light; text: string };
+
+/** One line of a comparison: a cell per attempt, keyed by its letter. */
+export type CompareRow = { group: string; label: string; cells: Record<string, CompareCell> };
+
+export type Comparison = { lean: { take: string; why: string }; rows: CompareRow[] };
 
 export type JourneyTask = {
   id: string;
@@ -283,6 +292,12 @@ export type TaskContext = {
 };
 
 const files = (n: number) => (n === 1 ? "1 file" : `${n} files`);
+
+/** One set of changes: its files, then lines added and removed. */
+export function sizeLabel(set: FileChange[]): string {
+  const [added, removed] = set.reduce(([a, r], f) => [a + f.added, r + f.removed], [0, 0]);
+  return `${files(new Set(set.map((f) => f.path)).size)} · ${diffLabel({ path: "", added, removed })}`;
+}
 export const screenCount = (n: number) => (n === 1 ? "1 screen" : `${n} screens`);
 
 /** Ship's kept attempt wins; otherwise the latest stage with attempts. */
@@ -293,11 +308,7 @@ function changed(task: JourneyTask): string {
   if (sets.length === 0) return "Nothing changed yet";
   const paths = new Set(sets.flat().map((f) => f.path));
   if (sets.length > 1) return `${files(paths.size)} across ${sets.length} attempts`;
-  const [added, removed] = (sets[0] ?? []).reduce(
-    ([a, r], f) => [a + f.added, r + f.removed],
-    [0, 0],
-  );
-  return `${files(paths.size)} · ${diffLabel({ path: "", added, removed })}`;
+  return sizeLabel(sets[0] ?? []);
 }
 
 /** The tiles under the stages: what it's for, how big, how sure. */

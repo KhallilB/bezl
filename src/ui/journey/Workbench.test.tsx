@@ -38,6 +38,11 @@ function Harness({
 
 const side = () => screen.getByRole("tabpanel");
 
+test("the side is evidence, labelled so", () => {
+  render(<Harness id="empty-state" stage="review" />);
+  expect(screen.getByRole("complementary", { name: "Evidence" })).toBeVisible();
+});
+
 describe("context tiles", () => {
   test("keep the goal, the change's reach and how sure Bezl is in view", () => {
     render(<Harness id="empty-state" stage="review" />);
