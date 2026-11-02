@@ -113,6 +113,8 @@ export type ProviderCheck = {
     found: { path: string; version: string } | null;
     rejected: { path: string; reason: Rejection }[];
   };
+  /** Found version has contract captures; else "Untested version" (D6). */
+  pinned: boolean;
   signin: SignInCheck;
   usage: Usage;
   readOnly: ReadOnlyCheck;

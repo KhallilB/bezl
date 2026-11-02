@@ -260,6 +260,7 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
             <Badge mono preserveCase>
               {bin.version}
             </Badge>
+            {check.pinned ? null : <Badge tone="warning">Untested version</Badge>}
           </Inline>
         ) : null}
         <Fixes check={check} />

@@ -1,6 +1,7 @@
 //! One preflight pass over every provider, as the Providers screen shows it.
 use super::capabilities::{self, Capability, Enforcement};
 use super::claude::{ClaudeSignIn, run_canary, signin_from};
+use super::contract;
 use super::probe::{self, ProbeRecord};
 use super::tiers::{self, TierRecord};
 use super::usage::{Usage, claude_usage};
@@ -15,6 +16,8 @@ use std::time::Duration;
 #[serde(rename_all = "camelCase")]
 pub struct ProviderCheck {
     pub discovery: Discovery,
+    /// Found version has contract captures; else the screen says "Untested version" (D6).
+    pub pinned: bool,
     pub signin: SignInCheck,
     pub usage: Usage,
     pub read_only: ReadOnlyCheck,
@@ -141,8 +144,13 @@ pub fn preflight(
                     ),
                 ),
             };
+            let pinned = discovery
+                .found
+                .as_ref()
+                .is_some_and(|found| contract::pinned(provider, &found.version));
             ProviderCheck {
                 discovery,
+                pinned,
                 signin,
                 usage,
                 read_only,
@@ -274,6 +282,7 @@ mod tests {
                     }),
                     rejected: vec![],
                 },
+                pinned: true,
                 signin: SignInCheck::Canary(ClaudeSignIn::SignedIn {
                     model: "claude-haiku-5-5".into(),
                 }),
@@ -293,6 +302,7 @@ mod tests {
                         reason: Rejection::Says("0.2.3".into()),
                     }],
                 },
+                pinned: false,
                 signin: SignInCheck::NoBinary,
                 usage: Usage::UNKNOWN,
                 read_only: ReadOnlyCheck::NoBinary,
@@ -309,6 +319,7 @@ mod tests {
                         "found": { "path": "/bin/claude", "version": "2.1.312" },
                         "rejected": []
                     },
+                    "pinned": true,
                     "signin": {
                         "kind": "canary",
                         "detail": { "kind": "signedIn", "detail": { "model": "claude-haiku-5-5" } }
@@ -326,6 +337,7 @@ mod tests {
                             { "path": "/bun/codex", "reason": { "kind": "says", "detail": "0.2.3" } }
                         ]
                     },
+                    "pinned": false,
                     "signin": { "kind": "noBinary" },
                     "usage": { "tokens": { "kind": "unknown" }, "limits": { "kind": "unknown" } },
                     "readOnly": { "kind": "noBinary" },
@@ -607,6 +619,7 @@ cat "$(dirname "$0")/said""#;
                             }),
                             rejected: vec![],
                         },
+                        pinned: true,
                         signin: SignInCheck::Canary(ClaudeSignIn::SignedIn {
                             model: "claude-haiku-5-5".into(),
                         }),
@@ -627,6 +640,7 @@ cat "$(dirname "$0")/said""#;
                                 reason: Rejection::Says("0.2.3".into()),
                             }],
                         },
+                        pinned: true,
                         signin: SignInCheck::Homes(vec![
                             HomeSignIn {
                                 home: Home::Operator,
@@ -648,6 +662,23 @@ cat "$(dirname "$0")/said""#;
                     },
                 ]
             );
+        }
+
+        #[test]
+        fn only_a_pinned_version_is_tested() {
+            let dir = Dir::new();
+            let claude = bin(&dir, "claude", "claude", CLAUDE);
+            fs::write(claude.join("said"), NOT_LOGGED_IN).unwrap();
+            let codex = bin(&dir, "codex", "codex", &CODEX.replace("0.163.0", "0.199.0"));
+            let homes = CodexHomes {
+                operator: dir.0.join("operator"),
+                workers: dir.0.join("workers"),
+            };
+            let path = std::env::join_paths([&claude, &codex]).unwrap();
+            let checks = preflight(&path, &homes, &probes(&dir), TIMEOUT, TIMEOUT);
+
+            let pinned: Vec<_> = checks.iter().map(|c| c.pinned).collect();
+            assert_eq!(pinned, [true, false]);
         }
 
         #[test]
