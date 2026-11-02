@@ -1,9 +1,12 @@
-import { Badge, Button, Input, Panel, Status } from "@kb.ui/react";
+import { Badge, Button, Input, Panel, Status, Switch } from "@kb.ui/react";
+import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { LightIcon, lightTone } from "./icons";
 import "./journey.css";
 import {
   type CiStatus,
+  type CompareRow,
+  type Comparison,
   ciText,
   diffLabel,
   type FileChange,
@@ -11,6 +14,7 @@ import {
   type Problem,
   type Row,
   type ShipSummary,
+  sizeLabel,
   stageLabel,
   type Take,
 } from "./model";
@@ -175,9 +179,6 @@ export function Problems({
 }) {
   const id = useId();
   const [open, setOpen] = useState(0);
-  const [sent, setSent] = useState(false);
-  const writers = [...new Set(problems.map((p) => p.writer))].join(" and ");
-  const what = problemCount(problems.length);
   return (
     <section className="journey-section" aria-labelledby={id}>
       <h2 id={id} className="page-label">
@@ -218,17 +219,119 @@ export function Problems({
           </li>
         ))}
       </ul>
-      {sent ? (
-        <p className="journey-steer-note" role="status">
-          {`Sent ${what} to ${writers} with what Bezl saw.`}
-        </p>
-      ) : (
-        <span>
-          <Button variant="primary" onClick={() => setSent(true)}>
-            {`Send ${what} to ${writers}`}
-          </Button>
-        </span>
-      )}
+    </section>
+  );
+}
+
+/** Who the problems go to, and how the send reads: "Send 2 problems to Codex". */
+export function sendText(problems: Problem[]): { what: string; writers: string } {
+  return {
+    what: problemCount(problems.length),
+    writers: [...new Set(problems.map((p) => p.writer))].join(" and "),
+  };
+}
+
+const groups = ["Done when", "Review", "Checks", "Size", "Cost"];
+
+/** Review's attempts line by line; Keep sits in each attempt's column head. */
+export function Compare({
+  takes,
+  compare,
+  onKeep,
+}: {
+  takes: Take[];
+  compare: Comparison;
+  onKeep?: ((id: string) => void) | undefined;
+}) {
+  const [diff, setDiff] = useState(false);
+  const cells = (f: (t: Take) => CompareRow["cells"][string]) =>
+    Object.fromEntries(takes.map((t) => [t.id, f(t)]));
+  const rows: CompareRow[] = [
+    ...compare.rows,
+    {
+      group: "Review",
+      label: "The other agent said",
+      cells: cells((t) => ({
+        light: t.findings?.some((f) => f.light !== "done") ? "needsYou" : "done",
+        text: t.verdict ? `${t.verdict.by}: ${t.verdict.text}` : "Not reviewed yet",
+      })),
+    },
+    {
+      group: "Size",
+      label: "Changed",
+      cells: cells((t) => ({ light: "done", text: sizeLabel(t.files ?? []) })),
+    },
+  ];
+  const shown = diff
+    ? rows.filter((r) => new Set(takes.map((t) => r.cells[t.id]?.text)).size > 1)
+    : rows;
+  return (
+    <section className="journey-section journey-compare" aria-label="Compare">
+      <Switch label="Only what differs" checked={diff} onCheckedChange={setDiff} />
+      <table className="journey-table" aria-label="Compare the attempts">
+        <thead>
+          <tr>
+            <th scope="col">
+              <span className="journey-sr">What</span>
+            </th>
+            {takes.map((t) => (
+              <th key={t.id} scope="col">
+                <span className="journey-table-take">{`${t.id} · ${t.model}`}</span>
+                {onKeep ? (
+                  <Button size="sm" variant="secondary" onClick={() => onKeep(t.id)}>
+                    {`Keep ${t.id}`}
+                  </Button>
+                ) : null}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {groups
+          .filter((g) => shown.some((r) => r.group === g))
+          .map((g) => (
+            <tbody key={g}>
+              <tr>
+                <th scope="colgroup" colSpan={takes.length + 1} className="page-label">
+                  {g}
+                </th>
+              </tr>
+              {shown
+                .filter((r) => r.group === g)
+                .map((r) => (
+                  <tr key={r.label}>
+                    <th scope="row">{r.label}</th>
+                    {takes.map((t) => {
+                      const c = r.cells[t.id];
+                      return (
+                        <td key={t.id} data-light={c?.light}>
+                          {c ? (
+                            <>
+                              <span className="journey-row-icon">
+                                <LightIcon light={c.light} />
+                                <span className="journey-sr">{`${lightLabel[c.light]}: `}</span>
+                              </span>
+                              {c.text}
+                            </>
+                          ) : null}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+            </tbody>
+          ))}
+      </table>
+    </section>
+  );
+}
+
+/** The stage's one next step, in the same place on every stage. */
+export function NextStep({ children }: { children: ReactNode }) {
+  return (
+    <section className="journey-next" aria-label="Next step">
+      <Panel density="compact">
+        <div className="journey-next-body">{children}</div>
+      </Panel>
     </section>
   );
 }
@@ -286,21 +389,8 @@ function Checks({ ci }: { ci: CiStatus }) {
   );
 }
 
-export function Ship({
-  ship,
-  shipped = false,
-  onBack,
-  onNewTask,
-}: {
-  ship: ShipSummary;
-  /** The pull request is already open, so Ship starts past Open. */
-  shipped?: boolean;
-  onBack: () => void;
-  /** Offered once the pull request is open. */
-  onNewTask?: (() => void) | undefined;
-}) {
+export function Ship({ ship, opened }: { ship: ShipSummary; opened: boolean }) {
   const id = useId();
-  const [opened, setOpened] = useState(shipped);
   return (
     <section className="journey-ship" aria-labelledby={id}>
       <div className="journey-ship-copy">
@@ -337,39 +427,6 @@ export function Ship({
           ))}
         </ul>
       </section>
-      <div className="journey-ship-actions">
-        {opened ? (
-          <>
-            <p className="journey-steer-note" role="status">
-              {ship.ci?.on === "merge"
-                ? `Pull request #${ship.pullRequest.number} is merged.`
-                : `Opened pull request #${ship.pullRequest.number} on GitHub.`}
-            </p>
-            {onNewTask ? (
-              <Button variant="secondary" onClick={onNewTask}>
-                New task
-              </Button>
-            ) : null}
-            <a
-              className="journey-link"
-              href={ship.pullRequest.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View on GitHub
-            </a>
-          </>
-        ) : (
-          <>
-            <Button variant="secondary" onClick={() => setOpened(true)}>
-              Open pull request
-            </Button>
-            <Button variant="ghost" onClick={onBack}>
-              Back to review
-            </Button>
-          </>
-        )}
-      </div>
     </section>
   );
 }

@@ -34,6 +34,8 @@ export type TourView =
       shipped?: "checking" | "merged";
       /** The side tab it opens on. */
       side?: SideTab;
+      /** Opens with the flow shown. */
+      flow?: boolean;
     }
   | { kind: "approvals"; cleared?: boolean }
   | { kind: "history" }
@@ -173,8 +175,15 @@ export const steps: Step[] = [
     id: "context",
     chapter: "Your tasks",
     title: "What it's for, how big, how sure",
-    note: "The line under the stages keeps your goal, how much the change touches and how many done-when lines are proven in view. Beside every stage, Intent holds what you decided and what the agents assumed, and changing an assumption asks you about it.",
+    note: "Three tiles under the stages: how much of the goal is done, how far the change reaches and how risky it is, and how much of it ran in a test. Each opens its view beside the stage; Intent holds what you decided and what the agents assumed.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
+  },
+  {
+    id: "flow",
+    chapter: "Your tasks",
+    title: "How it got here",
+    note: "Show the flow lays every stage out in a row: what happened there, who acted or acts next, and how it stands. Open any stage from its card.",
+    view: { kind: "task", taskId: "empty-state", stage: "review", flow: true },
   },
   {
     id: "preview",
@@ -201,7 +210,7 @@ export const steps: Step[] = [
     id: "problems",
     chapter: "Your tasks",
     title: "Problems first",
-    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw, and one button sends them all to the writer together. Checks that passed stay folded away.",
+    note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw. The bar at the bottom sends them all to the writer together; it sits in the same place on every stage. Checks that passed stay folded away.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
   },
   {
@@ -215,7 +224,7 @@ export const steps: Step[] = [
     id: "review-takes",
     chapter: "Your tasks",
     title: "Two attempts, two reviews",
-    note: "Each attempt is reviewed by the other coding agent, so you can weigh both reviews and keep the one that should ship.",
+    note: "The attempts line up row by row against your done-when lines, the checks, size and cost, with each one's review by the other coding agent. Keep heads each column, and the bar at the bottom says which one Bezl leans to and why.",
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {

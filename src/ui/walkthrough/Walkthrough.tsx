@@ -342,17 +342,18 @@ type TaskViewProps = {
   kept: boolean;
   shipped?: "checking" | "merged" | undefined;
   side?: SideTab | undefined;
+  flow?: boolean | undefined;
   shared: Shared;
 };
 
-function TaskView({ place, kept, shipped, side, shared }: TaskViewProps) {
+function TaskView({ place, kept, shipped, side, flow, shared }: TaskViewProps) {
   const list = shipped ? shippedTasks[shipped] : kept ? keptTasks : tasks;
   const open = list.find((t) => t.id === place.taskId) ?? list[0];
   if (!open) return null;
   return (
     <TasksShell list={list} current={open.id} shared={shared}>
       <TaskPage
-        key={`${open.id}-${side ?? ""}`}
+        key={`${open.id}-${side ?? ""}-${flow ? "flow" : ""}`}
         task={open}
         stage={place.stage}
         onStage={(stage) => shared.onPlace({ ...place, stage })}
@@ -361,6 +362,7 @@ function TaskView({ place, kept, shipped, side, shared }: TaskViewProps) {
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}
         {...(side ? { side } : {})}
+        {...(flow ? { flow } : {})}
         {...((kept || shipped) && open.id === history.taskId
           ? { onHistory: () => shared.onGoTo("history") }
           : {})}
@@ -488,6 +490,7 @@ function View({
           kept={view.kept ?? false}
           shipped={view.shipped}
           side={view.side}
+          flow={view.flow}
           shared={shared}
         />
       );

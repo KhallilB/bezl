@@ -14,8 +14,16 @@ import {
   stageLabel,
   stageMarker,
 } from "./model";
-import { Passed, Problems, RowItem, Ship, Takes } from "./StageViews";
-import { type Answer, ContextBar, HandledList, Questions, Side, type SideTab } from "./Workbench";
+import { Compare, NextStep, Passed, Problems, RowItem, Ship, sendText, Takes } from "./StageViews";
+import {
+  type Answer,
+  ContextTiles,
+  Flow,
+  HandledList,
+  Questions,
+  Side,
+  type SideTab,
+} from "./Workbench";
 
 type StageStripProps = { task: JourneyTask; stage: StageId; onStage: (stage: StageId) => void };
 
@@ -71,6 +79,8 @@ function SectionList({ section }: { section: Section }) {
 
 type PaneProps = TaskPageProps & { view: StageView };
 
+const questionCount = (n: number) => (n === 1 ? "the question" : `the ${n} questions`);
+
 function StagePane({
   task,
   stage,
@@ -79,26 +89,92 @@ function StagePane({
   onKeep,
   onNewTask,
   onWhy,
-}: PaneProps & { onWhy?: ((id: string) => void) | undefined }) {
+  asking,
+}: PaneProps & { onWhy?: ((id: string) => void) | undefined; asking: number }) {
   // Keeping is the decision Review waits on; once made, the buttons go.
   const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
+  const [sent, setSent] = useState(false);
+  const [opened, setOpened] = useState(
+    task.stages.ship === "working" || task.stages.ship === "done",
+  );
+  const lean = keep && view.compare ? view.compare.lean : undefined;
+  const next = () => {
+    if (view.problems?.length) {
+      const { what, writers } = sendText(view.problems);
+      return sent ? (
+        <p className="journey-next-text" role="status">
+          {`Sent ${what} to ${writers} with what Bezl saw.`}
+        </p>
+      ) : (
+        <Button variant="primary" onClick={() => setSent(true)}>
+          {`Send ${what} to ${writers}`}
+        </Button>
+      );
+    }
+    if (lean && keep) {
+      return (
+        <>
+          <p className="journey-next-text">
+            <strong>{`Bezl leans to ${lean.take}:`}</strong> {lean.why}
+          </p>
+          <Button variant="primary" onClick={() => keep(lean.take)}>
+            {`Keep attempt ${lean.take}`}
+          </Button>
+        </>
+      );
+    }
+    if (view.ship) {
+      const pr = view.ship.pullRequest;
+      return opened ? (
+        <>
+          <p className="journey-next-text" role="status">
+            {view.ship.ci?.on === "merge"
+              ? `Pull request #${pr.number} is merged.`
+              : `Opened pull request #${pr.number} on GitHub.`}
+          </p>
+          {onNewTask ? (
+            <Button variant="secondary" onClick={onNewTask}>
+              New task
+            </Button>
+          ) : null}
+          <a className="journey-link" href={pr.url} target="_blank" rel="noreferrer">
+            View on GitHub
+          </a>
+        </>
+      ) : (
+        <>
+          <Button variant="primary" onClick={() => setOpened(true)}>
+            Open pull request
+          </Button>
+          <Button variant="ghost" onClick={() => onStage("review")}>
+            Back to review
+          </Button>
+        </>
+      );
+    }
+    if (keep) return <p className="journey-next-text">Keep one of the attempts above.</p>;
+    if (asking)
+      return (
+        <p className="journey-next-text">{`Answer ${questionCount(asking)} above to go on.`}</p>
+      );
+    return <p className="journey-next-text">{`Nothing needs you at ${stageLabel[stage]}.`}</p>;
+  };
   return (
     <>
       {view.quote ? <blockquote className="journey-quote">{view.quote}</blockquote> : null}
       {view.problems?.length ? <Problems problems={view.problems} onWhy={onWhy} /> : null}
-      {view.takes ? <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} /> : null}
-      {view.ship ? (
-        <Ship
-          ship={view.ship}
-          shipped={task.stages.ship === "working" || task.stages.ship === "done"}
-          onBack={() => onStage("review")}
-          onNewTask={onNewTask}
-        />
+      {view.takes && view.compare ? (
+        <Compare takes={view.takes} compare={view.compare} onKeep={keep} />
+      ) : view.takes ? (
+        <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} />
       ) : null}
+      {view.ship ? <Ship ship={view.ship} opened={opened} /> : null}
       {view.sections.map((section) => (
         <SectionList key={section.title} section={section} />
       ))}
       {view.passed?.length ? <Passed rows={view.passed} /> : null}
+      {view.handled?.length ? <HandledList handled={view.handled} /> : null}
+      <NextStep>{next()}</NextStep>
     </>
   );
 }
@@ -115,10 +191,20 @@ export type TaskPageProps = StageStripProps & {
   onNewTask?: () => void;
   /** The side tab to open on; Preview when the stage has screenshots. */
   side?: SideTab;
+  /** Opens with the flow shown. */
+  flow?: boolean;
 };
 
 /** One task: header, stages, context line, status; then the stage beside its intent. */
-export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest }: TaskPageProps) {
+export function TaskPage({
+  task,
+  stage,
+  onStage,
+  onHistory,
+  side: first,
+  flow: flowFirst = false,
+  ...rest
+}: TaskPageProps) {
   const view = task.views[stage];
   const { needsYou, onNeedsYou } = rest;
   const [tab, setTab] = useState<SideTab>(first ?? "preview");
@@ -128,6 +214,8 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
   const [example, setExample] = useState<string | null>(null);
   const [answered, setAnswered] = useState<Answer[]>([]);
   const [raised, setRaised] = useState<string | null>(null);
+  const [flow, setFlow] = useState(flowFirst);
+  const flowId = useId();
   const side = useRef<HTMLDivElement>(null);
   const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
   const mine = answered.filter((a) => a.item.taskId === task.id);
@@ -153,17 +241,29 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
             {task.title}
           </h1>
           <span className="page-tag">{task.repo}</span>
-          {onHistory ? (
-            <span className="page-action">
+          <span className="page-action">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={flow}
+              aria-controls={flowId}
+              onClick={() => setFlow(!flow)}
+            >
+              {flow ? "Hide the flow" : "Show the flow"}
+            </Button>
+            {onHistory ? (
               <Button variant="ghost" size="sm" onClick={onHistory}>
                 History
               </Button>
-            </span>
-          ) : null}
+            ) : null}
+          </span>
         </div>
         <StageStrip task={task} stage={stage} onStage={onStage} />
-        <ContextBar
+        {flow ? <Flow id={flowId} task={task} stage={stage} onStage={onStage} /> : null}
+        <ContextTiles
           context={contextOf(task)}
+          impact={task.impact}
+          coverage={task.trace?.coverage}
           preview={shots.length > 0}
           trace={Boolean(task.trace)}
           onOpen={open}
@@ -203,9 +303,9 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
             view={view}
             onStage={onStage}
             onWhy={why}
+            asking={here.length}
             {...rest}
           />
-          {view.handled?.length ? <HandledList handled={view.handled} /> : null}
         </div>
         <div ref={side} className="journey-side-wrap">
           <Side

@@ -2,8 +2,10 @@ import type {
   Assumption,
   CiCheck,
   CiStatus,
+  Comparison,
   DoneWhen,
   JourneyTask,
+  Light,
   ProviderUsage,
   Shot,
   StageView,
@@ -26,6 +28,7 @@ import warmPhone from "./samples/projects-warm-phone.jpg";
 
 const define = (quote: string, done: DoneWhen[]): StageView => ({
   lead: "Ready to start.",
+  by: "You, from the issue",
   rest: "The goal covers everything a coding agent needs.",
   quote,
   sections: [
@@ -243,10 +246,59 @@ const reviewed = (a: string, b: string): Take[] => [
   },
 ];
 
+const both = (light: Light, text: string) => ({ A: { light, text }, B: { light, text } });
+
+const emptyCompare: Comparison = {
+  lean: {
+    take: "A",
+    why: "it meets the goal once the import link goes, and more of its lines run in a test.",
+  },
+  rows: [
+    { group: "Done when", label: emptyDone[0]?.text ?? "", cells: both("done", "Proven") },
+    {
+      group: "Done when",
+      label: emptyDone[1]?.text ?? "",
+      cells: {
+        A: { light: "needsYou", text: "The import link does nothing yet" },
+        B: { light: "needsYou", text: "A checklist adds a second way in" },
+      },
+    },
+    {
+      group: "Done when",
+      label: emptyDone[2]?.text ?? "",
+      cells: {
+        A: { light: "done", text: "0 issues" },
+        B: { light: "failed", text: "Contrast 2.6:1, needs 4.5:1" },
+      },
+    },
+    { group: "Done when", label: emptyDone[3]?.text ?? "", cells: both("done", "48 passed") },
+    {
+      group: "Checks",
+      label: "Changed lines run in a test",
+      cells: { A: { light: "done", text: "29 of 31" }, B: { light: "needsYou", text: "12 of 20" } },
+    },
+    { group: "Checks", label: "New dependencies", cells: both("done", "None") },
+    {
+      group: "Cost",
+      label: "Time",
+      cells: { A: { light: "done", text: "6 min" }, B: { light: "done", text: "9 min" } },
+    },
+    {
+      group: "Cost",
+      label: "Usage",
+      cells: {
+        A: { light: "done", text: "3% of Claude Code" },
+        B: { light: "done", text: "5% of Codex" },
+      },
+    },
+  ],
+};
+
 const emptyState: JourneyTask = {
   id: "empty-state",
   title: "Empty state for Projects",
   repo: "studio-web",
+  impact: { risk: "low", reach: "Projects page only" },
   current: "review",
   doneWhen: emptyDone,
   decisions: [
@@ -274,6 +326,7 @@ const emptyState: JourneyTask = {
     },
     plan: {
       lead: "The plan is done.",
+      by: "Claude Code and Codex",
       rest: "All 4 steps are finished.",
       shots: [today],
       sections: [
@@ -298,6 +351,7 @@ const emptyState: JourneyTask = {
     },
     build: {
       lead: "Build is done.",
+      by: "Claude Code and Codex, one attempt each",
       rest: "Both attempts have finished.",
       shots: [shotA, shotB],
       sections: [],
@@ -308,6 +362,7 @@ const emptyState: JourneyTask = {
     },
     check: {
       lead: "Everything passed.",
+      by: "Bezl ran 3 checks",
       shots: [shotA, loadingA, shotB],
       rest: "Attempt B had two problems at first, but Codex fixed them once they were sent back.",
       sections: [],
@@ -319,9 +374,11 @@ const emptyState: JourneyTask = {
     },
     review: {
       lead: "Which attempt should ship?",
+      by: "Each coding agent reviewed the other's attempt",
       rest: "Each one has been reviewed by the other coding agent, so you can compare them before you choose.",
       sections: [],
       takes: reviewed("Ready", "Ready"),
+      compare: emptyCompare,
       shots: [reviewedA, shotB],
       handled: [
         {
@@ -333,6 +390,7 @@ const emptyState: JourneyTask = {
     },
     ship: {
       lead: "Nothing to ship yet.",
+      by: "Waits on your pick",
       rest: "Ship opens once you choose which attempt to keep.",
       sections: [],
     },
@@ -348,6 +406,7 @@ const denyScopes: JourneyTask = {
   id: "deny-scopes",
   title: "Refuse tokens with no scopes",
   repo: "bezl",
+  impact: { risk: "medium", reach: "Token checks on every request" },
   current: "build",
   doneWhen: denyDone,
   stages: {
@@ -365,6 +424,7 @@ const denyScopes: JourneyTask = {
     ),
     plan: {
       lead: "The plan is ready.",
+      by: "Codex",
       rest: "Step 2 of 3 is waiting on you.",
       sections: [
         {
@@ -379,6 +439,7 @@ const denyScopes: JourneyTask = {
     },
     build: {
       lead: "Codex has a question.",
+      by: "Codex, waiting on you",
       rest: "It stopped before overwriting a file and is waiting for your answer.",
       sections: [],
       takes: [
@@ -402,16 +463,19 @@ const denyScopes: JourneyTask = {
     },
     check: {
       lead: "Checks haven't run yet.",
+      by: "Bezl runs them after Build",
       rest: "They start once Build finishes.",
       sections: [],
     },
     review: {
       lead: "Review hasn't started.",
+      by: "Claude Code reviews after Check",
       rest: "It starts once Check is done.",
       sections: [],
     },
     ship: {
       lead: "Nothing to ship yet.",
+      by: "Waits on Review",
       rest: "Ship opens once you choose which attempt to keep.",
       sections: [],
     },
@@ -427,6 +491,7 @@ const debounce: JourneyTask = {
   id: "debounce",
   title: "Debounce terminal resize",
   repo: "bezl",
+  impact: { risk: "low", reach: "Terminal resize only" },
   current: "build",
   doneWhen: debounceDone,
   stages: {
@@ -444,6 +509,7 @@ const debounce: JourneyTask = {
     ),
     plan: {
       lead: "Working through the plan.",
+      by: "Claude Code",
       rest: "It's on step 2 of 3.",
       sections: [
         {
@@ -458,6 +524,7 @@ const debounce: JourneyTask = {
     },
     build: {
       lead: "Claude Code is writing.",
+      by: "Claude Code",
       rest: "It started 4 minutes ago.",
       sections: [],
       takes: [
@@ -473,16 +540,19 @@ const debounce: JourneyTask = {
     },
     check: {
       lead: "Checks haven't run yet.",
+      by: "Bezl runs them after Build",
       rest: "They start once Build finishes.",
       sections: [],
     },
     review: {
       lead: "Review hasn't started.",
+      by: "Codex reviews after Check",
       rest: "It starts once Check is done.",
       sections: [],
     },
     ship: {
       lead: "Nothing to ship yet.",
+      by: "Waits on Review",
       rest: "Ship opens once you choose which attempt to keep.",
       sections: [],
     },
@@ -530,6 +600,7 @@ const snapshot: JourneyTask = {
   id: "snapshot",
   title: "Terminal snapshot",
   repo: "bezl",
+  impact: { risk: "medium", reach: "Terminal snapshots and restore" },
   current: "check",
   doneWhen: snapshotDone,
   trace: snapshotTrace,
@@ -548,6 +619,7 @@ const snapshot: JourneyTask = {
     ),
     plan: {
       lead: "The plan is done.",
+      by: "Codex",
       rest: "All 3 steps are finished.",
       sections: [
         {
@@ -562,6 +634,7 @@ const snapshot: JourneyTask = {
     },
     build: {
       lead: "Build is done.",
+      by: "Codex",
       rest: "Attempt A finished in 11 minutes.",
       sections: [],
       takes: [
@@ -580,6 +653,7 @@ const snapshot: JourneyTask = {
     },
     check: {
       lead: "2 things need a look.",
+      by: "Bezl ran 6 checks",
       rest: "Everything else passed, so these are all that's left.",
       sections: [],
       problems: [
@@ -618,11 +692,13 @@ const snapshot: JourneyTask = {
     },
     review: {
       lead: "Review hasn't started.",
+      by: "Claude Code reviews after Check",
       rest: "It starts once Check is done.",
       sections: [],
     },
     ship: {
       lead: "Nothing to ship yet.",
+      by: "Waits on Review",
       rest: "Ship opens once you choose which attempt to keep.",
       sections: [],
     },
@@ -662,6 +738,7 @@ const kept: JourneyTask = {
     ...emptyState.views,
     review: {
       lead: "You kept attempt A.",
+      by: "You kept it",
       rest: "Attempt B is set aside rather than deleted, in case you want it later.",
       sections: [],
       shots: [reviewedA, shotB],
@@ -669,6 +746,7 @@ const kept: JourneyTask = {
     },
     ship: {
       lead: "Ready to ship.",
+      by: "Bezl opens the pull request",
       rest: "Open the pull request when you are.",
       sections: [],
       shots: [

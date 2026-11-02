@@ -124,7 +124,8 @@ test("a header action sits at the end of the title row", async () => {
   const seen = await each(
     steps.filter((s) => ["ship", "history"].includes(s.id)),
     (el) => {
-      const action = el.querySelector("header button")?.getBoundingClientRect().right ?? 0;
+      const buttons = el.querySelectorAll("header .page-action button");
+      const action = buttons[buttons.length - 1]?.getBoundingClientRect().right ?? 0;
       const page = el.querySelector(".shell-main > *")?.getBoundingClientRect().right ?? -1;
       return Math.round(page - action);
     },
@@ -190,7 +191,7 @@ test("card titles and the brand mark match the shell's", async () => {
   const size = (el: Element | null) => (el ? getComputedStyle(el).fontSize : "none");
   const width = (el: Element | null) => Math.round(el?.getBoundingClientRect().width ?? 0);
   const shell = await each(
-    steps.filter((s) => s.id === "review-takes"),
+    steps.filter((s) => s.id === "working"),
     (el) =>
       `${size(el.querySelector(".journey-take h2"))} ${width(el.querySelector(".shell-mark"))}`,
   );
@@ -198,7 +199,7 @@ test("card titles and the brand mark match the shell's", async () => {
     [...el.querySelectorAll(".providers-panel h2, .task-cell h2")].map(size).join(),
   );
   const marks = await each(stateSteps, (el) => width(el.querySelector(".task-mark")));
-  const [title, mark] = String(shell["review-takes"]).split(" ");
+  const [title, mark] = String(shell.working).split(" ");
   // Preflight is still checking: no panels yet.
   for (const [id, sizes] of Object.entries(cards).filter(([, sizes]) => sizes)) {
     expect(new Set(sizes.split(",")), id).toEqual(new Set([title]));

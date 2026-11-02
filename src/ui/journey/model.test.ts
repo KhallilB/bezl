@@ -142,6 +142,8 @@ describe("contextOf", () => {
       touches: "Nothing changed yet",
       screens: 0,
       evidence: "Not checked yet",
+      proven: 0,
+      lines: 0,
     });
   });
 
@@ -213,9 +215,9 @@ describe("contextOf", () => {
       shots: [shot("1", "Projects"), shot("2", "Projects"), shot("3", "Settings")],
     };
     const examples = [shot("4", "Welcome", true)];
-    expect(contextOf({ ...task, examples, views: { ...task.views, build } }).touches).toBe(
-      "1 file · +1 · 2 screens",
-    );
+    const context = contextOf({ ...task, examples, views: { ...task.views, build } });
+    expect(context.touches).toBe("1 file · +1");
+    expect(context.screens).toBe(2);
   });
 
   test("evidence counts the done-when lines Bezl has proven", () => {
@@ -224,7 +226,11 @@ describe("contextOf", () => {
       { text: "b", checker: "You check", light: "needsYou" as const, status: "you check" },
       { text: "c", checker: "Tests check", light: "failed" as const, status: "1 failing" },
     ];
-    expect(contextOf({ ...task, doneWhen }).evidence).toBe("1 of 3 proven");
+    expect(contextOf({ ...task, doneWhen })).toMatchObject({
+      evidence: "1 of 3 proven",
+      proven: 1,
+      lines: 3,
+    });
   });
 });
 

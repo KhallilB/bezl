@@ -1,14 +1,20 @@
-import { Badge, Button, Panel } from "@kb.ui/react";
+import { Badge, Button, Card, Panel, Progress, Stat, Status } from "@kb.ui/react";
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { kindLabel, type NeedsYouChoice, type NeedsYouItem } from "../approvals/model";
-import { LightIcon } from "./icons";
+import { LightIcon, lightTone } from "./icons";
 import {
   type Assumption,
+  type Coverage,
   type Decision,
   type DoneWhen,
   type Handled,
+  type Impact,
+  type JourneyTask,
   lightLabel,
   type Shot,
+  type StageId,
+  screenCount,
+  stageIds,
   stageLabel,
   type TaskContext,
   type Trace,
@@ -18,55 +24,136 @@ import { TraceView } from "./TraceView";
 
 export type SideTab = "preview" | "trace" | "intent";
 
-/** One line under the stages: the goal, what changed, how much is proven. */
-export function ContextBar({
+const riskTone = { low: "success", medium: "warning", high: "danger" } as const;
+
+// Chips start with a capital, as on Providers.
+const capital = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`;
+
+/** Under the stages: what it's for, how far it reaches, how sure Bezl is; each opens its view. */
+export function ContextTiles({
   context,
+  impact,
+  coverage,
   preview,
   trace,
   onOpen,
 }: {
   context: TaskContext;
-  /** This stage has screenshots, so what changed can open them. */
+  impact?: Impact | undefined;
+  coverage?: Coverage | undefined;
+  /** This stage has screenshots, so the change opens them. */
   preview: boolean;
   /** Bezl measured something, so the evidence opens its trace. */
   trace: boolean;
   onOpen: (tab: SideTab) => void;
 }) {
+  const total = coverage
+    ? coverage.covered + coverage.uncovered + coverage.unknown + coverage.excluded
+    : 0;
   return (
-    <ul className="journey-context" aria-label="This task">
+    <ul className="journey-tiles" aria-label="This task">
       <li>
-        <span className="journey-context-label">Goal</span>
-        <button
-          type="button"
-          className="journey-context-link"
-          data-goal=""
-          title={context.goal}
-          onClick={() => onOpen("intent")}
-        >
-          {context.goal}
-        </button>
+        <Panel density="compact" tone="quiet" className="journey-tile">
+          <Stat
+            label="Goal"
+            value={context.lines ? `${context.proven} of ${context.lines} done` : "No checks yet"}
+          />
+          <p className="journey-tile-text">{context.goal}</p>
+          <span className="journey-tile-action">
+            <Button size="sm" variant="ghost" onClick={() => onOpen("intent")}>
+              Open Intent
+            </Button>
+          </span>
+        </Panel>
       </li>
       <li>
-        <span className="journey-context-label">Changes</span>
-        {preview ? (
-          <button type="button" className="journey-context-link" onClick={() => onOpen("preview")}>
-            {context.touches}
-          </button>
-        ) : (
-          <span>{context.touches}</span>
-        )}
+        <Panel density="compact" tone="quiet" className="journey-tile">
+          <Stat label="Changes" value={context.touches} />
+          <span className="journey-tile-tags">
+            {context.screens ? (
+              <Badge appearance="plain">{screenCount(context.screens)}</Badge>
+            ) : null}
+            {impact ? (
+              <>
+                <Badge tone={riskTone[impact.risk]}>{`${capital(impact.risk)} risk`}</Badge>
+                <Badge appearance="plain">{impact.reach}</Badge>
+              </>
+            ) : null}
+          </span>
+          {preview ? (
+            <span className="journey-tile-action">
+              <Button size="sm" variant="ghost" onClick={() => onOpen("preview")}>
+                Open Preview
+              </Button>
+            </span>
+          ) : null}
+        </Panel>
       </li>
       <li>
-        <span className="journey-context-label">Evidence</span>
-        <button
-          type="button"
-          className="journey-context-link"
-          onClick={() => onOpen(trace ? "trace" : "intent")}
-        >
-          {context.evidence}
-        </button>
+        <Panel density="compact" tone="quiet" className="journey-tile">
+          {coverage && total ? (
+            <Progress
+              label="Lines run in a test"
+              value={Math.round((coverage.covered / total) * 100)}
+              valueText={`${coverage.covered} of ${total}`}
+            />
+          ) : (
+            <Stat label="Evidence" value={context.evidence} />
+          )}
+          {coverage ? <p className="journey-tile-text">{context.evidence}</p> : null}
+          {trace ? (
+            <span className="journey-tile-action">
+              <Button size="sm" variant="ghost" onClick={() => onOpen("trace")}>
+                Open Trace
+              </Button>
+            </span>
+          ) : null}
+        </Panel>
       </li>
     </ul>
+  );
+}
+
+/** Every stage at a glance: what happened, who acted, and a way into it. */
+export function Flow({
+  id,
+  task,
+  stage,
+  onStage,
+}: {
+  id: string;
+  task: JourneyTask;
+  stage: StageId;
+  onStage: (s: StageId) => void;
+}) {
+  return (
+    <ol id={id} className="journey-flow" aria-label="How this task got here">
+      {stageIds.map((s) => {
+        const light = task.stages[s];
+        const view = task.views[s];
+        return (
+          <li key={s}>
+            <Card className="journey-flow-stage" data-current={s === stage ? "" : undefined}>
+              <span className="journey-flow-head">
+                <strong>{stageLabel[s]}</strong>
+                <Status compact tone={lightTone[light]} icon={<LightIcon light={light} />}>
+                  {capital(lightLabel[light])}
+                </Status>
+              </span>
+              <span>{view.lead}</span>
+              {view.by ? <span className="journey-flow-by">{view.by}</span> : null}
+              {s === stage ? null : (
+                <span className="journey-tile-action">
+                  <Button size="sm" variant="ghost" onClick={() => onStage(s)}>
+                    {`Open ${stageLabel[s]}`}
+                  </Button>
+                </span>
+              )}
+            </Card>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -376,7 +463,10 @@ export function Side({ tab, onTab, shots, example, trace, focus, onFocus, ...int
     document.getElementById(`${id}-${next.id}`)?.focus();
   };
   return (
-    <aside className="journey-side" aria-label="Beside this stage">
+    <aside className="journey-side" aria-labelledby={`${id}-evidence`}>
+      <h2 id={`${id}-evidence`} className="page-label">
+        Evidence
+      </h2>
       <Panel>
         <Panel.Header>
           <div className="journey-tabs" role="tablist" aria-label="Show">
