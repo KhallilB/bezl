@@ -20,11 +20,18 @@ export type TourView =
   | { kind: "choose"; refused?: boolean }
   | { kind: "providers"; result: Preflight }
   | { kind: "empty" }
-  | { kind: "newTask"; draft: Draft; focus?: "crew" }
+  /** `issues`: the GitHub issue list starts open, or with #128 picked. */
+  | { kind: "newTask"; draft: Draft; focus?: "crew"; issues?: "open" | "picked" }
   | { kind: "setup" }
   | { kind: "started" }
-  /** `kept`: the list after take A was kept on Review. */
-  | { kind: "task"; taskId: string; stage: StageId; kept?: boolean }
+  /** `kept`: the list after take A was kept on Review; `shipped`, after its pull request opened. */
+  | {
+      kind: "task";
+      taskId: string;
+      stage: StageId;
+      kept?: boolean;
+      shipped?: "checking" | "merged";
+    }
   | { kind: "approvals"; cleared?: boolean }
   | { kind: "history" }
   | { kind: "state"; scene: Scene }
@@ -88,6 +95,20 @@ export const steps: Step[] = [
     title: "Write the brief",
     note: "Describe the change in your own words. As you type, Bezl looks for five things a good brief usually covers, but you can start without them.",
     view: { kind: "newTask", draft: "blank" },
+  },
+  {
+    id: "from-issue",
+    chapter: "Start a task",
+    title: "Start from a GitHub issue",
+    note: "If the work is already written up as an issue, pick it instead of starting from scratch. Bezl reads your open issues through your own GitHub sign-in.",
+    view: { kind: "newTask", draft: "blank", issues: "open" },
+  },
+  {
+    id: "issue-filled",
+    chapter: "Start a task",
+    title: "The issue fills in the brief",
+    note: "The issue's title and description become the brief, and its checklist becomes the list of things to be done. Bezl checks it like any brief you wrote yourself, so the gaps still show.",
+    view: { kind: "newTask", draft: "blank", issues: "picked" },
   },
   {
     id: "readiness",
@@ -172,6 +193,20 @@ export const steps: Step[] = [
     title: "Ready to ship",
     note: "You see the pull request next to the history of how it got here, and Bezl puts that history in the pull request's description.",
     view: { kind: "task", taskId: "empty-state", stage: "ship", kept: true },
+  },
+  {
+    id: "pr-checks",
+    chapter: "Your tasks",
+    title: "Checks on the pull request",
+    note: "Once the pull request is open, Ship shows GitHub's checks as they finish. A failing check links to its log, but nothing here stops you, because merging is your call.",
+    view: { kind: "task", taskId: "empty-state", stage: "ship", shipped: "checking" },
+  },
+  {
+    id: "merged",
+    chapter: "Your tasks",
+    title: "Checked where it landed",
+    note: "After you merge, GitHub runs the checks again on the merged commit. Ship shows that result, so you know the change works on the branch it joined.",
+    view: { kind: "task", taskId: "empty-state", stage: "ship", shipped: "merged" },
   },
   {
     id: "approvals",

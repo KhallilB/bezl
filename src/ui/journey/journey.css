@@ -494,6 +494,22 @@
   color: var(--kb-color-muted);
 }
 
+.journey-ci-summary {
+  margin: 0 0 var(--kb-space-2);
+  font-size: var(--kb-size-sm);
+}
+
+.journey-ci {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-ci-state {
+  display: inline-flex;
+  gap: var(--kb-space-3);
+}
+
 .journey-ship-actions {
   display: flex;
   flex-wrap: wrap;

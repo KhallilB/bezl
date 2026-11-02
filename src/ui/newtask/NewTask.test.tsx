@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { crew, suggestions } from "./fixtures";
+import { crew, issues, suggestions } from "./fixtures";
 import { NewTask, type NewTaskProps } from "./NewTask";
 import { SetupConfirm } from "./SetupConfirm";
 
@@ -121,5 +121,43 @@ describe("SetupConfirm", () => {
     expect(onEditBrief).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByRole("button", { name: "Allow setup" }));
     expect(onAllow).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("NewTask from a GitHub issue", () => {
+  test("picking an issue fills the brief, which is checked like any other", async () => {
+    setup({ issues });
+    await userEvent.click(screen.getByRole("button", { name: "Start from a GitHub issue" }));
+    const list = screen.getByRole("list", { name: "Open issues in studio-web" });
+    await userEvent.click(within(list).getByRole("button", { name: /#128/ }));
+    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveDisplayValue(
+      /^Projects page shows an empty table/,
+    );
+    expect(
+      within(screen.getByRole("list", { name: "It's done when" })).getAllByRole("listitem"),
+    ).toHaveLength(2);
+    expect(check(/How you'll know it's done/)).toHaveAccessibleDescription(/present/);
+    expect(check(/Who it's for/)).toHaveAccessibleDescription(/missing/);
+    expect(screen.getByRole("link", { name: "View issue #128" })).toHaveAttribute(
+      "href",
+      "https://github.com/acme/studio-web/issues/128",
+    );
+  });
+
+  test("the issue travels with the task, and you can go back to an empty brief", async () => {
+    const { onStart } = setup({ issues, pickedIssue: 128 });
+    await userEvent.click(screen.getByRole("button", { name: "Start anyway" }));
+    expect(onStart.mock.calls[0]?.[0].draft.issue).toEqual({
+      number: 128,
+      url: "https://github.com/acme/studio-web/issues/128",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Start from an empty brief" }));
+    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveValue("");
+    expect(screen.queryByRole("link", { name: "View issue #128" })).toBeNull();
+  });
+
+  test("without GitHub issues, the brief starts empty and nothing offers them", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: "Start from a GitHub issue" })).toBeNull();
   });
 });

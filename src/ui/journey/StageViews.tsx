@@ -3,6 +3,8 @@ import { useId, useState } from "react";
 import { LightIcon } from "./icons";
 import "./journey.css";
 import {
+  type CiStatus,
+  ciText,
   diffLabel,
   type FileChange,
   lightLabel,
@@ -217,18 +219,61 @@ export function Passed({ rows }: { rows: Row[] }) {
   );
 }
 
+const ciLight = { passed: "done", failed: "failed", running: "working" } as const;
+const ciWord = { passed: "Passed", failed: "Failed", running: "Running" } as const;
+
+/** What GitHub reports; Bezl shows it and leaves merging to you. */
+function Checks({ ci }: { ci: CiStatus }) {
+  const id = useId();
+  return (
+    <section className="journey-section" aria-labelledby={id}>
+      <h3 id={id} className="page-label">
+        {ci.on === "merge" ? "Checks on the merged commit" : "Checks on GitHub"}
+      </h3>
+      <p className="journey-ci-summary">{ciText(ci)}</p>
+      <ul className="journey-ci" aria-labelledby={id}>
+        {ci.checks.map((c) => (
+          <li key={c.name} className="journey-row" data-light={ciLight[c.state]}>
+            <span className="journey-row-icon">
+              <LightIcon light={ciLight[c.state]} />
+            </span>
+            <span className="journey-row-text">{c.name}</span>
+            <span className="journey-row-meta journey-ci-state">
+              {ciWord[c.state]}
+              {c.state === "failed" ? (
+                <a
+                  className="journey-link"
+                  href={c.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`View log for ${c.name}`}
+                >
+                  View log
+                </a>
+              ) : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function Ship({
   ship,
+  shipped = false,
   onBack,
   onNewTask,
 }: {
   ship: ShipSummary;
+  /** The pull request is already open, so Ship starts past Open. */
+  shipped?: boolean;
   onBack: () => void;
   /** Offered once the pull request is open. */
   onNewTask?: (() => void) | undefined;
 }) {
   const id = useId();
-  const [opened, setOpened] = useState(false);
+  const [opened, setOpened] = useState(shipped);
   return (
     <section className="journey-ship" aria-labelledby={id}>
       <div className="journey-ship-copy">
@@ -240,6 +285,7 @@ export function Ship({
           ))}
         </ul>
       </div>
+      {opened && ship.ci ? <Checks ci={ship.ci} /> : null}
       <section className="journey-section" aria-labelledby={`${id}-changed`}>
         <h3 id={`${id}-changed`} className="page-label">
           What changed
@@ -268,7 +314,9 @@ export function Ship({
         {opened ? (
           <>
             <p className="journey-steer-note" role="status">
-              {`Opened pull request #${ship.pullRequest.number} on GitHub.`}
+              {ship.ci?.on === "merge"
+                ? `Pull request #${ship.pullRequest.number} is merged.`
+                : `Opened pull request #${ship.pullRequest.number} on GitHub.`}
             </p>
             {onNewTask ? (
               <Button variant="secondary" onClick={onNewTask}>

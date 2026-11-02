@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { diffLabel, type StageLights, stageMarker, taskLight } from "./model";
+import { ciText, diffLabel, type StageLights, stageMarker, taskLight } from "./model";
 
 const quiet: StageLights = {
   brief: "done",
@@ -53,5 +53,38 @@ describe("diffLabel", () => {
   test("shows lines added and removed, and drops a zero removal", () => {
     expect(diffLabel({ path: "a.ts", added: 31, removed: 4 })).toBe("+31 −4");
     expect(diffLabel({ path: "a.ts", added: 43, removed: 0 })).toBe("+43");
+  });
+});
+
+describe("ciText", () => {
+  const check = (name: string, state: "passed" | "failed" | "running") => ({
+    name,
+    state,
+    url: `https://github.com/acme/studio-web/actions/runs/${name}`,
+  });
+
+  test("counts what passed and what is still running on the pull request", () => {
+    expect(
+      ciText({ on: "pullRequest", checks: [check("lint", "passed"), check("e2e", "running")] }),
+    ).toBe("1 of 2 checks has passed, and 1 is still running.");
+  });
+
+  test("a failure comes first", () => {
+    expect(
+      ciText({
+        on: "pullRequest",
+        checks: [check("lint", "passed"), check("e2e", "failed"), check("unit", "running")],
+      }),
+    ).toBe("1 of 3 checks failed. Open its log to see why.");
+  });
+
+  test("names the merged commit once every check there has passed", () => {
+    expect(
+      ciText({
+        on: "merge",
+        commit: "3f9c2ab",
+        checks: [check("lint", "passed"), check("e2e", "passed")],
+      }),
+    ).toBe("All 2 checks passed on the merged commit 3f9c2ab.");
   });
 });

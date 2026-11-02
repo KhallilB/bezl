@@ -95,7 +95,36 @@ export type ShipSummary = {
   history: { stage: StageId; text: string }[];
   /** Where Open lands the pull request. */
   pullRequest: { number: number; url: string };
+  /** Shown once the pull request is open. */
+  ci?: CiStatus;
 };
+
+export type CiCheck = { name: string; state: "passed" | "failed" | "running"; url: string };
+
+/** The pull request's checks, then the merged commit's; shown, never a gate. */
+export type CiStatus = { checks: CiCheck[] } & (
+  | { on: "pullRequest" }
+  | { on: "merge"; commit: string }
+);
+
+const checks = (n: number) => (n === 1 ? "1 check" : `${n} checks`);
+
+/** Failures first, then what is still running, then where everything passed. */
+export function ciText(ci: CiStatus): string {
+  const count = (state: CiCheck["state"]) => ci.checks.filter((c) => c.state === state).length;
+  const [all, passed, failed, running] = [
+    ci.checks.length,
+    count("passed"),
+    count("failed"),
+    count("running"),
+  ];
+  if (failed > 0)
+    return `${failed} of ${checks(all)} failed. Open ${failed === 1 ? "its log" : "their logs"} to see why.`;
+  if (running > 0)
+    return `${passed} of ${checks(all)} ${passed === 1 ? "has" : "have"} passed, and ${running} ${running === 1 ? "is" : "are"} still running.`;
+  const where = ci.on === "merge" ? `the merged commit ${ci.commit}` : "the pull request";
+  return `${all === 1 ? "The check" : `All ${checks(all)}`} passed on ${where}.`;
+}
 
 export type StageView = {
   /** The status sentence: a bold lead, then the rest. */

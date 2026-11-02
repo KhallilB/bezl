@@ -205,6 +205,30 @@ describe("Walkthrough start a task", () => {
     expect(within(dock()).getByText(position("new-task"))).toBeVisible();
   });
 
+  test("a brief can start from a GitHub issue", async () => {
+    at("?screen=walkthrough&step=from-issue");
+    const picker = render(<Walkthrough />);
+    const list = screen.getByRole("list", { name: "Open issues in studio-web" });
+    await userEvent.click(within(list).getByRole("button", { name: /#128/ }));
+    expect(screen.getByRole("link", { name: "View issue #128" })).toBeVisible();
+    picker.unmount();
+    at("?screen=walkthrough&step=issue-filled");
+    render(<Walkthrough />);
+    expect(screen.getByRole("textbox", { name: "Brief" })).toHaveDisplayValue(
+      /^Projects page shows an empty table/,
+    );
+  });
+
+  test("after Ship, the pull request's checks and then the merged commit's", () => {
+    at("?screen=walkthrough&step=pr-checks");
+    const open = render(<Walkthrough />);
+    expect(screen.getByRole("list", { name: "Checks on GitHub" })).toBeVisible();
+    open.unmount();
+    at("?screen=walkthrough&step=merged");
+    render(<Walkthrough />);
+    expect(screen.getByRole("list", { name: "Checks on the merged commit" })).toBeVisible();
+  });
+
   test("each brief step shows the form further filled in", () => {
     at("?screen=walkthrough&step=new-task");
     const blank = render(<Walkthrough />);
