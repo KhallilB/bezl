@@ -138,6 +138,7 @@ describe("contextOf", () => {
     expect(contextOf(task)).toEqual({
       goal: "Refuse empty scopes.",
       touches: "Nothing changed yet",
+      screens: 0,
       evidence: "Not checked yet",
     });
   });
@@ -191,6 +192,27 @@ describe("contextOf", () => {
     const review = { ...view, takes: [take("A", [["a.ts", 5, 1]]), take("B", [["z.ts", 9, 0]])] };
     expect(contextOf({ ...task, views: { ...task.views, review, ship } }).touches).toBe(
       "1 file · +5 −1",
+    );
+  });
+
+  test("screens the change shows count once, however many states", () => {
+    const shot = (id: string, screen: string, example = false) => ({
+      id,
+      name: id,
+      screen,
+      from: "attempt A",
+      commit: "abc",
+      images: { phone: "", desktop: "" },
+      example,
+    });
+    const build = {
+      ...view,
+      takes: [take("A", [["a.ts", 1, 0]])],
+      shots: [shot("1", "Projects"), shot("2", "Projects"), shot("3", "Settings")],
+    };
+    const examples = [shot("4", "Welcome", true)];
+    expect(contextOf({ ...task, examples, views: { ...task.views, build } }).touches).toBe(
+      "1 file · +1 · 2 screens",
     );
   });
 

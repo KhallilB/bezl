@@ -8,20 +8,23 @@ import {
   type DoneWhen,
   type Handled,
   lightLabel,
+  type Shot,
   stageLabel,
   type TaskContext,
 } from "./model";
+import { Preview } from "./Preview";
 
-export type SideTab = "intent";
-
-const tabs: { id: SideTab; name: string }[] = [{ id: "intent", name: "Intent" }];
+export type SideTab = "preview" | "intent";
 
 /** One line under the stages: the goal, what changed, how much is proven. */
 export function ContextBar({
   context,
+  preview,
   onOpen,
 }: {
   context: TaskContext;
+  /** This stage has screenshots, so what changed can open them. */
+  preview: boolean;
   onOpen: (tab: SideTab) => void;
 }) {
   return (
@@ -40,7 +43,13 @@ export function ContextBar({
       </li>
       <li>
         <span className="journey-context-label">Changes</span>
-        <span>{context.touches}</span>
+        {preview ? (
+          <button type="button" className="journey-context-link" onClick={() => onOpen("preview")}>
+            {context.touches}
+          </button>
+        ) : (
+          <span>{context.touches}</span>
+        )}
       </li>
       <li>
         <span className="journey-context-label">Evidence</span>
@@ -54,15 +63,24 @@ export function ContextBar({
 
 export type Answer = { item: NeedsYouItem; choice: NeedsYouChoice };
 
+/** Points at an example Shot while a choice is hovered or focused; null when it leaves. */
+type OnExample = (shotId: string | null) => void;
+
 function Choices({
   item,
   onAnswer,
+  onExample,
 }: {
   item: NeedsYouItem;
   onAnswer: (c: NeedsYouChoice) => void;
+  onExample?: OnExample | undefined;
 }) {
   const rec = useId();
-  const [hint, setHint] = useState<string | null>(null);
+  const [hint, setHintState] = useState<string | null>(null);
+  const setHint = (id: string | null) => {
+    setHintState(id);
+    onExample?.(item.choices.find((c) => c.id === id)?.example ?? null);
+  };
   const shown = item.choices.find((c) => c.id === (hint ?? item.recommended));
   return (
     <>
@@ -103,12 +121,14 @@ export function Questions({
   answered,
   prefer,
   onAnswer,
+  onExample,
 }: {
   items: NeedsYouItem[];
   answered: Answer[];
   /** Opens first while still unanswered: a question you just raised. */
   prefer?: string | null;
   onAnswer: (item: NeedsYouItem, choice: NeedsYouChoice) => void;
+  onExample?: OnExample;
 }) {
   const id = useId();
   const [picked, setPicked] = useState<string | null>(null);
@@ -169,9 +189,11 @@ export function Questions({
                   ) : (
                     <Choices
                       item={item}
+                      onExample={onExample}
                       onAnswer={(c) => {
                         setPicked(null);
                         setLast({ item, choice: c });
+                        onExample?.(null);
                         onAnswer(item, c);
                       }}
                     />
@@ -296,26 +318,32 @@ function Intent({ goal, doneWhen, decisions, assumptions, raised, onChange }: In
   );
 }
 
-/** Beside every stage: what the task is for, kept in view while you decide. */
-export function Side({
-  tab,
-  onTab,
-  ...intent
-}: IntentProps & { tab: SideTab; onTab: (t: SideTab) => void }) {
+type SideProps = IntentProps & {
+  tab: SideTab;
+  onTab: (t: SideTab) => void;
+  shots: Shot[];
+  /** An example to show in place of the screenshots while a choice is pointed at. */
+  example: Shot | null;
+};
+
+/** Beside every stage: what it looks like and what it's for, kept in view while you decide. */
+export function Side({ tab, onTab, shots, example, ...intent }: SideProps) {
   const id = useId();
+  const tabs: { id: SideTab; name: string }[] = [
+    ...(shots.length || example ? [{ id: "preview" as const, name: "Preview" }] : []),
+    { id: "intent", name: "Intent" },
+  ];
+  const shown = tabs.some((t) => t.id === tab) ? tab : "intent";
   const move = (e: KeyboardEvent<HTMLButtonElement>) => {
-    const i = tabs.findIndex((t) => t.id === tab);
-    const to =
-      e.key === "ArrowRight"
-        ? i + 1
-        : e.key === "ArrowLeft"
-          ? i - 1
-          : e.key === "Home"
-            ? 0
-            : e.key === "End"
-              ? tabs.length - 1
-              : null;
-    if (to === null) return;
+    const i = tabs.findIndex((t) => t.id === shown);
+    const keys: Record<string, number> = {
+      ArrowRight: i + 1,
+      ArrowLeft: i - 1,
+      Home: 0,
+      End: tabs.length - 1,
+    };
+    const to = keys[e.key];
+    if (to === undefined) return;
     e.preventDefault();
     const next = tabs[(to + tabs.length) % tabs.length];
     if (!next) return;
@@ -331,9 +359,9 @@ export function Side({
             id={`${id}-${t.id}`}
             type="button"
             role="tab"
-            aria-selected={tab === t.id}
+            aria-selected={shown === t.id}
             aria-controls={`${id}-panel`}
-            tabIndex={tab === t.id ? 0 : -1}
+            tabIndex={shown === t.id ? 0 : -1}
             onClick={() => onTab(t.id)}
             onKeyDown={move}
           >
@@ -344,10 +372,10 @@ export function Side({
       <div
         id={`${id}-panel`}
         role="tabpanel"
-        aria-labelledby={`${id}-${tab}`}
+        aria-labelledby={`${id}-${shown}`}
         className="journey-side-panel"
       >
-        <Intent {...intent} />
+        {shown === "preview" ? <Preview shots={shots} example={example} /> : <Intent {...intent} />}
       </div>
     </aside>
   );

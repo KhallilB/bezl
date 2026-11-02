@@ -10,8 +10,8 @@ export const kindLabel: Record<NeedsYouKind, string> = {
   dispute: "Disputed issue",
 };
 
-/** `next` says what happens once you choose it. */
-export type NeedsYouChoice = { id: string; label: string; next: string };
+/** `next` says what happens once you choose it; `example` names a Shot that shows it. */
+export type NeedsYouChoice = { id: string; label: string; next: string; example?: string };
 
 export type NeedsYouItem = {
   id: string;

@@ -5,9 +5,20 @@ import type {
   DoneWhen,
   JourneyTask,
   ProviderUsage,
+  Shot,
   StageView,
   Take,
 } from "./model";
+import checklistDesktop from "./samples/projects-checklist-desktop.jpg";
+import checklistPhone from "./samples/projects-checklist-phone.jpg";
+import emptyDesktop from "./samples/projects-empty-desktop.jpg";
+import emptyPhone from "./samples/projects-empty-phone.jpg";
+import loadingDesktop from "./samples/projects-loading-desktop.jpg";
+import loadingPhone from "./samples/projects-loading-phone.jpg";
+import tableDesktop from "./samples/projects-table-desktop.jpg";
+import tablePhone from "./samples/projects-table-phone.jpg";
+import warmDesktop from "./samples/projects-warm-desktop.jpg";
+import warmPhone from "./samples/projects-warm-phone.jpg";
 
 // Sample data only; shapes match what M5 projects from the task log.
 
@@ -43,6 +54,48 @@ const emptyDone: DoneWhen[] = [
   line("Existing tests still pass", "Bezl checks", "done", "48 passed"),
 ];
 
+// Screenshots of studio-web's Projects page, as Bezl's checks capture them.
+const projects = (
+  id: string,
+  name: string,
+  from: string,
+  commit: string,
+  phone: string,
+  desktop: string,
+  more: Partial<Shot> = {},
+): Shot => ({ id, name, screen: "Projects", from, commit, images: { phone, desktop }, ...more });
+
+const today = projects("today", "Today", "main", "9b0f3d1", tablePhone, tableDesktop);
+const shotA = projects("a", "Attempt A", "Claude Code", "4e1c2b9", emptyPhone, emptyDesktop);
+const shotB = projects("b", "Attempt B", "Codex", "7d2a610", checklistPhone, checklistDesktop);
+const loadingA = projects(
+  "a-loading",
+  "A, loading",
+  "Claude Code",
+  "4e1c2b9",
+  loadingPhone,
+  loadingDesktop,
+);
+const importLink = "The Import from GitHub link does nothing yet";
+const reviewedA: Shot = {
+  ...shotA,
+  findings: [
+    { size: "phone", x: 50, y: 62.8, text: importLink },
+    { size: "desktop", x: 50, y: 59.2, text: importLink },
+  ],
+};
+const warm = projects(
+  "warm",
+  "Example: warm copy",
+  "Claude Code",
+  "not built",
+  warmPhone,
+  warmDesktop,
+  {
+    example: true,
+  },
+);
+
 const emptyAssumed: Assumption[] = [
   {
     id: "tone",
@@ -56,11 +109,13 @@ const emptyAssumed: Assumption[] = [
           id: "plain",
           label: "No projects yet",
           next: "Matches the other empty states in the app.",
+          example: "a",
         },
         {
           id: "warm",
           label: "Let's start your first project",
           next: "Stands out, since the other empty states read plainly.",
+          example: "warm",
         },
       ],
     },
@@ -150,6 +205,7 @@ const emptyState: JourneyTask = {
     { stage: "plan", text: "Build both approaches and choose in Review." },
   ],
   assumptions: emptyAssumed,
+  examples: [warm],
   stages: {
     define: "done",
     plan: "done",
@@ -159,13 +215,17 @@ const emptyState: JourneyTask = {
     ship: "waiting",
   },
   views: {
-    define: define(
-      "When someone has no projects yet, the Projects page should help them start one instead of showing an empty table.",
-      emptyDone,
-    ),
+    define: {
+      ...define(
+        "When someone has no projects yet, the Projects page should help them start one instead of showing an empty table.",
+        emptyDone,
+      ),
+      shots: [today],
+    },
     plan: {
       lead: "The plan is done.",
       rest: "All 4 steps are finished.",
+      shots: [today],
       sections: [
         {
           title: "Attempt A · Claude Code",
@@ -189,6 +249,7 @@ const emptyState: JourneyTask = {
     build: {
       lead: "Build is done.",
       rest: "Both attempts have finished.",
+      shots: [shotA, shotB],
       sections: [],
       takes: [
         { ...takeA, state: "Finished", light: "done", activity: "Finished in 6 minutes" },
@@ -197,6 +258,7 @@ const emptyState: JourneyTask = {
     },
     check: {
       lead: "Everything passed.",
+      shots: [shotA, loadingA, shotB],
       rest: "Attempt B had two problems at first, but Codex fixed them once they were sent back.",
       sections: [],
       passed: [
@@ -210,6 +272,7 @@ const emptyState: JourneyTask = {
       rest: "Each one has been reviewed by the other coding agent, so you can compare them before you choose.",
       sections: [],
       takes: reviewed("Ready", "Ready"),
+      shots: [reviewedA, shotB],
       handled: [
         {
           text: "Claude Code on attempt B: two naming nits",
@@ -521,12 +584,17 @@ const kept: JourneyTask = {
       lead: "You kept attempt A.",
       rest: "Attempt B is set aside rather than deleted, in case you want it later.",
       sections: [],
+      shots: [reviewedA, shotB],
       takes: reviewed("Kept", "Set aside"),
     },
     ship: {
       lead: "Ready to ship.",
       rest: "Open the pull request when you are.",
       sections: [],
+      shots: [
+        { ...today, name: "Before" },
+        { ...shotA, name: "After" },
+      ],
       ship: {
         title: "Add an empty state to the Projects page",
         summary:

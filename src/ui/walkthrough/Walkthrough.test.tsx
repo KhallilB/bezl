@@ -47,6 +47,15 @@ describe("Walkthrough tour", () => {
     expect(screen.getByRole("list", { name: "Decided" })).toBeVisible();
   });
 
+  test("the preview step shows the change as Bezl captured it", async () => {
+    at("?screen=walkthrough&step=preview");
+    render(<Walkthrough />);
+    expect(within(dock()).getByText("See it before you decide")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(screen.getByRole("button", { name: "A, loading" }));
+    expect(screen.getByRole("img", { name: "Projects, A, loading, at 375 px" })).toBeVisible();
+  });
+
   test("starts at the first step, where Back is off", () => {
     at("?screen=walkthrough");
     render(<Walkthrough />);

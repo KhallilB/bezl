@@ -167,6 +167,13 @@ export const steps: Step[] = [
     view: { kind: "task", taskId: "empty-state", stage: "review" },
   },
   {
+    id: "preview",
+    chapter: "Your tasks",
+    title: "See it before you decide",
+    note: "Preview shows the screenshots Bezl took at phone and desktop size, with each finding pinned where it is. Click a spot to leave a note, and pointing at a choice shows an example of it, marked as not built yet.",
+    view: { kind: "task", taskId: "empty-state", stage: "check" },
+  },
+  {
     id: "working",
     chapter: "Your tasks",
     title: "Work in progress",

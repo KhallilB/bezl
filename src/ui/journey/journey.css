@@ -728,3 +728,200 @@
   color: var(--kb-color-muted);
   font-size: var(--kb-size-xs);
 }
+
+/* Preview: Bezl's screenshots at phone or desktop size, with pins on them. */
+.journey-preview {
+  display: grid;
+  gap: var(--kb-space-3);
+}
+
+.journey-preview-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kb-space-2);
+}
+
+.journey-preview-name {
+  font-size: var(--kb-size-sm);
+}
+
+.journey-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.journey-toggle button {
+  padding: var(--kb-space-1) var(--kb-space-3);
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--journey-ring);
+  color: var(--kb-color-muted);
+  font: inherit;
+  font-size: var(--kb-size-xs);
+  cursor: pointer;
+}
+
+.journey-toggle button:hover {
+  color: var(--kb-color-fg);
+}
+
+.journey-toggle button[aria-pressed="true"] {
+  background: color-mix(in oklab, var(--kb-color-fg) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kb-color-fg) 40%, transparent);
+  color: var(--kb-color-fg);
+}
+
+.journey-toggle button:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 2px;
+}
+
+.journey-shot {
+  display: grid;
+  justify-items: center;
+  gap: var(--kb-space-2);
+  margin: 0;
+}
+
+/* Phone keeps its proportions and a readable width; desktop fills the column. */
+.journey-shot-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--kb-radius-md);
+  box-shadow: 0 0 0 1px var(--journey-ring);
+}
+
+.journey-shot[data-size="phone"] .journey-shot-frame {
+  width: min(100%, 13rem);
+}
+
+.journey-shot-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.journey-shot-frame[data-example] {
+  outline: 1px dashed color-mix(in oklab, var(--kb-color-info) 60%, transparent);
+  outline-offset: 4px;
+}
+
+.journey-shot-tag {
+  position: absolute;
+  inset-block-start: var(--kb-space-2);
+  inset-inline-start: 50%;
+  padding: 0.125rem var(--kb-space-2);
+  border-radius: 999px;
+  background: var(--kb-color-bg);
+  box-shadow: 0 0 0 1px var(--journey-ring);
+  color: var(--kb-color-muted);
+  font-family: var(--journey-mono);
+  font-size: var(--kb-size-xs);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.journey-shot-caption {
+  color: var(--kb-color-muted);
+  font-family: var(--journey-mono);
+  font-size: var(--kb-size-xs);
+}
+
+/* Covers the screenshot while placing a note; the crosshair says click a spot. */
+.journey-shot-place {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in oklab, var(--kb-color-info) 6%, transparent);
+  cursor: crosshair;
+}
+
+.journey-shot-place:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: -2px;
+}
+
+.journey-pin {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  background: var(--kb-color-info);
+  color: var(--kb-color-bg);
+  font-size: var(--kb-size-xs);
+  font-weight: 600;
+}
+
+.journey-shot-frame .journey-pin {
+  position: absolute;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--kb-color-info) 30%, transparent);
+  transform: translate(-50%, -50%);
+}
+
+.journey-pin[data-kind="finding"] {
+  background: var(--kb-color-danger);
+}
+
+.journey-shot-frame .journey-pin[data-kind="finding"] {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--kb-color-danger) 30%, transparent);
+}
+
+.journey-pin[data-draft] {
+  opacity: 0.7;
+}
+
+.journey-pins {
+  display: grid;
+  gap: var(--kb-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--kb-size-sm);
+}
+
+.journey-pins li {
+  display: flex;
+  align-items: start;
+  gap: var(--kb-space-2);
+}
+
+.journey-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kb-space-2);
+}
+
+.journey-note input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  padding: var(--kb-space-1) var(--kb-space-2);
+  border: 0;
+  border-radius: var(--kb-radius-md);
+  background: var(--kb-color-bg);
+  box-shadow: inset 0 0 0 1px var(--journey-ring);
+  color: inherit;
+  font: inherit;
+  font-size: var(--kb-size-sm);
+}
+
+.journey-note input:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 1px;
+}
+
+.journey-note-actions {
+  display: grid;
+  justify-items: start;
+  gap: var(--kb-space-2);
+}

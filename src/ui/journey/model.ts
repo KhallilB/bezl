@@ -127,7 +127,28 @@ export function ciText(ci: CiStatus): string {
   return `${all === 1 ? "The check" : `All ${checks(all)}`} passed on ${where}.`;
 }
 
+export type ShotSize = "phone" | "desktop";
+
+export const shotWidth: Record<ShotSize, number> = { phone: 375, desktop: 1280 };
+
+/** A finding Bezl placed on a screenshot; x and y are percentages of it. */
+export type ShotPin = { size: ShotSize; x: number; y: number; text: string };
+
+/** One state of a screen Bezl captured at both sizes; an example is a choice not built yet. */
+export type Shot = {
+  id: string;
+  name: string;
+  screen: string;
+  from: string;
+  commit: string;
+  images: Record<ShotSize, string>;
+  example?: boolean;
+  findings?: ShotPin[];
+};
+
 export type StageView = {
+  /** Screens as Bezl captured them at this stage. */
+  shots?: Shot[];
   /** Questions Bezl answered, sent back or merged, so they never reached you. */
   handled?: Handled[];
   /** The status sentence: a bold lead, then the rest. */
@@ -156,6 +177,8 @@ export type JourneyTask = {
   /** Answers you gave earlier, kept with the stage that asked. */
   decisions?: Decision[];
   assumptions?: Assumption[];
+  /** Examples of choices not built yet, shown while you point at one. */
+  examples?: Shot[];
 };
 
 export type DoneWhen = { text: string; checker: string; light: Light; status: string };
@@ -176,9 +199,10 @@ export type Handled = {
   by: "answered" | "returned" | "merged" | "dropped";
 };
 
-export type TaskContext = { goal: string; touches: string; evidence: string };
+export type TaskContext = { goal: string; touches: string; screens: number; evidence: string };
 
 const files = (n: number) => (n === 1 ? "1 file" : `${n} files`);
+const screens = (n: number) => (n === 1 ? "1 screen" : `${n} screens`);
 
 /** Ship's kept attempt wins; otherwise the latest stage with attempts. */
 function changed(task: JourneyTask): string {
@@ -200,9 +224,15 @@ export function contextOf(task: JourneyTask): TaskContext {
   const lines = task.doneWhen ?? [];
   const proven = lines.filter((l) => l.light === "done").length;
   const checked = lines.some((l) => l.light !== "waiting");
+  const shown = new Set(stageIds.flatMap((id) => task.views[id].shots ?? []).map((s) => s.screen));
+  const touches = changed(task);
   return {
     goal: task.views.define.quote ?? task.title,
-    touches: changed(task),
+    touches:
+      shown.size && touches !== "Nothing changed yet"
+        ? `${touches} · ${screens(shown.size)}`
+        : touches,
+    screens: shown.size,
     evidence: checked ? `${proven} of ${lines.length} proven` : "Not checked yet",
   };
 }
