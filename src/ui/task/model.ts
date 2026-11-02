@@ -39,11 +39,12 @@ export type WorkerPresentation = {
 
 export const states: WorkerState[] = ["running", "blocked", "idle", "finished"];
 
-export const roleLabel: Record<WorkerRole, string> = { primary: "Primary", reviewer: "Reviewer" };
+export const roleLabel: Record<WorkerRole, string> = { primary: "Writer", reviewer: "Reviewer" };
 
-export const accessLabel: Record<WorkerRole, "writes" | "reads"> = {
-  primary: "writes",
-  reviewer: "reads",
+// Short: the worker map draws it beside each node.
+export const accessLabel: Record<WorkerRole, "edits files" | "reads only"> = {
+  primary: "edits files",
+  reviewer: "reads only",
 };
 
 /** The worker a task centres on: first running, else first blocked, else none. */

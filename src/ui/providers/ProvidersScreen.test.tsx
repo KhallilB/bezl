@@ -28,17 +28,17 @@ describe("ProvidersScreen", () => {
     const first = pending();
     render(<ProvidersScreen />);
     await first.finish(noWriter);
-    expect(screen.getByText("No writer available")).toBeVisible();
+    expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
 
     const again = pending();
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));
     expect(preflight).toHaveBeenCalledTimes(2);
     expect(preflight).toHaveBeenLastCalledWith("providers_preflight");
-    expect(screen.getByRole("status")).toHaveTextContent("Checking agent CLIs…");
-    expect(screen.getByText("No writer available")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("Checking your coding agents…");
+    expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
 
     await again.finish([claudeFound, codexProbed]);
-    expect(screen.getByText("Ready: Claude Code and Codex can write.")).toBeVisible();
+    expect(screen.getByText("Ready: Claude Code and Codex can write code.")).toBeVisible();
     expect(screen.queryByRole("status")).toBeNull();
   });
 
@@ -62,7 +62,7 @@ describe("ProvidersScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "Check again" }));
     await act(async () => again.fail("spawn failed"));
     expect(screen.getByRole("alert")).toHaveTextContent("spawn failed");
-    expect(screen.getByText("No writer available")).toBeVisible();
+    expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
     expect(screen.getByRole("button", { name: "Check again" })).toBeEnabled();
   });
 });

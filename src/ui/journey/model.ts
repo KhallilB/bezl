@@ -23,7 +23,7 @@ export const lightLabel: Record<Light | TaskLight, string> = {
   working: "working",
   needsYou: "needs you",
   failed: "failed",
-  waiting: "waiting",
+  waiting: "not started",
   idle: "idle",
 };
 

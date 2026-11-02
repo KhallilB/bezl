@@ -9,8 +9,8 @@ const transcript = Array.from(
   { length: 8 },
   (_, i) =>
     `[${String(i + 1).padStart(2, "0")}] cargo test -p bezl-domain ... Compiling bezl-domain v0.1.0; ` +
-    "warning: unused variable `ctx` in src/policy.rs:41; the well scrolls inside its panel, so a " +
-    "long transcript never spills past the panel's edge.",
+    "warning: unused variable `ctx` in src/policy.rs:41; this output scrolls inside its panel, so " +
+    "long output never spills past the panel's edge.",
 ).join("\n");
 
 const a: WorkerView = {
@@ -27,7 +27,7 @@ const c: WorkerView = {
   role: "reviewer",
   provider: "Gemini CLI",
   state: "finished",
-  summary: "Review finished with no findings.",
+  summary: "Review finished with no issues.",
   branch: "feat/policy-engine",
   elapsed: "00:42",
 };
@@ -37,7 +37,7 @@ const b: WorkerView = {
   role: "primary",
   provider: "Codex",
   state: "idle",
-  summary: "Waiting for a task worktree.",
+  summary: "Waiting for the task's copy of your code.",
 };
 
 export const idle: WorkerView[] = [a, b, c];

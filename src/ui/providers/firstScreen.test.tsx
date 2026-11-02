@@ -18,10 +18,10 @@ function noSpike() {
 }
 
 describe("first screen", () => {
-  test("the app opens on Providers, since there is no task list before M5", () => {
+  test("the app opens on Coding agents, since there is no task list before M5", () => {
     noSpike();
     render(<App />);
-    expect(screen.getByRole("heading", { level: 1, name: "Providers" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "Coding agents" })).toBeVisible();
     expect(invoke).toHaveBeenCalledWith("providers_preflight");
   });
 
@@ -29,7 +29,7 @@ describe("first screen", () => {
     noSpike();
     window.history.replaceState(null, "", "/?screen=task&sample=blocked");
     render(<App />);
-    expect(screen.queryByRole("heading", { level: 1, name: "Providers" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 1, name: "Coding agents" })).toBeNull();
     expect(invoke).not.toHaveBeenCalledWith("providers_preflight");
     expect(screen.getByRole("region", { name: "Worker B" })).toBeVisible();
     expect(screen.getByText(/overwrite src\/policy\.rs\?/)).toBeVisible();

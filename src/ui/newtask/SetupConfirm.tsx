@@ -21,7 +21,7 @@ export function SetupConfirm({ repo, command, onAllow, onDeny, onEditBrief }: Se
       <header className="page-header">
         <div className="page-title-row">
           <h1 id="newtask-setup-title" className="page-title">
-            {denied ? "Setup denied" : "Run setup in the new worktree?"}
+            {denied ? "Setup denied" : "Run setup in the task's copy of your code?"}
           </h1>
           <span className="page-tag">{repo}</span>
         </div>
@@ -31,13 +31,13 @@ export function SetupConfirm({ repo, command, onAllow, onDeny, onEditBrief }: Se
           </span>
           {denied ? (
             <span>
-              <strong>Stopped.</strong> Nothing ran in the worktree. Allow setup to go on, or change
-              the brief.
+              <strong>Stopped.</strong> Nothing ran in the task's copy. Allow setup to go on, or
+              change the brief.
             </span>
           ) : (
             <span>
-              <strong>Needs you.</strong> The worktree needs its dependencies before anyone can plan
-              or build. This command runs there, never in your checkout.
+              <strong>Needs you.</strong> The task's copy of your code needs its dependencies
+              installed before work can start. This command runs only in that copy, never in yours.
             </span>
           )}
         </p>

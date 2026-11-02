@@ -16,6 +16,6 @@ export function DemoScreen() {
     });
   }, []);
   if (plan === undefined) return null;
-  if (plan === null) return <p>{error ?? "No demo: run scripts/demo/run.sh."}</p>;
+  if (plan === null) return <p>{error ?? "No demo to run. Start one with scripts/demo/run.sh."}</p>;
   return plan.scenario === "providers" ? <ProvidersDemo out={plan.out} /> : <TerminalsDemo />;
 }

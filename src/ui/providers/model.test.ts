@@ -60,12 +60,12 @@ describe("fixes", () => {
   test("an impostor says what its version output says, then what to install", () => {
     expect(fixes(thisMachine[1] as ProviderCheck)).toEqual([
       {
-        problem: "This `codex` is not Codex CLI",
-        says: 'Its version output says "0.2.3"',
-        action: "Remove it from your path, or point Bezl at the real one.",
+        problem: "This `codex` isn't Codex",
+        says: 'It printed "0.2.3" when asked for its version',
+        action: "Remove it, or show Bezl where the real one is.",
       },
       {
-        problem: "No Codex CLI on your path",
+        problem: "Codex isn't installed on this computer",
         action: "Install it: `npm install -g @openai/codex`",
       },
     ]);
@@ -81,9 +81,9 @@ describe("fixes", () => {
       },
     };
     expect(fixes(broken)[0]).toEqual({
-      problem: "Bezl could not identify this `codex`",
-      says: "Timed out on --version",
-      action: "Remove it from your path, or point Bezl at the real one.",
+      problem: "Bezl couldn't tell what this `codex` is",
+      says: "Didn't answer when asked for its version",
+      action: "Remove it, or show Bezl where the real one is.",
     });
   });
 
@@ -96,7 +96,7 @@ describe("fixes", () => {
     };
     expect(fixes(missing)).toEqual([
       {
-        problem: "No Claude Code on your path",
+        problem: "Claude Code isn't installed on this computer",
         action: "Install it: `curl -fsSL https://claude.ai/install.sh | bash`",
       },
     ]);
@@ -115,7 +115,7 @@ describe("fixes", () => {
   test("workers alone signed out: signed in for you, not for workers", () => {
     expect(fixes(codexWith(signedIn, signedOut))).toEqual([
       {
-        problem: "Codex is signed in for you, not for workers",
+        problem: "Codex is signed in for you, not for Bezl's agents",
         action: `Run \`CODEX_HOME=${quotedWorkers} codex login\`.`,
       },
     ]);
@@ -125,7 +125,7 @@ describe("fixes", () => {
     expect(fixes(codexWith(signedOut, signedOut))).toEqual([
       { problem: "Codex is signed out for you", action: "Run `codex login`." },
       {
-        problem: "Codex is signed out for workers",
+        problem: "Codex is signed out for Bezl's agents",
         action: `Run \`CODEX_HOME=${quotedWorkers} codex login\`.`,
       },
     ]);
@@ -134,7 +134,7 @@ describe("fixes", () => {
   test("a missing workers' home is made first, since Codex refuses one that does not exist", () => {
     expect(fixes(codexWith(signedIn, { kind: "homeMissing" }))).toEqual([
       {
-        problem: "Codex is signed in for you, not for workers",
+        problem: "Codex is signed in for you, not for Bezl's agents",
         action: `Run \`mkdir -p ${quotedWorkers} && CODEX_HOME=${quotedWorkers} codex login\`.`,
       },
     ]);
@@ -144,7 +144,7 @@ describe("fixes", () => {
     const odd: CodexSignIn = { kind: "unrecognized", detail: { code: 1, says: "huh" } };
     expect(fixes(codexWith(signedIn, odd))).toEqual([
       {
-        problem: "Workers' Codex home: sign-in status not recognized",
+        problem: "Codex for Bezl's agents: unexpected sign-in status",
         says: "huh",
         action: `Run \`CODEX_HOME=${quotedWorkers} codex login status\` to see it.`,
       },
@@ -158,9 +158,9 @@ describe("fixes", () => {
     };
     expect(fixes(check)).toEqual([
       {
-        problem: "The read-only probe could not run",
+        problem: "The safety tests couldn't run",
         says: "no result event",
-        action: "Check again to probe it again.",
+        action: "Select Check again to try again.",
       },
     ]);
   });
@@ -174,9 +174,9 @@ describe("tier probe fixes", () => {
     };
     expect(fixes(check)).toEqual([
       {
-        problem: "The coordination-tier probe could not run",
+        problem: "The working-alongside tests couldn't run",
         says: "timed out",
-        action: "Check again to probe it again.",
+        action: "Select Check again to try again.",
       },
     ]);
   });
@@ -187,34 +187,34 @@ describe("capabilityRows", () => {
     expect(capabilityRows(codexProbed)).toEqual([
       {
         capability: "fileWrites",
-        label: "File writes",
-        enforcement: "Blocked by `--sandbox read-only`",
+        label: "Writing files",
+        enforcement: "Turned off with `--sandbox read-only`",
         outcome: { label: "Passed", tone: "success", icon: "finished" },
       },
       {
         capability: "shell",
-        label: "Shell",
-        enforcement: "Blocked by `--sandbox read-only`",
+        label: "Running commands",
+        enforcement: "Turned off with `--sandbox read-only`",
         outcome: { label: "Passed", tone: "success", icon: "finished" },
       },
       {
         capability: "mcpTools",
         label: "MCP tools",
-        enforcement: "Instruction only",
+        enforcement: "Asked, not enforced",
         outcome: { label: "Failed", tone: "blocked", icon: "blocked" },
         note: "an MCP server from the Codex config wrote its marker",
       },
       {
         capability: "hooks",
         label: "Hooks",
-        enforcement: "Instruction only",
-        outcome: { label: "Not probed", tone: "neutral", icon: "idle" },
+        enforcement: "Asked, not enforced",
+        outcome: { label: "Not tested", tone: "neutral", icon: "idle" },
         note: "Codex runs only hooks trusted in its home; not probed",
       },
       {
         capability: "network",
-        label: "Network",
-        enforcement: "Blocked by `--sandbox read-only`",
+        label: "Internet access",
+        enforcement: "Turned off with `--sandbox read-only`",
         outcome: { label: "Passed", tone: "success", icon: "finished" },
       },
     ]);
@@ -226,7 +226,7 @@ describe("capabilityRows", () => {
     expect(rows[2]).toEqual({
       capability: "mcpTools",
       label: "MCP tools",
-      enforcement: "Instruction only",
+      enforcement: "Asked, not enforced",
       outcome: null,
     });
   });
@@ -242,15 +242,15 @@ describe("readOnlyShown", () => {
 
   test("a failed capability makes the reviewer not read-only", () => {
     expect(readOnlyShown(codexProbed)).toEqual({
-      shown: { label: "Not read-only", tone: "blocked", icon: "blocked" },
-      detail: `Probed 0.163.0 on ${on(1793313000)}`,
+      shown: { label: "A safety test failed", tone: "blocked", icon: "blocked" },
+      detail: `Tested version 0.163.0 on ${on(1793313000)}`,
     });
   });
 
   test("all five passed is read-only", () => {
     expect(readOnlyShown(claudeFound)).toEqual({
-      shown: { label: "All five passed", tone: "success", icon: "finished" },
-      detail: `Probed 2.1.312 on ${on(1793312545)}`,
+      shown: { label: "All 5 safety tests passed", tone: "success", icon: "finished" },
+      detail: `Tested version 2.1.312 on ${on(1793312545)}`,
     });
   });
 
@@ -268,18 +268,18 @@ describe("readOnlyShown", () => {
       },
     };
     expect(readOnlyShown(partly)).toEqual({
-      shown: { label: "Partly probed", tone: "neutral", icon: "idle" },
-      detail: `Probed 0.163.0 on ${on(1793313000)}`,
+      shown: { label: "Some not tested", tone: "neutral", icon: "idle" },
+      detail: `Tested version 0.163.0 on ${on(1793313000)}`,
     });
   });
 
   test("an unprobed reviewer says why", () => {
     expect(readOnlyShown(codexFound)).toEqual({
-      shown: { label: "Not probed: needs sign-in", tone: "warning", icon: "blocked" },
+      shown: { label: "Not tested yet: sign in first", tone: "warning", icon: "blocked" },
     });
     expect(
       readOnlyShown({ ...claudeFound, readOnly: { kind: "couldNotRun", detail: { says: "x" } } }),
-    ).toEqual({ shown: { label: "Could not run", tone: "blocked", icon: "blocked" } });
+    ).toEqual({ shown: { label: "Couldn't run", tone: "blocked", icon: "blocked" } });
     expect(readOnlyShown(thisMachine[1] as ProviderCheck)).toBeNull();
   });
 });
@@ -289,20 +289,20 @@ describe("tierRows", () => {
     expect(tierRows(codexProbed)).toEqual([
       {
         tier: "stepBoundary",
-        label: "Tier 0: facts at step boundaries",
-        outcome: { label: "Holds", tone: "success", icon: "finished" },
+        label: "Gets updates between steps",
+        outcome: { label: "Works", tone: "success", icon: "finished" },
         note: "one exec call ran one turn and ended with turn.completed",
       },
       {
         tier: "mcpTool",
-        label: "Tier 1: Bezl MCP tool",
-        outcome: { label: "Holds", tone: "success", icon: "finished" },
+        label: "Can use Bezl's MCP tool",
+        outcome: { label: "Works", tone: "success", icon: "finished" },
         note: "exec --json has no init tool list; the agent called bezl's batch_state",
       },
       {
         tier: "liveInput",
-        label: "Tier 2: live input mid-step",
-        outcome: { label: "Missing", tone: "neutral", icon: "idle" },
+        label: "Gets messages mid-step",
+        outcome: { label: "Doesn't work", tone: "neutral", icon: "idle" },
         note: "codex queue took the input mid-step, but the step ended without it",
       },
     ]);
@@ -324,7 +324,7 @@ describe("tierRows", () => {
       },
     };
     expect(tierRows(check).map((r) => [r.outcome?.label, r.note])).toEqual([
-      ["Holds", "ran"],
+      ["Works", "ran"],
       ["Unknown", "no call"],
       ["Unknown", "no push"],
     ]);
@@ -345,22 +345,22 @@ describe("tiersShown", () => {
 
   test("counts the tiers that hold", () => {
     expect(tiersShown(claudeFound)).toEqual({
-      shown: { label: "All three hold", tone: "success", icon: "finished" },
-      detail: `Probed 2.1.312 on ${on(1793344492)}`,
+      shown: { label: "All 3 work", tone: "success", icon: "finished" },
+      detail: `Tested version 2.1.312 on ${on(1793344492)}`,
     });
     expect(tiersShown(codexProbed)).toEqual({
-      shown: { label: "2 of 3 hold", tone: "neutral", icon: "idle" },
-      detail: `Probed 0.163.0 on ${on(1793344492)}`,
+      shown: { label: "2 of 3 work", tone: "neutral", icon: "idle" },
+      detail: `Tested version 0.163.0 on ${on(1793344492)}`,
     });
   });
 
   test("an unprobed CLI says why", () => {
     expect(tiersShown(codexFound)).toEqual({
-      shown: { label: "Not probed: needs sign-in", tone: "warning", icon: "blocked" },
+      shown: { label: "Not tested yet: sign in first", tone: "warning", icon: "blocked" },
     });
     expect(
       tiersShown({ ...claudeFound, tiers: { kind: "couldNotRun", detail: { says: "x" } } }),
-    ).toEqual({ shown: { label: "Could not run", tone: "blocked", icon: "blocked" } });
+    ).toEqual({ shown: { label: "Couldn't run", tone: "blocked", icon: "blocked" } });
     expect(tiersShown(thisMachine[1] as ProviderCheck)).toBeNull();
   });
 });

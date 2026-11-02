@@ -81,28 +81,32 @@ const local: CrewProvider = {
 const unproven: CrewProvider = { ...codex, id: "codex-new", name: "Codex 0.170", readOnly: false };
 
 describe("writerChoices", () => {
-  test("only an agent CLI can write; anything else is greyed with the reason", () => {
+  test("only a coding agent can write; anything else is greyed with the reason", () => {
     const choices = writerChoices([claude, codex, local]);
     expect(choices.map((c) => [c.id, c.disabled ?? null])).toEqual([
       ["claude", null],
       ["codex", null],
-      ["local", "Not an agent CLI, so it has no tools to write with"],
+      ["local", "Not a coding agent, so it can't write code"],
     ]);
   });
 });
 
 describe("reviewerChoices", () => {
-  test("a reviewer must be proven read-only", () => {
+  test("a reviewer must be tested unable to change files", () => {
     const choices = reviewerChoices([codex, unproven, local], "claude");
-    expect(choices.find((c) => c.id === "codex-new")?.disabled).toBe("Not proven read-only");
-    expect(choices.find((c) => c.id === "local")?.disabled).toBe("Not proven read-only");
+    expect(choices.find((c) => c.id === "codex-new")?.disabled).toBe(
+      "It might change files, so it can't review",
+    );
+    expect(choices.find((c) => c.id === "local")?.disabled).toBe(
+      "It might change files, so it can't review",
+    );
     expect(choices.find((c) => c.id === "codex")?.disabled).toBeUndefined();
   });
 
   test("the writer's own vendor is allowed, and labelled as self-review", () => {
     const choices = reviewerChoices([claude, codex], "claude");
     expect(choices.find((c) => c.id === "claude")).toMatchObject({
-      note: "Reviewed by the same provider that wrote it",
+      note: "The same company's models write and review it",
     });
     expect(choices.find((c) => c.id === "claude")?.disabled).toBeUndefined();
     expect(choices.find((c) => c.id === "codex")?.note).toBeUndefined();

@@ -41,17 +41,17 @@ const briefView: StageView = {
   quote: text,
   sections: [
     {
-      title: "Done when",
+      title: "It's done when",
       rows: doneWhen.map((d) => ({
         text: d.text,
-        meta: d.checker === "bezl" ? "Bezl" : "you",
+        meta: d.checker === "bezl" ? "Bezl checks" : "You check",
         light: "done" as const,
       })),
     },
   ],
 };
 
-/** The task just started: setup waits on you, then the worktree is prepared. */
+/** Task just started: setup waits on you, then its copy of your code is set up. */
 export function startedTask(setup: "asking" | "allowed"): JourneyTask {
   const asking = setup === "asking";
   return {
@@ -71,10 +71,12 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
       brief: briefView,
       plan: {
         lead: asking ? "Setup needs you." : "Preparing.",
-        rest: asking ? "Bezl runs nothing unasked." : "The worktree comes first, then the plan.",
+        rest: asking
+          ? "Bezl runs nothing without asking."
+          : "First the task's copy of your code, then the plan.",
         sections: [
           {
-            title: "Worktree",
+            title: "Its copy of your code",
             rows: [
               { text: "bezl/empty-state from main", mono: true, light: "done" },
               { text: "bun install", mono: true, light: asking ? "needsYou" : "working" },
@@ -86,7 +88,7 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
       build: { lead: "Not yet.", rest: "Build follows the plan.", sections: [] },
       check: { lead: "Not yet.", rest: "Checks run after Build.", sections: [] },
       review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-      ship: { lead: "Not yet.", rest: "Ship opens once you keep a take.", sections: [] },
+      ship: { lead: "Not yet.", rest: "Ship opens once you keep an attempt.", sections: [] },
     },
   };
 }

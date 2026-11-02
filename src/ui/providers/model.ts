@@ -128,8 +128,8 @@ export const providerName: Record<ProviderId, string> = {
 };
 
 export const homeName: Record<HomeSignIn["home"], string> = {
-  operator: "Your Codex home",
-  workers: "Workers' Codex home",
+  operator: "Codex for you",
+  workers: "Codex for Bezl's agents",
 };
 
 /** Status text, tone and shape icon; icons reuse the task screen's shapes. */
@@ -141,7 +141,7 @@ const needsYou = (label: string): Shown => ({ label, tone: "warning", icon: "blo
 const failed = (label: string): Shown => ({ label, tone: "blocked", icon: "blocked" });
 
 export function runErrorText(error: RunError): string {
-  return error.kind === "timedOut" ? "Timed out" : `Did not start: ${error.detail}`;
+  return error.kind === "timedOut" ? "Timed out" : `Didn't start: ${error.detail}`;
 }
 
 export function signinShown(signin: CodexSignIn): Shown {
@@ -153,9 +153,9 @@ export function signinShown(signin: CodexSignIn): Shown {
     case "signedOut":
       return needsYou("Signed out");
     case "homeMissing":
-      return quiet("No Codex home yet");
+      return quiet("Not set up yet");
     case "unrecognized":
-      return needsYou(`Unrecognized: "${signin.detail.says}"`);
+      return needsYou(`Unexpected reply: "${signin.detail.says}"`);
     case "failed":
       return failed(runErrorText(signin.detail));
   }
@@ -164,13 +164,13 @@ export function signinShown(signin: CodexSignIn): Shown {
 export function canaryShown(signin: ClaudeSignIn): Shown {
   switch (signin.kind) {
     case "signedIn":
-      return good(`Signed in, ${signin.detail.model} answered`);
+      return good(`Signed in. ${signin.detail.model} answered a test message`);
     case "signedOut":
       return needsYou(`Signed out: "${signin.detail.says}"`);
     case "outOfQuota":
-      return needsYou(`Out of quota: "${signin.detail.says}"`);
+      return needsYou(`Usage limit reached: "${signin.detail.says}"`);
     case "unrecognized":
-      return needsYou(`Unrecognized: "${signin.detail.says}"`);
+      return needsYou(`Unexpected reply: "${signin.detail.says}"`);
     case "failed":
       return failed(runErrorText(signin.detail));
   }
@@ -179,15 +179,15 @@ export function canaryShown(signin: ClaudeSignIn): Shown {
 export function rejectionText(reason: Rejection): string {
   switch (reason.kind) {
     case "says":
-      return `Says "${reason.detail}"`;
+      return `Printed "${reason.detail}" when asked for its version`;
     case "noOutput":
-      return "Printed nothing for --version";
+      return "Printed nothing when asked for its version";
     case "exited":
-      return `Exited with code ${reason.detail.code ?? "none"}: "${reason.detail.says}"`;
+      return `Stopped with error code ${reason.detail.code ?? "none"}: "${reason.detail.says}"`;
     case "timedOut":
-      return "Timed out on --version";
+      return "Didn't answer when asked for its version";
     case "didNotStart":
-      return `Did not start: ${reason.detail}`;
+      return `Didn't start: ${reason.detail}`;
   }
 }
 
@@ -209,8 +209,8 @@ function windowName({ name, minutes }: LimitWindow): string {
 }
 
 export function windowText(w: LimitWindow): string {
-  const parts = [w.usedPercent === null ? "use unknown" : `${w.usedPercent}% used`];
-  if (w.reached) parts.push("reached");
+  const parts = [w.usedPercent === null ? "usage unknown" : `${w.usedPercent}% used`];
+  if (w.reached) parts.push("limit reached");
   if (w.resetsAt !== null) {
     const at = new Date(w.resetsAt * 1000).toLocaleString("en-US", {
       weekday: "short",
@@ -222,10 +222,10 @@ export function windowText(w: LimitWindow): string {
   return `${windowName(w)}: ${parts.join(", ")}`;
 }
 
-export const limitHit = (says: string) => needsYou(`Limit hit: "${says}"`);
+export const limitHit = (says: string) => needsYou(`Limit reached: "${says}"`);
 
-export const found = good("Found");
-export const notFound = failed("Not found");
+export const found = good("Installed");
+export const notFound = failed("Not installed");
 
 /** A writer runs where its sign-in was checked: Claude's canary, Codex's workers' home. */
 export function canWrite({ discovery, signin }: ProviderCheck): boolean {
@@ -236,17 +236,16 @@ export function canWrite({ discovery, signin }: ProviderCheck): boolean {
   return false;
 }
 
-/** `null` when nothing can write: the screen says "No writer available". */
+/** `null` when nothing can write; the screen then says so. */
 export function readyShown(checks: ProviderCheck[]): Shown | null {
   const names = checks.filter(canWrite).map((c) => providerName[c.discovery.provider]);
-  return names.length === 0 ? null : good(`Ready: ${names.join(" and ")} can write.`);
+  return names.length === 0 ? null : good(`Ready: ${names.join(" and ")} can write code.`);
 }
 
 /** What failed and what the operator runs; backticks mark code. Bezl never runs a sign-in. */
 export type Fix = { problem: string; says?: string; action: string };
 
 const binName: Record<ProviderId, string> = { claude: "claude", codex: "codex" };
-const cliName: Record<ProviderId, string> = { claude: "Claude Code", codex: "Codex CLI" };
 const install: Record<ProviderId, string> = {
   claude: "curl -fsSL https://claude.ai/install.sh | bash",
   codex: "npm install -g @openai/codex",
@@ -258,15 +257,15 @@ function shellQuote(s: string): string {
 
 function rejectedFix(provider: ProviderId, reason: Rejection): Fix {
   const bin = `\`${binName[provider]}\``;
-  const action = "Remove it from your path, or point Bezl at the real one.";
+  const action = "Remove it, or show Bezl where the real one is.";
   if (reason.kind === "says")
     return {
-      problem: `This ${bin} is not ${cliName[provider]}`,
-      says: `Its version output says "${reason.detail}"`,
+      problem: `This ${bin} isn't ${providerName[provider]}`,
+      says: `It printed "${reason.detail}" when asked for its version`,
       action,
     };
-  // Silence or a crash is not proof of an impostor.
-  return { problem: `Bezl could not identify this ${bin}`, says: rejectionText(reason), action };
+  // Silence or crash: not proof it is a different program.
+  return { problem: `Bezl couldn't tell what this ${bin} is`, says: rejectionText(reason), action };
 }
 
 function canaryFix(signin: ClaudeSignIn): Fix | null {
@@ -282,19 +281,19 @@ function canaryFix(signin: ClaudeSignIn): Fix | null {
       };
     case "outOfQuota":
       return {
-        problem: "Claude Code is out of quota",
+        problem: "Claude Code has reached its usage limit",
         says: signin.detail.says,
-        action: "Wait for it to reset, then Check again.",
+        action: "Wait for the limit to reset, then select Check again.",
       };
     case "unrecognized":
       return {
-        problem: "Claude Code's sign-in canary was not recognized",
+        problem: "Bezl didn't understand Claude Code's reply to a test message",
         says: signin.detail.says,
         action: see,
       };
     case "failed":
       return {
-        problem: `Claude Code's sign-in canary: ${runErrorText(signin.detail)}`,
+        problem: `Test message to Claude Code: ${runErrorText(signin.detail)}`,
         action: see,
       };
   }
@@ -315,13 +314,13 @@ function homeFix({ home, path, signin }: HomeSignIn, operatorIn: boolean): Fix |
         home === "operator"
           ? "Codex is signed out for you"
           : operatorIn
-            ? "Codex is signed in for you, not for workers"
-            : "Codex is signed out for workers";
+            ? "Codex is signed in for you, not for Bezl's agents"
+            : "Codex is signed out for Bezl's agents";
       return { problem, action: `Run \`${mkdir}${env}codex login\`.` };
     }
     case "unrecognized":
       return {
-        problem: `${homeName[home]}: sign-in status not recognized`,
+        problem: `${homeName[home]}: unexpected sign-in status`,
         says: signin.detail.says,
         action: status,
       };
@@ -333,12 +332,12 @@ function homeFix({ home, path, signin }: HomeSignIn, operatorIn: boolean): Fix |
   }
 }
 
-function couldNotRunFix(probe: string, check: Recorded<unknown>): Fix | null {
+function couldNotRunFix(problem: string, check: Recorded<unknown>): Fix | null {
   return check.kind === "couldNotRun"
     ? {
-        problem: `The ${probe} probe could not run`,
+        problem,
         says: check.detail.says,
-        action: "Check again to probe it again.",
+        action: "Select Check again to try again.",
       }
     : null;
 }
@@ -349,7 +348,7 @@ export function fixes({ discovery, signin, readOnly, tiers }: ProviderCheck): Fi
     return [
       ...discovery.rejected.map((r) => rejectedFix(provider, r.reason)),
       {
-        problem: `No ${cliName[provider]} on your path`,
+        problem: `${providerName[provider]} isn't installed on this computer`,
         action: `Install it: \`${install[provider]}\``,
       },
     ];
@@ -361,17 +360,17 @@ export function fixes({ discovery, signin, readOnly, tiers }: ProviderCheck): Fi
       : homes.map((h) => homeFix(h, operatorIn));
   return [
     ...signinFixes,
-    couldNotRunFix("read-only", readOnly),
-    couldNotRunFix("coordination-tier", tiers),
+    couldNotRunFix("The safety tests couldn't run", readOnly),
+    couldNotRunFix("The working-alongside tests couldn't run", tiers),
   ].filter((f): f is Fix => f !== null);
 }
 
 const capabilityName: Record<Capability, string> = {
-  fileWrites: "File writes",
-  shell: "Shell",
+  fileWrites: "Writing files",
+  shell: "Running commands",
   mcpTools: "MCP tools",
   hooks: "Hooks",
-  network: "Network",
+  network: "Internet access",
 };
 const capabilityOrder: Capability[] = ["fileWrites", "shell", "mcpTools", "hooks", "network"];
 
@@ -385,7 +384,9 @@ export type CapabilityRow = {
 };
 
 function enforcementText(e: Enforcement): string {
-  return e.kind === "blocked" ? `Blocked by \`${e.detail.flag.join(" ")}\`` : "Instruction only";
+  return e.kind === "blocked"
+    ? `Turned off with \`${e.detail.flag.join(" ")}\``
+    : "Asked, not enforced";
 }
 
 function probed(o: ProbeOutcome): Pick<CapabilityRow, "outcome" | "note"> {
@@ -395,7 +396,7 @@ function probed(o: ProbeOutcome): Pick<CapabilityRow, "outcome" | "note"> {
     case "failed":
       return { outcome: failed("Failed"), note: o.detail.evidence };
     case "notProbed":
-      return { outcome: quiet("Not probed"), note: o.detail.why };
+      return { outcome: quiet("Not tested"), note: o.detail.why };
   }
 }
 
@@ -421,9 +422,9 @@ function recordedShown<R extends { version: string; probedAt: number }>(
     case "noBinary":
       return null;
     case "needsSignIn":
-      return { shown: needsYou("Not probed: needs sign-in") };
+      return { shown: needsYou("Not tested yet: sign in first") };
     case "couldNotRun":
-      return { shown: failed("Could not run") };
+      return { shown: failed("Couldn't run") };
     case "probed": {
       const { version, probedAt } = check.detail;
       const on = new Date(probedAt * 1000).toLocaleDateString("en-US", {
@@ -431,7 +432,7 @@ function recordedShown<R extends { version: string; probedAt: number }>(
         day: "numeric",
         year: "numeric",
       });
-      return { shown: summary(check.detail), detail: `Probed ${version} on ${on}` };
+      return { shown: summary(check.detail), detail: `Tested version ${version} on ${on}` };
     }
   }
 }
@@ -440,15 +441,17 @@ function recordedShown<R extends { version: string; probedAt: number }>(
 export function readOnlyShown({ readOnly }: ProviderCheck): Overall | null {
   return recordedShown(readOnly, ({ capabilities }) => {
     const kinds = Object.values(capabilities).map((o) => o.kind);
-    if (kinds.includes("failed")) return failed("Not read-only");
-    return kinds.every((k) => k === "passed") ? good("All five passed") : quiet("Partly probed");
+    if (kinds.includes("failed")) return failed("A safety test failed");
+    return kinds.every((k) => k === "passed")
+      ? good("All 5 safety tests passed")
+      : quiet("Some not tested");
   });
 }
 
 const tierName: Record<Tier, string> = {
-  stepBoundary: "Tier 0: facts at step boundaries",
-  mcpTool: "Tier 1: Bezl MCP tool",
-  liveInput: "Tier 2: live input mid-step",
+  stepBoundary: "Gets updates between steps",
+  mcpTool: "Can use Bezl's MCP tool",
+  liveInput: "Gets messages mid-step",
 };
 const tierOrder: Tier[] = ["stepBoundary", "mcpTool", "liveInput"];
 
@@ -458,9 +461,9 @@ export type TierRow = { tier: Tier; label: string; outcome: Shown; note: string 
 function tierOutcome(o: TierOutcome): Pick<TierRow, "outcome" | "note"> {
   switch (o.kind) {
     case "holds":
-      return { outcome: good("Holds"), note: o.detail.evidence };
+      return { outcome: good("Works"), note: o.detail.evidence };
     case "missing":
-      return { outcome: quiet("Missing"), note: o.detail.evidence };
+      return { outcome: quiet("Doesn't work"), note: o.detail.evidence };
     case "unknown":
       return { outcome: quiet("Unknown"), note: o.detail.why };
   }
@@ -481,7 +484,7 @@ export function tiersShown({ tiers }: ProviderCheck): Overall | null {
   return recordedShown(tiers, (record) => {
     const holding = tierOrder.filter((t) => record.tiers[t].kind === "holds").length;
     return holding === tierOrder.length
-      ? good("All three hold")
-      : quiet(`${holding} of ${tierOrder.length} hold`);
+      ? good("All 3 work")
+      : quiet(`${holding} of ${tierOrder.length} work`);
   });
 }

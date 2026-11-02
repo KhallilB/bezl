@@ -13,7 +13,7 @@ function SnapshotViewer({ snapshot, onClose }: { snapshot: Snapshot | null; onCl
       {snapshot ? (
         <Dialog.Content
           {...(portal ? { container: portal } : {})}
-          title={`Snapshot · take ${snapshot.take} · ${snapshot.model}`}
+          title={`Snapshot · attempt ${snapshot.take} · ${snapshot.model}`}
           description={`The terminal as it was at ${snapshot.at}.`}
           className="history-viewer"
         >
@@ -27,7 +27,7 @@ function SnapshotViewer({ snapshot, onClose }: { snapshot: Snapshot | null; onCl
   );
 }
 
-/** A task's full record for reading: timeline, snapshots, each worker's changes. */
+/** A task's full history: timeline, snapshots, each attempt's changes. */
 export function HistoryPage({ history, onBack }: { history: TaskHistory; onBack: () => void }) {
   const [open, setOpen] = useState<Snapshot | null>(null);
   return (
@@ -79,7 +79,7 @@ export function HistoryPage({ history, onBack }: { history: TaskHistory; onBack:
                     variant="ghost"
                     size="sm"
                     className="history-open"
-                    aria-label={`Open snapshot, take ${snapshot.take} at ${snapshot.at}`}
+                    aria-label={`Open snapshot, attempt ${snapshot.take} at ${snapshot.at}`}
                     onClick={() => setOpen(snapshot)}
                   >
                     Open snapshot
@@ -93,13 +93,13 @@ export function HistoryPage({ history, onBack }: { history: TaskHistory; onBack:
 
       <section className="history-section" aria-labelledby="history-changes">
         <h2 id="history-changes" className="page-label">
-          What each worker changed
+          What each attempt changed
         </h2>
         <div className="history-changes">
           {history.changes.map((take) => (
             <div key={take.id} className="history-take">
-              <span className="history-take-name">{`Take ${take.id} · ${take.model}`}</span>
-              <Files files={take.files ?? []} label={`Files take ${take.id} changed`} />
+              <span className="history-take-name">{`Attempt ${take.id} · ${take.model}`}</span>
+              <Files files={take.files ?? []} label={`Files attempt ${take.id} changed`} />
             </div>
           ))}
         </div>

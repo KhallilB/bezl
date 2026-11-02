@@ -18,7 +18,7 @@ describe("Approvals", () => {
     render(<Queue initial={needsYou} onOpenTask={vi.fn()} />);
     expect(screen.getByText("3 things need you.")).toBeVisible();
     const question = screen.getByRole("article", { name: /Question from Codex/ });
-    expect(within(question).getByText("Deny empty scopes")).toBeVisible();
+    expect(within(question).getByText("Refuse tokens with no scopes")).toBeVisible();
     expect(within(question).getByText(/6 min/)).toBeVisible();
     expect(within(question).getByRole("button", { name: "Work around them" })).toBeVisible();
   });
@@ -41,7 +41,7 @@ describe("Approvals", () => {
   test("the task name opens the task", async () => {
     const onOpenTask = vi.fn();
     render(<Queue initial={needsYou} onOpenTask={onOpenTask} />);
-    const dispute = screen.getByRole("article", { name: /Disputed finding/ });
+    const dispute = screen.getByRole("article", { name: /Disputed issue/ });
     await userEvent.click(within(dispute).getByRole("link", { name: "Empty state for Projects" }));
     expect(onOpenTask).toHaveBeenCalledWith("empty-state", "review");
   });
@@ -65,7 +65,7 @@ describe("Needs you inline", () => {
     }
     render(<Page />);
     expect(screen.getAllByRole("article", { name: /from Codex/ })).toHaveLength(2);
-    expect(screen.queryByRole("article", { name: /Disputed finding/ })).toBeNull();
+    expect(screen.queryByRole("article", { name: /Disputed issue/ })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Work around them" }));
     expect(screen.getAllByRole("article", { name: /from Codex/ })).toHaveLength(1);
     expect(screen.getByRole("status")).toHaveTextContent(/keeps your edits/);

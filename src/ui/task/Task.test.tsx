@@ -64,12 +64,12 @@ describe("Task", () => {
   test("names each worker's role and provider above its title", () => {
     render(<Task task={task} workers={running} onStop={noop} />);
     const region = screen.getByRole("region", { name: "Worker B" });
-    const eyebrow = within(region).getByText("Primary · Codex · writes");
+    const eyebrow = within(region).getByText("Writer · Codex · edits files");
     expect(eyebrow).toBeVisible();
     expect(eyebrow.closest(".kb-badge")).toHaveAttribute("data-appearance", "plain");
     expect(eyebrow.closest(".kb-badge")).toHaveAttribute("data-mono");
     const reviewer = screen.getByRole("region", { name: "Worker A" });
-    expect(within(reviewer).getByText("Reviewer · Claude Code · reads")).toBeVisible();
+    expect(within(reviewer).getByText("Reviewer · Claude Code · reads only")).toBeVisible();
   });
 
   test("shows status chips for every worker and announces only the running one", () => {
@@ -99,11 +99,11 @@ describe("Task", () => {
     );
   });
 
-  test("maps the task worktree and its workers in the worker map", () => {
+  test("maps the task's copy of your code and its workers in the worker map", () => {
     render(<Task task={task} workers={blocked} onStop={noop} />);
     expect(
       screen.getByRole("img", {
-        name: "Task feat/policy-engine: Worker A reads, idle; Worker B writes, blocked; Worker C reads, finished",
+        name: "Task feat/policy-engine: Worker A reads only, idle; Worker B edits files, blocked; Worker C reads only, finished",
       }),
     ).toBeVisible();
   });

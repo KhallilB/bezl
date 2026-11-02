@@ -24,7 +24,7 @@ function setup(props: Partial<NewTaskProps> = {}) {
   return { onStart };
 }
 
-const readinessList = () => screen.getByRole("list", { name: "Brief readiness" });
+const readinessList = () => screen.getByRole("list", { name: "Is the brief ready?" });
 const check = (name: RegExp) => within(readinessList()).getByRole("listitem", { name });
 
 describe("NewTask brief", () => {
@@ -43,10 +43,10 @@ describe("NewTask brief", () => {
     expect(screen.getByText(suggestions.who?.who ?? "")).toBeVisible();
   });
 
-  test("done-when items say who checks each", async () => {
+  test("done checks say who checks each", async () => {
     setup({ initial: { text, doneWhen: [] } });
     await userEvent.click(within(check(/How you will know/)).getByRole("button", { name: /Add/ }));
-    const list = screen.getByRole("list", { name: "Done when" });
+    const list = screen.getByRole("list", { name: "It's done when" });
     expect(within(list).getAllByText("Bezl checks").length).toBeGreaterThan(0);
     expect(within(list).getAllByText("You check").length).toBeGreaterThan(0);
   });
@@ -68,20 +68,22 @@ describe("NewTask crew", () => {
       "aria-disabled",
       "true",
     );
-    expect(within(writer).getByText(/no tools to write with/)).toBeVisible();
+    expect(within(writer).getByText(/can't write code/)).toBeVisible();
   });
 
   test("a reviewer from the writer's vendor is allowed and labelled", async () => {
     setup();
     const reviewer = screen.getByRole("radiogroup", { name: "Reviews" });
-    expect(within(reviewer).queryByText(/same provider/)).toBeNull();
+    expect(within(reviewer).queryByText(/same company/)).toBeNull();
     await userEvent.click(within(reviewer).getByRole("radio", { name: /Claude Code/ }));
-    expect(within(reviewer).getByText("Reviewed by the same provider that wrote it")).toBeVisible();
+    expect(
+      within(reviewer).getByText("The same company's models write and review it"),
+    ).toBeVisible();
   });
 
   test("open problems do not block Ship unless you say so", () => {
     setup();
-    expect(screen.getByRole("switch", { name: /Open problems block Ship/ })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: /Don't ship with open problems/ })).not.toBeChecked();
   });
 });
 
@@ -113,7 +115,7 @@ describe("SetupConfirm", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Deny" }));
     expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
-    expect(screen.getByText(/Nothing ran in the worktree/)).toBeVisible();
+    expect(screen.getByText(/Nothing ran in the task's copy/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Deny" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Edit the brief" }));
     expect(onEditBrief).toHaveBeenCalledOnce();

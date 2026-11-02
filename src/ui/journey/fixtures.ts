@@ -4,10 +4,13 @@ import type { JourneyTask, ProviderUsage, StageView, Take } from "./model";
 
 const brief = (quote: string, done: [string, string][]): StageView => ({
   lead: "Ready to start.",
-  rest: "Everything a model needs is here.",
+  rest: "Everything a coding agent needs is here.",
   quote,
   sections: [
-    { title: "Done when", rows: done.map(([text, meta]) => ({ text, meta, light: "done" })) },
+    {
+      title: "It's done when",
+      rows: done.map(([text, meta]) => ({ text, meta, light: "done" })),
+    },
   ],
 });
 
@@ -34,15 +37,18 @@ const takeB: Take = {
   ],
 };
 
-// Each take is reviewed by the other provider.
+// Each attempt is reviewed by the other coding agent.
 const reviewed = (a: string, b: string): Take[] => [
   {
     ...takeA,
     state: a,
-    verdict: { by: "Codex", text: "Clear, reuses EmptyState. The import link has no handler yet." },
+    verdict: {
+      by: "Codex",
+      text: "Clear, reuses EmptyState. The import link does nothing yet.",
+    },
     findings: [
       {
-        text: "Import from GitHub has no handler",
+        text: "The Import from GitHub link does nothing yet",
         where: "Projects.tsx:41",
         light: "needsYou",
       },
@@ -51,10 +57,10 @@ const reviewed = (a: string, b: string): Take[] => [
   {
     ...takeB,
     state: b,
-    verdict: { by: "Claude Code", text: "Good guidance, but the checklist fails contrast." },
+    verdict: { by: "Claude Code", text: "Helpful, but the checklist text is too faint to read." },
     findings: [
       {
-        text: "Checklist text is too faint: 2.6:1, needs 4.5:1",
+        text: "Checklist text is too faint: contrast is 2.6:1, needs 4.5:1",
         where: "ProjectsChecklist.tsx:18",
         light: "needsYou",
       },
@@ -80,10 +86,10 @@ const emptyState: JourneyTask = {
     brief: brief(
       "When someone has no projects yet, the Projects page should help them start one instead of showing an empty table.",
       [
-        ["The empty state shows when there are no projects", "tests"],
-        ["One clear way to create the first project", "you"],
-        ["Passes accessibility checks", "Bezl"],
-        ["Existing tests still pass", "Bezl"],
+        ["The empty state shows when there are no projects", "Tests check"],
+        ["One clear way to create the first project", "You check"],
+        ["Passes accessibility checks", "Bezl checks"],
+        ["Existing tests still pass", "Bezl checks"],
       ],
     ),
     plan: {
@@ -91,7 +97,7 @@ const emptyState: JourneyTask = {
       rest: "4 of 4 steps finished.",
       sections: [
         {
-          title: "Take A · Claude Code",
+          title: "Attempt A · Claude Code",
           rows: [
             { text: "Find where Projects renders its table", light: "done" },
             { text: "Reuse EmptyState with one primary action", light: "done" },
@@ -100,7 +106,7 @@ const emptyState: JourneyTask = {
           ],
         },
         {
-          title: "Take B · Codex",
+          title: "Attempt B · Codex",
           rows: [
             { text: "Add a first-project checklist to Projects", light: "done" },
             { text: "Add a test for zero projects", light: "done" },
@@ -111,7 +117,7 @@ const emptyState: JourneyTask = {
     },
     build: {
       lead: "Built.",
-      rest: "Both takes finished.",
+      rest: "Both attempts finished.",
       sections: [],
       takes: [
         { ...takeA, state: "Finished", light: "done", activity: "Finished in 6 minutes" },
@@ -120,23 +126,23 @@ const emptyState: JourneyTask = {
     },
     check: {
       lead: "Everything passed.",
-      rest: "Take B's two problems went back to Codex and are fixed.",
+      rest: "Attempt B's two problems went back to Codex and are fixed.",
       sections: [],
       passed: [
         { text: "bun run test", meta: "48 passed", mono: true, light: "done" },
-        { text: "Accessibility at 1440 and 390 px", meta: "0 issues", light: "done" },
-        { text: "Changed code no test runs", meta: "none", light: "done" },
+        { text: "Accessibility at 1440 px and 390 px wide", meta: "0 issues", light: "done" },
+        { text: "Changed code with no test", meta: "none", light: "done" },
       ],
     },
     review: {
-      lead: "Which take should ship?",
-      rest: "Each was reviewed by the other provider.",
+      lead: "Which attempt should ship?",
+      rest: "Each one was reviewed by the other coding agent.",
       sections: [],
       takes: reviewed("Ready", "Ready"),
     },
     ship: {
       lead: "Not yet.",
-      rest: "Ship opens once you keep a take.",
+      rest: "Ship opens once you keep an attempt.",
       sections: [],
     },
   },
@@ -144,7 +150,7 @@ const emptyState: JourneyTask = {
 
 const denyScopes: JourneyTask = {
   id: "deny-scopes",
-  title: "Deny empty scopes",
+  title: "Refuse tokens with no scopes",
   repo: "bezl",
   current: "build",
   stages: {
@@ -157,15 +163,15 @@ const denyScopes: JourneyTask = {
   },
   views: {
     brief: brief("A token request with no scopes should be refused, not granted everything.", [
-      ["An empty scope list is refused with a reason", "tests"],
-      ["Existing grants keep working", "Bezl"],
+      ["An empty scope list is refused with a reason", "Tests check"],
+      ["Existing grants keep working", "Bezl checks"],
     ]),
     plan: {
       lead: "Plan ready.",
       rest: "Step 2 of 3 is waiting on you.",
       sections: [
         {
-          title: "Take A · Codex",
+          title: "Attempt A · Codex",
           rows: [
             { text: "Add a failing test for an empty scope list", light: "done" },
             { text: "Refuse empty scopes in the policy engine", light: "needsYou" },
@@ -184,14 +190,14 @@ const denyScopes: JourneyTask = {
           model: "Codex",
           state: "Waiting on you",
           light: "needsYou",
-          activity: "Stopped before writing src/policy.rs · 6 min",
+          activity: "Stopped before changing src/policy.rs · waiting 6 min",
           files: [{ path: "crates/bezl-domain/tests/policy.rs", added: 22, removed: 0 }],
         },
       ],
     },
     check: { lead: "Not yet.", rest: "Checks run after Build.", sections: [] },
     review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-    ship: { lead: "Not yet.", rest: "Ship opens once you keep a take.", sections: [] },
+    ship: { lead: "Not yet.", rest: "Ship opens once you keep an attempt.", sections: [] },
   },
 };
 
@@ -210,19 +216,19 @@ const debounce: JourneyTask = {
   },
   views: {
     brief: brief("Dragging the window should not resize every terminal on every frame.", [
-      ["One resize per pane per 100 ms at most", "tests"],
-      ["The last size always lands", "tests"],
+      ["At most one resize per pane every 100 ms", "Tests check"],
+      ["The final size is always applied", "Tests check"],
     ]),
     plan: {
-      lead: "Plan running.",
-      rest: "Step 2 of 3.",
+      lead: "Working through the plan.",
+      rest: "On step 2 of 3.",
       sections: [
         {
-          title: "Take A · Claude Code",
+          title: "Attempt A · Claude Code",
           rows: [
             { text: "Measure resize calls during a drag", light: "done" },
-            { text: "Debounce in the fit addon wrapper", light: "working" },
-            { text: "Prove the trailing resize lands", light: "waiting" },
+            { text: "Debounce the code that resizes the terminal", light: "working" },
+            { text: "Check that the last resize still happens", light: "waiting" },
           ],
         },
       ],
@@ -244,7 +250,7 @@ const debounce: JourneyTask = {
     },
     check: { lead: "Not yet.", rest: "Checks run after Build.", sections: [] },
     review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-    ship: { lead: "Not yet.", rest: "Ship opens once you keep a take.", sections: [] },
+    ship: { lead: "Not yet.", rest: "Ship opens once you keep an attempt.", sections: [] },
   },
 };
 
@@ -263,18 +269,18 @@ const snapshot: JourneyTask = {
   },
   views: {
     brief: brief("Save a terminal's screen so it opens again after the pane closes.", [
-      ["A snapshot restores colours and cursor", "tests"],
-      ["Snapshots stay in .git/bezl", "Bezl"],
+      ["A snapshot restores colours and cursor", "Tests check"],
+      ["Snapshots stay in .git/bezl", "Bezl checks"],
     ]),
     plan: {
       lead: "Plan done.",
       rest: "3 of 3 steps finished.",
       sections: [
         {
-          title: "Take A · Codex",
+          title: "Attempt A · Codex",
           rows: [
-            { text: "Serialize with the xterm addon", light: "done" },
-            { text: "Write snapshots under .git/bezl", light: "done" },
+            { text: "Save the terminal's screen as text", light: "done" },
+            { text: "Store snapshots in .git/bezl", light: "done" },
             { text: "Open them in the viewer", light: "done" },
           ],
         },
@@ -282,7 +288,7 @@ const snapshot: JourneyTask = {
     },
     build: {
       lead: "Built.",
-      rest: "Take A finished in 11 minutes.",
+      rest: "Attempt A finished in 11 minutes.",
       sections: [],
       takes: [
         {
@@ -316,10 +322,10 @@ const snapshot: JourneyTask = {
           writer: "Codex",
         },
         {
-          title: "restoreSnapshot runs in no test",
+          title: "No test covers restoreSnapshot",
           kind: "untested",
           where: "src/ui/terminals/snapshot.ts:23",
-          detail: "Changed code that no test runs, so nothing proves it works.",
+          detail: "This changed code never runs in a test, so nothing shows it works.",
           evidence: [
             "Called by SnapshotViewer.open (SnapshotViewer.tsx:17)",
             "No test reaches it in bun run test coverage",
@@ -331,11 +337,11 @@ const snapshot: JourneyTask = {
         { text: "cargo test -p bezl-domain", meta: "31 passed", mono: true, light: "done" },
         { text: "bun run typecheck", meta: "0 errors", mono: true, light: "done" },
         { text: "bunx biome check", meta: "clean", mono: true, light: "done" },
-        { text: "Accessibility at 1440 and 390 px", meta: "0 issues", light: "done" },
+        { text: "Accessibility at 1440 px and 390 px wide", meta: "0 issues", light: "done" },
       ],
     },
     review: { lead: "Not yet.", rest: "Review follows Check.", sections: [] },
-    ship: { lead: "Not yet.", rest: "Ship opens once you keep a take.", sections: [] },
+    ship: { lead: "Not yet.", rest: "Ship opens once you keep an attempt.", sections: [] },
   },
 };
 
@@ -346,7 +352,7 @@ export const usage: ProviderUsage[] = [
   { name: "Codex", used: "22%" },
 ];
 
-/** The same list after you keep take A: Review is done and Ship waits on you. */
+/** Same list after you keep attempt A: Review done, Ship waits on you. */
 const kept: JourneyTask = {
   ...emptyState,
   current: "ship",
@@ -354,8 +360,8 @@ const kept: JourneyTask = {
   views: {
     ...emptyState.views,
     review: {
-      lead: "Take A kept.",
-      rest: "Take B is set aside, not deleted.",
+      lead: "Attempt A kept.",
+      rest: "Attempt B is set aside, not deleted.",
       sections: [],
       takes: reviewed("Kept", "Set aside"),
     },
@@ -366,14 +372,17 @@ const kept: JourneyTask = {
       ship: {
         title: "Add an empty state to the Projects page",
         summary:
-          "Take A by Claude Code, reviewed by Codex. Reuses EmptyState with one action, “Create your first project”.",
-        facts: ["Checks 12 of 12", "Reviewed by Codex", "Take A of 2"],
+          "Claude Code wrote attempt A and Codex reviewed it. It reuses EmptyState with one action, “Create your first project”.",
+        facts: ["12 of 12 checks passed", "Reviewed by Codex", "Attempt A of 2"],
         files: takeA.files ?? [],
         history: [
           { stage: "brief", text: "For new users; reuse EmptyState; one clear action" },
           { stage: "plan", text: "4 steps by Claude Code, 3 by Codex" },
-          { stage: "build", text: "Two takes, by Claude Code and Codex" },
-          { stage: "check", text: "Take B had 2 problems, fixed; take A passed all 12" },
+          { stage: "build", text: "Two attempts, one by Claude Code and one by Codex" },
+          {
+            stage: "check",
+            text: "Attempt B had 2 problems, now fixed; attempt A passed all 12 checks",
+          },
           { stage: "review", text: "Codex: “Clear, reuses EmptyState”" },
         ],
         pullRequest: { number: 42, url: "https://github.com/acme/studio-web/pull/42" },

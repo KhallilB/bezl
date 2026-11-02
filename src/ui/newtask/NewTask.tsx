@@ -29,7 +29,7 @@ export type NewTaskProps = {
   initial: BriefDraft;
   /** One-click additions per gap; from M6 the code map supplies them. */
   suggestions: Partial<Record<CheckId, Suggestion>>;
-  /** Providers that passed preflight, greyed where they cannot take the role. */
+  /** Agents that passed the agent check; greyed where they can't take the role. */
   providers: CrewProvider[];
   paths: string[];
   onStart: (task: StartedTask) => void;
@@ -44,7 +44,7 @@ const defaultReviewer = (choices: Choice[]) =>
   choices.find((c) => !c.disabled && !c.note)?.id ?? firstOpen(choices);
 
 function preview(addition: Suggestion) {
-  if (addition.doneWhen) return `${addition.doneWhen.length} checks`;
+  if (addition.doneWhen) return `${addition.doneWhen.length} done checks`;
   return addition.who ?? addition.avoid ?? addition.example ?? "";
 }
 
@@ -63,7 +63,7 @@ function Readiness({
   return (
     <aside className="newtask-readiness" aria-labelledby={`${id}-title`}>
       <div className="newtask-readiness-head">
-        <h2 id={`${id}-title`}>Brief readiness</h2>
+        <h2 id={`${id}-title`}>Is the brief ready?</h2>
         <span>{gaps === 0 ? "Ready" : `${checks.length - gaps} of ${checks.length}`}</span>
       </div>
       <ul aria-labelledby={`${id}-title`}>
@@ -124,7 +124,7 @@ function Parts({ draft }: { draft: BriefDraft }) {
       {draft.doneWhen.length > 0 ? (
         <section className="newtask-section" aria-labelledby="newtask-done">
           <h2 id="newtask-done" className="page-label">
-            Done when
+            It's done when
           </h2>
           <ul className="newtask-done" aria-labelledby="newtask-done">
             {draft.doneWhen.map((d) => (
@@ -227,8 +227,8 @@ export function NewTask({
       </div>
 
       <Fieldset
-        legend="Crew"
-        description="Only providers that passed preflight. Each works in its own worktree."
+        legend="Who works on it"
+        description="Only coding agents that passed the agent check. Each works in its own copy of your code."
         className="newtask-crew"
         ref={focus === "crew" ? (el) => el?.scrollIntoView({ block: "center" }) : undefined}
       >
@@ -236,10 +236,10 @@ export function NewTask({
         <Choices label="Reviews" choices={reviewers} value={reviewer} onChange={setReviewer} />
       </Fieldset>
 
-      <Fieldset legend="Scope" className="newtask-scope">
+      <Fieldset legend="Limits" className="newtask-scope">
         <section className="newtask-section" aria-labelledby="newtask-paths">
           <h2 id="newtask-paths" className="newtask-field">
-            Allowed paths
+            Files it may change
           </h2>
           <ul className="newtask-paths" aria-labelledby="newtask-paths">
             {paths.map((p) => (
@@ -248,8 +248,8 @@ export function NewTask({
           </ul>
         </section>
         <Switch
-          label="Open problems block Ship"
-          description="Off: Ship lists open problems and lets you go ahead."
+          label="Don't ship with open problems"
+          description="When this is off, Ship lists open problems and lets you go ahead anyway."
           checked={blockShip}
           onCheckedChange={setBlockShip}
         />
@@ -261,8 +261,8 @@ export function NewTask({
         </Button>
         <span>
           {ready
-            ? "Bezl prepares a worktree, then plans."
-            : "Gaps are fine; Bezl checks against what you wrote."}
+            ? "Bezl sets up the task's own copy of your code, then makes a plan."
+            : "You can start with gaps. Bezl checks the work against what you wrote."}
         </span>
       </footer>
     </form>

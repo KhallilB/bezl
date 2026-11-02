@@ -51,7 +51,8 @@ export function EmptyTasks({
           No tasks yet
         </h1>
         <p className="page-lead">
-          Describe a change, choose who writes and who reviews, and Bezl sets up a worktree for it.
+          Describe a change and choose who writes and who reviews it. Bezl gives the task its own
+          copy of your code.
         </p>
       </header>
       {firstRun ? <OnboardingSteps current="first" /> : null}
@@ -157,7 +158,7 @@ export function AppShell({
             </ul>
           </nav>
         </div>
-        <dl className="shell-usage" aria-label="Provider usage">
+        <dl className="shell-usage" aria-label="Coding agent usage">
           {usage.map((p) => (
             <div key={p.name}>
               <dt>{p.name}</dt>

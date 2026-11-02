@@ -106,7 +106,7 @@ describe("Walkthrough free navigation", () => {
   test("the list names each task's light in words", () => {
     render(<Walkthrough />);
     expect(
-      within(tasks()).getByRole("link", { name: "Deny empty scopes, needs you" }),
+      within(tasks()).getByRole("link", { name: "Refuse tokens with no scopes, needs you" }),
     ).toBeVisible();
     expect(
       within(tasks()).getByRole("link", { name: "Debounce terminal resize, working" }),
@@ -134,12 +134,12 @@ describe("Walkthrough design states", () => {
 });
 
 describe("Walkthrough getting started", () => {
-  test("Choose a folder moves on to preflight", async () => {
+  test("Choose a folder moves on to the agent check", async () => {
     at("?screen=walkthrough&step=open-repo");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Choose a folder" }));
     expect(within(dock()).getByText(position("preflight"))).toBeVisible();
-    expect(screen.getByText("Checking agent CLIs…")).toBeVisible();
+    expect(screen.getByText("Checking your coding agents…")).toBeVisible();
   });
 
   test("a folder that is not a repository is refused with its reason", () => {
@@ -148,10 +148,10 @@ describe("Walkthrough getting started", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Not a git repository");
   });
 
-  test("Providers shows the real screen for each preflight result", () => {
+  test("Coding agents shows the real screen for each agent check result", () => {
     at("?screen=walkthrough&step=providers");
     const { unmount } = render(<Walkthrough />);
-    expect(screen.getByText("Ready: Claude Code and Codex can write.")).toBeVisible();
+    expect(screen.getByText("Ready: Claude Code and Codex can write code.")).toBeVisible();
     unmount();
     at("?screen=walkthrough&step=impostor");
     const impostor = render(<Walkthrough />);
@@ -159,10 +159,10 @@ describe("Walkthrough getting started", () => {
     impostor.unmount();
     at("?screen=walkthrough&step=no-writer");
     render(<Walkthrough />);
-    expect(screen.getByText("No writer available")).toBeVisible();
+    expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
   });
 
-  test("Start your first task moves from Providers to the empty task list", async () => {
+  test("Start your first task moves from Coding agents to the empty task list", async () => {
     at("?screen=walkthrough&step=providers");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Start your first task" }));
@@ -213,7 +213,7 @@ describe("Walkthrough start a task", () => {
     at("?screen=walkthrough&step=brief-ready");
     render(<Walkthrough />);
     expect(screen.getByRole("button", { name: "Start task" })).toBeVisible();
-    expect(screen.getByRole("list", { name: "Done when" })).toBeVisible();
+    expect(screen.getByRole("list", { name: "It's done when" })).toBeVisible();
   });
 
   test("starting asks about setup, and Allow prepares the first task", async () => {
@@ -234,10 +234,10 @@ describe("Walkthrough start a task", () => {
 });
 
 describe("Walkthrough stage details", () => {
-  test("keeping a take on Review moves the tour to Ship", async () => {
+  test("keeping an attempt on Review moves the tour to Ship", async () => {
     at("?screen=walkthrough&step=review-takes");
     render(<Walkthrough />);
-    await userEvent.click(screen.getByRole("button", { name: "Keep take A" }));
+    await userEvent.click(screen.getByRole("button", { name: "Keep attempt A" }));
     expect(within(dock()).getByText(position("ship"))).toBeVisible();
     expect(screen.getByText("Ready to ship.")).toBeVisible();
     expect(within(stageStrip()).getByRole("button", { current: "step" })).toHaveAccessibleName(

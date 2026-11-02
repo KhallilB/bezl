@@ -6,7 +6,7 @@ export const needsYou: NeedsYouItem[] = [
   {
     id: "deny-scopes-overwrite",
     taskId: "deny-scopes",
-    taskTitle: "Deny empty scopes",
+    taskTitle: "Refuse tokens with no scopes",
     stage: "build",
     kind: "question",
     from: "Codex",
@@ -22,7 +22,7 @@ export const needsYou: NeedsYouItem[] = [
       {
         id: "overwrite",
         label: "Overwrite them",
-        next: "Codex writes over them in its worktree; your checkout keeps your copy.",
+        next: "Codex writes over them in its own copy of your code. Your files stay as they are.",
       },
       {
         id: "stop",
@@ -34,15 +34,15 @@ export const needsYou: NeedsYouItem[] = [
   {
     id: "deny-scopes-network",
     taskId: "deny-scopes",
-    taskTitle: "Deny empty scopes",
+    taskTitle: "Refuse tokens with no scopes",
     stage: "build",
     kind: "access",
     from: "Codex",
-    prompt: "Codex asks for network access to fetch one new crate.",
+    prompt: "Codex asks for internet access to download one new crate.",
     context: "cargo add thiserror",
     waited: "4 min",
     choices: [
-      { id: "once", label: "Grant once", next: "Codex runs it once; the next request asks again." },
+      { id: "once", label: "Allow once", next: "Codex runs it once. It asks again next time." },
       { id: "deny", label: "Deny", next: "Codex continues without it." },
     ],
   },
@@ -54,12 +54,16 @@ export const needsYou: NeedsYouItem[] = [
     kind: "dispute",
     from: "Claude Code",
     prompt:
-      "Claude Code disputes a finding: the import link is out of scope, since the brief asks for one clear action.",
-    context: "Codex: Import from GitHub has no handler · Projects.tsx:41",
+      "Claude Code disagrees with an issue Codex raised: the brief asks for one clear action, so the import link isn't part of this task.",
+    context: "Codex: The Import from GitHub link does nothing yet · Projects.tsx:41",
     waited: "12 min",
     choices: [
-      { id: "reviewer", label: "Side with Codex", next: "The finding goes back to Claude Code." },
-      { id: "writer", label: "Side with Claude Code", next: "The finding closes." },
+      {
+        id: "reviewer",
+        label: "Side with Codex",
+        next: "The issue goes back to Claude Code to fix.",
+      },
+      { id: "writer", label: "Side with Claude Code", next: "The issue is closed." },
     ],
   },
 ];

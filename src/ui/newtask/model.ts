@@ -25,19 +25,19 @@ export function readiness(draft: BriefDraft): ReadinessCheck[] {
     {
       id: "what",
       label: "What you want",
-      why: "A sentence of intent, not a title, so the model builds the right thing.",
+      why: "A full sentence about the goal, not a title, so the agent builds the right thing.",
       met: intent(draft.text),
     },
     {
       id: "who",
       label: "Who it is for",
-      why: "Tells the model whose problem it solves when choices come up.",
+      why: "Tells the agent whose problem it solves when it has to make a choice.",
       met: filled(draft.who),
     },
     {
       id: "done",
       label: "How you will know it is done",
-      why: "Bezl checks these after every step instead of taking the model's word.",
+      why: "Bezl checks these after every step instead of taking the agent's word for it.",
       met: draft.doneWhen.length > 0,
     },
     {
@@ -82,7 +82,7 @@ export function writerChoices(providers: CrewProvider[]): Choice[] {
   return providers.map((p) =>
     p.canWrite
       ? { id: p.id, label: p.name }
-      : { id: p.id, label: p.name, disabled: "Not an agent CLI, so it has no tools to write with" },
+      : { id: p.id, label: p.name, disabled: "Not a coding agent, so it can't write code" },
   );
 }
 
@@ -90,9 +90,10 @@ export function writerChoices(providers: CrewProvider[]): Choice[] {
 export function reviewerChoices(providers: CrewProvider[], writerId: string): Choice[] {
   const vendor = providers.find((p) => p.id === writerId)?.vendor;
   return providers.map((p): Choice => {
-    if (!p.readOnly) return { id: p.id, label: p.name, disabled: "Not proven read-only" };
+    if (!p.readOnly)
+      return { id: p.id, label: p.name, disabled: "It might change files, so it can't review" };
     return p.vendor === vendor
-      ? { id: p.id, label: p.name, note: "Reviewed by the same provider that wrote it" }
+      ? { id: p.id, label: p.name, note: "The same company's models write and review it" }
       : { id: p.id, label: p.name };
   });
 }

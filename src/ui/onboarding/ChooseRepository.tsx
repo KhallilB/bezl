@@ -25,8 +25,8 @@ export function ChooseRepository({ onChoose, refused }: ChooseRepositoryProps) {
             Open a repository
           </h1>
           <p className="page-lead">
-            Bezl works inside a git repository. Every task's record stays in its{" "}
-            <code>.git/bezl</code> folder, on this machine.
+            Bezl works inside a git repository. Each task's history stays in the repository's{" "}
+            <code>.git/bezl</code> folder, on this computer.
           </p>
         </header>
         <OnboardingSteps current="repository" />

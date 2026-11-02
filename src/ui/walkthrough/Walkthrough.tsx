@@ -80,7 +80,7 @@ export function StateScene({ scene }: { scene: Scene }) {
       onStop={(id) =>
         setWorkers((all) =>
           all.map((w) =>
-            w.id === id ? { ...w, state: "finished", summary: "Stopped by operator." } : w,
+            w.id === id ? { ...w, state: "finished", summary: "Stopped by you." } : w,
           ),
         )
       }
