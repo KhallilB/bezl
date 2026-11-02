@@ -15,7 +15,7 @@ export type Chapter = (typeof chapters)[number];
 
 export type Draft = keyof typeof drafts;
 
-export type Preflight = "checking" | "ready" | "impostor" | "noWriter";
+export type Preflight = "checking" | "ready" | "noGitHub" | "impostor" | "noWriter";
 
 export type TourView =
   | { kind: "choose"; refused?: boolean }
@@ -70,6 +70,13 @@ export const steps: Step[] = [
     title: "Coding agents",
     note: "Each coding agent gets a card showing its version, whether it's signed in, how it did on the safety tests and how much usage it has left.",
     view: { kind: "providers", result: "ready" },
+  },
+  {
+    id: "github",
+    chapter: "Getting started",
+    title: "No GitHub sign-in",
+    note: "Without a GitHub sign-in, Bezl hides the issue picker and Ship can't open a pull request, so the task finishes on a local branch. Nothing else waits on it, so you can still start.",
+    view: { kind: "providers", result: "noGitHub" },
   },
   {
     id: "impostor",
