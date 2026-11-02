@@ -37,6 +37,16 @@ describe("Walkthrough tour", () => {
     ).toBeVisible();
   });
 
+  test("the context step keeps the goal, the change and its proof beside the stage", async () => {
+    at("?screen=walkthrough&step=context");
+    render(<Walkthrough />);
+    expect(within(dock()).getByText("What it's for, how big, how sure")).toBeVisible();
+    const context = screen.getByRole("list", { name: "This task" });
+    await userEvent.click(within(context).getByRole("button", { name: "3 of 4 proven" }));
+    expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("list", { name: "Decided" })).toBeVisible();
+  });
+
   test("starts at the first step, where Back is off", () => {
     at("?screen=walkthrough");
     render(<Walkthrough />);
@@ -59,7 +69,7 @@ describe("Walkthrough tour", () => {
   test("arrow keys step, T flips the theme, modifiers are left alone", async () => {
     render(<Walkthrough />);
     await userEvent.keyboard("{ArrowRight}{ArrowRight}");
-    expect(within(dock()).getByText(position("working"))).toBeVisible();
+    expect(within(dock()).getByText(position("context"))).toBeVisible();
     await userEvent.keyboard("{ArrowLeft}");
     expect(within(dock()).getByText(position("stages"))).toBeVisible();
     await userEvent.keyboard("t");

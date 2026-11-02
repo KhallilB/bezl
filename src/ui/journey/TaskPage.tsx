@@ -1,10 +1,10 @@
 import { Button } from "@kb.ui/react";
-import { useId } from "react";
-import { NeedsYouList } from "../approvals/Approvals";
-import { itemsFor, type NeedsYouItem } from "../approvals/model";
+import { useId, useRef, useState } from "react";
+import { answer, itemsFor, type NeedsYouItem, raise } from "../approvals/model";
 import "./journey.css";
 import { LightIcon } from "./icons";
 import {
+  contextOf,
   type JourneyTask,
   lightLabel,
   type Section,
@@ -15,6 +15,7 @@ import {
   stageMarker,
 } from "./model";
 import { Passed, Problems, RowItem, Ship, Takes } from "./StageViews";
+import { type Answer, ContextBar, HandledList, Questions, Side, type SideTab } from "./Workbench";
 
 type StageStripProps = { task: JourneyTask; stage: StageId; onStage: (stage: StageId) => void };
 
@@ -70,30 +71,12 @@ function SectionList({ section }: { section: Section }) {
 
 type PaneProps = TaskPageProps & { view: StageView };
 
-function StagePane({
-  task,
-  stage,
-  view,
-  onStage,
-  onKeep,
-  onNewTask,
-  needsYou,
-  onNeedsYou,
-}: PaneProps) {
+function StagePane({ task, stage, view, onStage, onKeep, onNewTask }: PaneProps) {
   // Keeping is the decision Review waits on; once made, the buttons go.
   const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
-  const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
   return (
-    <div className="journey-pane">
+    <>
       {view.quote ? <blockquote className="journey-quote">{view.quote}</blockquote> : null}
-      {needsYou && onNeedsYou && here.length > 0 ? (
-        <NeedsYouList
-          items={here}
-          onItems={(left) =>
-            onNeedsYou(needsYou.filter((i) => !here.includes(i) || left.includes(i)))
-          }
-        />
-      ) : null}
       {view.problems?.length ? <Problems problems={view.problems} /> : null}
       {view.takes ? <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} /> : null}
       {view.ship ? (
@@ -108,7 +91,7 @@ function StagePane({
         <SectionList key={section.title} section={section} />
       ))}
       {view.passed?.length ? <Passed rows={view.passed} /> : null}
-    </div>
+    </>
   );
 }
 
@@ -124,9 +107,22 @@ export type TaskPageProps = StageStripProps & {
   onNewTask?: () => void;
 };
 
-/** One task: its header, the stage strip, one status sentence and the open stage. */
+/** One task: header, stages, context line, status; then the stage beside its intent. */
 export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageProps) {
   const view = task.views[stage];
+  const { needsYou, onNeedsYou } = rest;
+  const [tab, setTab] = useState<SideTab>("intent");
+  const [answered, setAnswered] = useState<Answer[]>([]);
+  const [raised, setRaised] = useState<string | null>(null);
+  const side = useRef<HTMLDivElement>(null);
+  const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
+  const mine = answered.filter((a) => a.item.taskId === task.id);
+  const asked = new Set([...(needsYou ?? []), ...mine.map((a) => a.item)].map((i) => i.id));
+  const assumptions = task.assumptions ?? [];
+  const open = (t: SideTab) => {
+    setTab(t);
+    side.current?.scrollIntoView?.({ block: "nearest" });
+  };
   return (
     <article className="journey page" aria-labelledby={`task-${task.id}`}>
       <header className="page-header">
@@ -144,12 +140,69 @@ export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageP
           ) : null}
         </div>
         <StageStrip task={task} stage={stage} onStage={onStage} />
+        <ContextBar context={contextOf(task)} onOpen={open} />
         <p className="page-status">
           <strong>{view.lead}</strong>
           {view.rest ? ` ${view.rest}` : null}
         </p>
       </header>
-      <StagePane key={stage} task={task} stage={stage} view={view} onStage={onStage} {...rest} />
+      <div className="journey-bench">
+        <div className="journey-pane">
+          {needsYou &&
+          onNeedsYou &&
+          (here.length > 0 || mine.some((a) => a.item.stage === stage)) ? (
+            <Questions
+              key={`questions-${stage}`}
+              items={here}
+              answered={mine.filter((a) => a.item.stage === stage)}
+              prefer={raised}
+              onAnswer={(item, choice) => {
+                const result = answer(needsYou, item.id, choice.id);
+                if (!result) return;
+                setAnswered((a) => [...a, { item, choice }]);
+                onNeedsYou(result.items);
+              }}
+            />
+          ) : null}
+          <StagePane
+            key={stage}
+            task={task}
+            stage={stage}
+            view={view}
+            onStage={onStage}
+            {...rest}
+          />
+          {view.handled?.length ? <HandledList handled={view.handled} /> : null}
+        </div>
+        <div ref={side} className="journey-side-wrap">
+          <Side
+            tab={tab}
+            onTab={setTab}
+            goal={contextOf(task).goal}
+            doneWhen={task.doneWhen ?? []}
+            decisions={[
+              ...(task.decisions ?? []),
+              ...mine.map((a) => ({
+                stage: a.item.stage,
+                text: `${a.choice.label}. ${a.choice.next}`,
+              })),
+            ]}
+            assumptions={assumptions}
+            raised={
+              new Set(assumptions.filter((a) => asked.has(`${task.id}-${a.id}`)).map((a) => a.id))
+            }
+            onChange={
+              needsYou && onNeedsYou
+                ? (a) => {
+                    const item = raise(task, stage, a);
+                    setRaised(item.id);
+                    onNeedsYou([...needsYou, item]);
+                  }
+                : undefined
+            }
+          />
+        </div>
+      </div>
     </article>
   );
 }
