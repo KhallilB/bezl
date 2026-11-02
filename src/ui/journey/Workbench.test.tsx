@@ -43,23 +43,30 @@ test("the side is evidence, labelled so", () => {
   expect(screen.getByRole("complementary", { name: "Evidence" })).toBeVisible();
 });
 
-describe("context tiles", () => {
-  test("keep the goal, the change's reach and how sure Bezl is in view", () => {
+describe("summary", () => {
+  test("one line under the stages: the goal, the change's reach and how sure Bezl is", () => {
     render(<Harness id="empty-state" stage="review" />);
-    const context = screen.getByRole("list", { name: "This task" });
-    expect(within(context).getByText("3 of 4 done")).toBeVisible();
-    expect(within(context).getByText(/When someone has no projects/)).toBeVisible();
-    expect(within(context).getByText("4 files across 2 attempts")).toBeVisible();
-    expect(within(context).getByText("1 screen")).toBeVisible();
-    expect(within(context).getByText("Low risk")).toBeVisible();
+    const summary = screen.getByRole("list", { name: "This task" });
+    expect(within(summary).getByRole("button", { name: "3 of 4 done" })).toBeVisible();
     expect(
-      within(context).getByRole("progressbar", { name: /Lines run in a test/ }),
-    ).toHaveAttribute("aria-valuenow", "80");
+      within(summary).getByRole("button", { name: "4 files across 2 attempts" }),
+    ).toBeVisible();
+    expect(within(summary).getByText("Low risk")).toBeVisible();
+    expect(within(summary).getByText("Projects page only")).toBeVisible();
+    expect(
+      within(summary).getByRole("button", { name: "41 of 51 lines run in a test" }),
+    ).toBeVisible();
+  });
+
+  test("no cards above the stage: no tiles, no flow", () => {
+    render(<Harness id="empty-state" stage="review" />);
+    expect(screen.queryByRole("button", { name: "Show the flow" })).toBeNull();
+    expect(screen.queryByText(/When someone has no projects/)).toBeNull();
   });
 
   test("the goal opens Intent: what's proven, what you decided and what was assumed", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    await userEvent.click(screen.getByRole("button", { name: "Open Intent" }));
+    await userEvent.click(screen.getByRole("button", { name: "3 of 4 done" }));
     expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
     const done = within(side()).getByRole("list", { name: "Done when" });
     expect(within(done).getAllByRole("listitem")).toHaveLength(4);
@@ -67,35 +74,12 @@ describe("context tiles", () => {
     expect(within(side()).getByRole("list", { name: "Decided" })).toBeVisible();
     expect(within(side()).getByRole("list", { name: "Assumed" })).toBeVisible();
   });
-});
 
-describe("flow", () => {
-  test("folded until asked for, then each stage with what happened and who acted", async () => {
+  test("pointing at a stage says what happened there and who acted", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    expect(screen.queryByRole("list", { name: "How this task got here" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Show the flow" }));
-    const flow = screen.getByRole("list", { name: "How this task got here" });
-    const stages = within(flow).getAllByRole("listitem");
-    expect(stages).toHaveLength(6);
-    const review = stages[4] as HTMLElement;
-    expect(within(review).getByText("Which attempt should ship?")).toBeVisible();
-    expect(
-      within(review).getByText("Each coding agent reviewed the other's attempt"),
-    ).toBeVisible();
-    expect(within(review).getByText("Needs you")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Hide the flow" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-  });
-
-  test("opens any other stage from its card", async () => {
-    const onStage = vi.fn();
-    render(<Harness id="empty-state" stage="review" onStage={onStage} />);
-    await userEvent.click(screen.getByRole("button", { name: "Show the flow" }));
-    expect(screen.queryByRole("button", { name: "Open Review" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Open Build" }));
-    expect(onStage).toHaveBeenCalledWith("build");
+    const stages = screen.getByRole("navigation", { name: "Stages" });
+    await userEvent.hover(within(stages).getByRole("button", { name: /^Define/ }));
+    expect(await screen.findByText(/You, from the issue/)).toBeVisible();
   });
 });
 
@@ -110,6 +94,14 @@ describe("questions", () => {
       "Recommended",
     );
     expect(screen.getByText(/Codex keeps your edits/)).toBeVisible();
+  });
+
+  test("each choice shows what it costs and what it unblocks", async () => {
+    render(<Harness id="deny-scopes" stage="build" />);
+    const then = screen.getByText(/Codex keeps your edits/).closest("p") as HTMLElement;
+    expect(within(then).getByText("Keeps your edits")).toBeVisible();
+    await userEvent.hover(screen.getByRole("button", { name: "Overwrite them" }));
+    expect(screen.getByText("Your edits stay out of it")).toBeVisible();
   });
 
   test("each choice says what happens before you pick it", async () => {
@@ -188,6 +180,57 @@ describe("Preview", () => {
     expect(within(side()).getByRole("toolbar", { name: "Screenshot" })).toBeVisible();
   });
 
+  test("Preview widens the evidence; another tab gives the room back", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    const bench = screen.getByRole("complementary", { name: "Evidence" }).closest(".journey-bench");
+    expect(bench).toHaveAttribute("data-wide");
+    await userEvent.click(screen.getByRole("tab", { name: "Intent" }));
+    expect(bench).not.toHaveAttribute("data-wide");
+  });
+
+  test("Expand opens a design review, with the notes you left", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(within(side()).getByRole("button", { name: "Add a note" }));
+    await userEvent.click(within(side()).getByRole("button", { name: "Put your note here" }));
+    await userEvent.type(
+      within(side()).getByRole("textbox", { name: "Your note" }),
+      "Bigger button",
+    );
+    await userEvent.click(within(side()).getByRole("button", { name: "Add note" }));
+    await userEvent.click(within(side()).getByRole("button", { name: "Expand" }));
+    const review = screen.getByRole("dialog", { name: "Design review · Projects" });
+    expect(
+      within(review).getByRole("img", { name: "Projects, Attempt A, at 375 px" }),
+    ).toBeVisible();
+    expect(within(review).getByText("Bigger button")).toBeVisible();
+    expect(within(review).getByText("The Import from GitHub link does nothing yet")).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(side()).getByText("Bigger button")).toBeVisible();
+  });
+
+  test("the design review puts two screenshots side by side", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(within(side()).getByRole("button", { name: "Expand" }));
+    const review = screen.getByRole("dialog", { name: "Design review · Projects" });
+    const beside = within(review).getByRole("toolbar", { name: "Beside it" });
+    expect(within(beside).getByRole("button", { name: "Nothing" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(within(beside).getByRole("button", { name: "Attempt B" }));
+    expect(
+      within(review).getByRole("img", { name: "Projects, Attempt A, at 375 px" }),
+    ).toBeVisible();
+    expect(
+      within(review).getByRole("img", { name: "Projects, Attempt B, at 375 px" }),
+    ).toBeVisible();
+    await userEvent.click(within(review).getByRole("button", { name: "Desktop" }));
+    expect(
+      within(review).getByRole("img", { name: "Projects, Attempt B, at 1280 px" }),
+    ).toBeVisible();
+  });
+
   test("pins Bezl's findings where they are", () => {
     render(<Harness id="empty-state" stage="review" />);
     const pins = within(side()).getByRole("list", { name: "On this screenshot" });
@@ -211,7 +254,7 @@ describe("Preview", () => {
   test("what the change touches opens Preview", async () => {
     render(<Harness id="empty-state" stage="review" />);
     await userEvent.click(screen.getByRole("tab", { name: "Intent" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open Preview" }));
+    await userEvent.click(screen.getByRole("button", { name: "4 files across 2 attempts" }));
     expect(preview()).toHaveAttribute("aria-selected", "true");
   });
 
@@ -229,7 +272,7 @@ describe("Preview", () => {
   test("a change with no screens has no Preview", () => {
     render(<Harness id="deny-scopes" stage="build" />);
     expect(screen.queryByRole("tab", { name: "Preview" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open Preview" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /across/ })).toBeNull();
   });
 
   test("arrow keys move between the tabs", async () => {
@@ -272,7 +315,7 @@ describe("Trace", () => {
 
   test("the evidence opens Trace", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    await userEvent.click(screen.getByRole("button", { name: "Open Trace" }));
+    await userEvent.click(screen.getByRole("button", { name: /lines run in a test/ }));
     expect(trace()).toHaveAttribute("aria-selected", "true");
   });
 

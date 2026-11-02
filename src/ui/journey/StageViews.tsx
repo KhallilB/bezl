@@ -1,4 +1,15 @@
-import { Badge, Button, Input, Panel, Status, Switch } from "@kb.ui/react";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Fieldset,
+  Input,
+  Panel,
+  RadioGroup,
+  Stat,
+  Status,
+  Switch,
+} from "@kb.ui/react";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { LightIcon, lightTone } from "./icons";
@@ -9,10 +20,12 @@ import {
   type Comparison,
   ciText,
   diffLabel,
+  estimate,
   type FileChange,
   lightLabel,
   type Problem,
   type Row,
+  type SendBackOptions,
   type ShipSummary,
   sizeLabel,
   stageLabel,
@@ -224,7 +237,7 @@ export function Problems({
 }
 
 /** Who the problems go to, and how the send reads: "Send 2 problems to Codex". */
-export function sendText(problems: Problem[]): { what: string; writers: string } {
+function sendText(problems: Problem[]): { what: string; writers: string } {
   return {
     what: problemCount(problems.length),
     writers: [...new Set(problems.map((p) => p.writer))].join(" and "),
@@ -322,6 +335,103 @@ export function Compare({
           ))}
       </table>
     </section>
+  );
+}
+
+/** Send the problems back; Options sets who fixes, what goes and what runs after. */
+export function SendBack({
+  problems,
+  options,
+  shots,
+}: {
+  problems: Problem[];
+  options?: SendBackOptions | undefined;
+  /** Stage has screenshots, so they can go too. */
+  shots: boolean;
+}) {
+  const id = useId();
+  const { what, writers } = sendText(problems);
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [fixer, setFixer] = useState(options?.fixers[0]?.id ?? "");
+  const [checks, setChecks] = useState(options?.checks.map((c) => c.id) ?? []);
+  const [carry, setCarry] = useState({ notes: true, shots: true });
+  const to = options?.fixers.find((f) => f.id === fixer)?.name ?? writers;
+  if (sent) {
+    return (
+      <p className="journey-next-text" role="status">
+        {`Sent ${what} to ${to} with what Bezl saw.`}
+      </p>
+    );
+  }
+  const est = options ? estimate(options, { fixer, checks }) : null;
+  return (
+    <>
+      {options && est && open ? (
+        <div id={id} className="journey-sendback">
+          <RadioGroup label="Who fixes" value={fixer} onValueChange={setFixer}>
+            {options.fixers.map((f) => (
+              <RadioGroup.Item key={f.id} value={f.id}>
+                {f.name}
+              </RadioGroup.Item>
+            ))}
+          </RadioGroup>
+          <Fieldset legend="What goes with it">
+            <Checkbox
+              label="What Bezl saw"
+              description="Each problem's evidence always goes."
+              checked
+              disabled
+              onCheckedChange={() => {}}
+            />
+            <Checkbox
+              label="Your notes"
+              description="The notes you pinned in Preview."
+              checked={carry.notes}
+              onCheckedChange={(notes) => setCarry({ ...carry, notes })}
+            />
+            {shots ? (
+              <Checkbox
+                label="The screenshots"
+                checked={carry.shots}
+                onCheckedChange={(on) => setCarry({ ...carry, shots: on })}
+              />
+            ) : null}
+          </Fieldset>
+          <Fieldset legend="Checks after the fix">
+            {options.checks.map((c) => (
+              <Switch
+                key={c.id}
+                label={c.label}
+                description={c.note}
+                checked={checks.includes(c.id)}
+                onCheckedChange={(on) =>
+                  setChecks(on ? [...checks, c.id] : checks.filter((x) => x !== c.id))
+                }
+              />
+            ))}
+          </Fieldset>
+          <section className="journey-estimate" aria-label="Estimate">
+            <Stat label="Time" value={`About ${est.minutes} min`} />
+            <Stat label="Usage" value={est.usage} />
+            <Stat label="Files it may change" value={options.paths.join(", ")} />
+          </section>
+        </div>
+      ) : null}
+      <Button variant="primary" onClick={() => setSent(true)}>
+        {`Send ${what} to ${to}`}
+      </Button>
+      {options ? (
+        <Button
+          variant="ghost"
+          aria-expanded={open}
+          aria-controls={open ? id : undefined}
+          onClick={() => setOpen(!open)}
+        >
+          Options
+        </Button>
+      ) : null}
+    </>
   );
 }
 

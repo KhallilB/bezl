@@ -1,6 +1,7 @@
-import { Button } from "@kb.ui/react";
+import { Button, Tooltip } from "@kb.ui/react";
 import { useId, useRef, useState } from "react";
 import { answer, itemsFor, type NeedsYouItem, raise } from "../approvals/model";
+import { usePortalRoot } from "../theme/AppTheme";
 import "./journey.css";
 import { LightIcon } from "./icons";
 import {
@@ -14,16 +15,18 @@ import {
   stageLabel,
   stageMarker,
 } from "./model";
-import { Compare, NextStep, Passed, Problems, RowItem, Ship, sendText, Takes } from "./StageViews";
-import {
-  type Answer,
-  ContextTiles,
-  Flow,
-  HandledList,
-  Questions,
-  Side,
-  type SideTab,
-} from "./Workbench";
+import { Compare, NextStep, Passed, Problems, RowItem, SendBack, Ship, Takes } from "./StageViews";
+import { type Answer, HandledList, Questions, Side, type SideTab, Summary } from "./Workbench";
+
+/** What happened at a stage and who acted, for the strip's tooltip. */
+function StageHint({ view }: { view: StageView }) {
+  return (
+    <span className="journey-stage-hint">
+      <strong>{view.lead}</strong>
+      {view.by ? <span>{view.by}</span> : null}
+    </span>
+  );
+}
 
 type StageStripProps = { task: JourneyTask; stage: StageId; onStage: (stage: StageId) => void };
 
@@ -32,6 +35,7 @@ const reveal = (el: HTMLButtonElement | null) =>
   el?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
 
 function StageStrip({ task, stage, onStage }: StageStripProps) {
+  const portal = usePortalRoot();
   return (
     <nav aria-label="Stages" className="journey-strip">
       <ol>
@@ -39,20 +43,25 @@ function StageStrip({ task, stage, onStage }: StageStripProps) {
           const light = task.stages[id];
           return (
             <li key={id}>
-              <button
-                type="button"
-                ref={id === stage ? reveal : undefined}
-                className="journey-stage"
-                data-light={light}
-                aria-current={id === stage ? "step" : undefined}
-                onClick={() => onStage(id)}
+              <Tooltip
+                content={<StageHint view={task.views[id]} />}
+                {...(portal ? { container: portal } : {})}
               >
-                <span className="journey-marker" aria-hidden="true">
-                  {light === "waiting" ? stageMarker(light, i) : <LightIcon light={light} />}
-                </span>
-                {stageLabel[id]}
-                <span className="journey-sr">{`, ${lightLabel[light]}`}</span>
-              </button>
+                <button
+                  type="button"
+                  ref={id === stage ? reveal : undefined}
+                  className="journey-stage"
+                  data-light={light}
+                  aria-current={id === stage ? "step" : undefined}
+                  onClick={() => onStage(id)}
+                >
+                  <span className="journey-marker" aria-hidden="true">
+                    {light === "waiting" ? stageMarker(light, i) : <LightIcon light={light} />}
+                  </span>
+                  {stageLabel[id]}
+                  <span className="journey-sr">{`, ${lightLabel[light]}`}</span>
+                </button>
+              </Tooltip>
             </li>
           );
         })}
@@ -93,22 +102,18 @@ function StagePane({
 }: PaneProps & { onWhy?: ((id: string) => void) | undefined; asking: number }) {
   // Keeping is the decision Review waits on; once made, the buttons go.
   const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
-  const [sent, setSent] = useState(false);
   const [opened, setOpened] = useState(
     task.stages.ship === "working" || task.stages.ship === "done",
   );
   const lean = keep && view.compare ? view.compare.lean : undefined;
   const next = () => {
     if (view.problems?.length) {
-      const { what, writers } = sendText(view.problems);
-      return sent ? (
-        <p className="journey-next-text" role="status">
-          {`Sent ${what} to ${writers} with what Bezl saw.`}
-        </p>
-      ) : (
-        <Button variant="primary" onClick={() => setSent(true)}>
-          {`Send ${what} to ${writers}`}
-        </Button>
+      return (
+        <SendBack
+          problems={view.problems}
+          options={view.sendBack}
+          shots={Boolean(view.shots?.length)}
+        />
       );
     }
     if (lean && keep) {
@@ -191,20 +196,10 @@ export type TaskPageProps = StageStripProps & {
   onNewTask?: () => void;
   /** The side tab to open on; Preview when the stage has screenshots. */
   side?: SideTab;
-  /** Opens with the flow shown. */
-  flow?: boolean;
 };
 
 /** One task: header, stages, context line, status; then the stage beside its intent. */
-export function TaskPage({
-  task,
-  stage,
-  onStage,
-  onHistory,
-  side: first,
-  flow: flowFirst = false,
-  ...rest
-}: TaskPageProps) {
+export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest }: TaskPageProps) {
   const view = task.views[stage];
   const { needsYou, onNeedsYou } = rest;
   const [tab, setTab] = useState<SideTab>(first ?? "preview");
@@ -214,8 +209,6 @@ export function TaskPage({
   const [example, setExample] = useState<string | null>(null);
   const [answered, setAnswered] = useState<Answer[]>([]);
   const [raised, setRaised] = useState<string | null>(null);
-  const [flow, setFlow] = useState(flowFirst);
-  const flowId = useId();
   const side = useRef<HTMLDivElement>(null);
   const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
   const mine = answered.filter((a) => a.item.taskId === task.id);
@@ -241,26 +234,16 @@ export function TaskPage({
             {task.title}
           </h1>
           <span className="page-tag">{task.repo}</span>
-          <span className="page-action">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={flow}
-              aria-controls={flowId}
-              onClick={() => setFlow(!flow)}
-            >
-              {flow ? "Hide the flow" : "Show the flow"}
-            </Button>
-            {onHistory ? (
+          {onHistory ? (
+            <span className="page-action">
               <Button variant="ghost" size="sm" onClick={onHistory}>
                 History
               </Button>
-            ) : null}
-          </span>
+            </span>
+          ) : null}
         </div>
         <StageStrip task={task} stage={stage} onStage={onStage} />
-        {flow ? <Flow id={flowId} task={task} stage={stage} onStage={onStage} /> : null}
-        <ContextTiles
+        <Summary
           context={contextOf(task)}
           impact={task.impact}
           coverage={task.trace?.coverage}
@@ -273,7 +256,10 @@ export function TaskPage({
           {view.rest ? ` ${view.rest}` : null}
         </p>
       </header>
-      <div className="journey-bench">
+      <div
+        className="journey-bench"
+        data-wide={tab === "preview" && (shots.length || shown) ? "" : undefined}
+      >
         <div className="journey-pane">
           {needsYou &&
           onNeedsYou &&

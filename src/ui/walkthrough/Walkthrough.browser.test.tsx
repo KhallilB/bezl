@@ -119,6 +119,15 @@ test("every screen in the shell is one width, and every task page one wider widt
   expect(Object.values(wide)[0]).toBeGreaterThan(Object.values(narrow)[0] ?? 0);
 });
 
+test("the summary under the stages is one line, and Preview shows a phone shot at its width", async () => {
+  await page.viewport(1440, 900);
+  const el = await mount("?screen=walkthrough&step=preview&theme=dark");
+  const summary = el.querySelector<HTMLElement>(".journey-summary");
+  expect(summary?.getBoundingClientRect().height).toBeLessThanOrEqual(40);
+  const shot = el.querySelector<HTMLElement>(".journey-shot img");
+  expect(shot?.getBoundingClientRect().width).toBeGreaterThanOrEqual(360);
+});
+
 test("a header action sits at the end of the title row", async () => {
   await page.viewport(1440, 900);
   const seen = await each(
