@@ -98,4 +98,26 @@ describe("SetupConfirm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Deny" }));
     expect(onDeny).toHaveBeenCalledOnce();
   });
+
+  test("Deny stops with the reason and what you can do next", async () => {
+    const onAllow = vi.fn();
+    const onEditBrief = vi.fn();
+    render(
+      <SetupConfirm
+        repo="studio-web"
+        command="bun install"
+        onAllow={onAllow}
+        onDeny={() => {}}
+        onEditBrief={onEditBrief}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Deny" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
+    expect(screen.getByText(/Nothing ran in the worktree/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Deny" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Edit the brief" }));
+    expect(onEditBrief).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole("button", { name: "Allow setup" }));
+    expect(onAllow).toHaveBeenCalledWith(false);
+  });
 });

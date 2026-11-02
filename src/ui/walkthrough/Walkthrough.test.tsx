@@ -162,6 +162,18 @@ describe("Walkthrough getting started", () => {
     expect(screen.getByText("No writer available")).toBeVisible();
   });
 
+  test("Start your first task moves from Providers to the empty task list", async () => {
+    at("?screen=walkthrough&step=providers");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Start your first task" }));
+    expect(within(dock()).getByText(position("empty-list"))).toBeVisible();
+    const steps = screen.getByRole("list", { name: "Getting started" });
+    expect(within(steps).getByText("First task").closest("li")).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+  });
+
   test("a missing GitHub sign-in shows on Providers without blocking a writer", () => {
     at("?screen=walkthrough&step=github");
     render(<Walkthrough />);
@@ -185,6 +197,23 @@ describe("Walkthrough getting started", () => {
 });
 
 describe("Walkthrough start a task", () => {
+  test("denying setup stops, and Edit the brief goes back to it", async () => {
+    at("?screen=walkthrough&step=setup");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Deny" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Setup denied" })).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Edit the brief" }));
+    expect(within(dock()).getByText(position("brief-ready"))).toBeVisible();
+  });
+
+  test("after the pull request opens, New task starts the next one", async () => {
+    at("?screen=walkthrough&step=ship");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Open pull request" }));
+    await userEvent.click(screen.getByRole("button", { name: "New task" }));
+    expect(within(dock()).getByText(position("new-task"))).toBeVisible();
+  });
+
   test("each brief step shows the form further filled in", () => {
     at("?screen=walkthrough&step=new-task");
     const blank = render(<Walkthrough />);

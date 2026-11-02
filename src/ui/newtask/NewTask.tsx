@@ -255,7 +255,7 @@ export function NewTask({
         />
       </Fieldset>
 
-      <footer className="newtask-actions">
+      <footer className="newtask-actions newtask-start">
         <Button type="submit" variant="secondary">
           {ready ? "Start task" : "Start anyway"}
         </Button>

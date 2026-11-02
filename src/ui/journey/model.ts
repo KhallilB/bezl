@@ -93,6 +93,8 @@ export type ShipSummary = {
   files: FileChange[];
   /** Each stage in a sentence; this goes into the pull request's description. */
   history: { stage: StageId; text: string }[];
+  /** Where Open lands the pull request. */
+  pullRequest: { number: number; url: string };
 };
 
 export type StageView = {

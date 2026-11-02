@@ -228,6 +228,15 @@
   font-size: var(--kb-size-sm);
 }
 
+/* Start stays in reach however long the form; an overlay sets --page-sticky-bottom to clear itself. */
+.newtask-start {
+  position: sticky;
+  bottom: var(--page-sticky-bottom, 0px);
+  padding-block: var(--kb-space-3);
+  background: color-mix(in oklab, var(--kb-color-bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+}
+
 /* Setup question: one needs-you item with its command. */
 .newtask-setup-status {
   display: flex;
@@ -243,6 +252,10 @@
   height: 1rem;
   color: var(--kb-color-warning);
   transform: translateY(0.125rem);
+}
+
+[data-state="denied"] > .newtask-setup-icon {
+  color: var(--kb-color-muted);
 }
 
 .newtask-command {

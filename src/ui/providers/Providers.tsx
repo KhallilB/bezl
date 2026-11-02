@@ -1,4 +1,6 @@
 import { Badge, Button, Callout, Code, Inline, Panel, Status, Text } from "@kb.ui/react";
+import { useId } from "react";
+import { OnboardingSteps } from "../onboarding/OnboardingSteps";
 import "../shell/page.css";
 import { StateIcon } from "../task/icons";
 import {
@@ -37,6 +39,10 @@ export type ProvidersProps = {
   checking?: boolean;
   error?: string;
   onCheckAgain?: () => void;
+  /** Shows first run's steps; the action then reads "Start your first task". */
+  firstRun?: boolean;
+  /** The way on once a CLI can write; disabled, with the reason, when none can. */
+  onContinue?: () => void;
   /** Omitted: no GitHub row. `null`: its check is in flight. */
   github?: GitHubCheck | null;
 };
@@ -325,18 +331,43 @@ function GitHubPanel({ check }: { check: GitHubCheck | null }) {
   );
 }
 
-function Writers({ checks }: { checks: ProviderCheck[] }) {
+function Writers({
+  checks,
+  action,
+  onContinue,
+}: {
+  checks: ProviderCheck[];
+  action: string;
+  onContinue?: (() => void) | undefined;
+}) {
+  const reason = useId();
   const ready = readyShown(checks);
+  const button = onContinue ? (
+    <Button
+      variant="secondary"
+      disabled={!ready}
+      onClick={onContinue}
+      {...(ready ? {} : { "aria-describedby": reason })}
+    >
+      {action}
+    </Button>
+  ) : null;
   if (ready)
     return (
-      <div>
+      <div className="providers-ready">
         <Shows shown={ready} />
+        {button}
       </div>
     );
   return (
-    <Callout tone="warning" title="No writer available">
-      Fix a CLI below, then Check again.
-    </Callout>
+    <>
+      <div id={reason}>
+        <Callout tone="warning" title="No writer available">
+          Fix a CLI below, then Check again.
+        </Callout>
+      </div>
+      {button ? <div>{button}</div> : null}
+    </>
   );
 }
 
@@ -345,6 +376,8 @@ export function Providers({
   checking = false,
   error,
   onCheckAgain,
+  firstRun = false,
+  onContinue,
   github,
 }: ProvidersProps) {
   const busy = checking || (checks === null && !error);
@@ -364,6 +397,7 @@ export function Providers({
           </div>
           <p className="page-lead">Agent CLIs on PATH, identified by their version output.</p>
         </header>
+        {firstRun ? <OnboardingSteps current="agents" /> : null}
         {busy ? (
           <Status tone="running" live icon={<StateIcon state="running" />}>
             Checking agent CLIs…
@@ -374,7 +408,13 @@ export function Providers({
             {error}
           </Callout>
         ) : null}
-        {checks === null ? null : <Writers checks={checks} />}
+        {checks === null ? null : (
+          <Writers
+            checks={checks}
+            action={firstRun ? "Start your first task" : "New task"}
+            onContinue={onContinue}
+          />
+        )}
         {/* Above the CLI cards, which run long: a missing sign-in should show on day one. */}
         {github === undefined ? null : <GitHubPanel check={github} />}
         {checks === null ? null : (

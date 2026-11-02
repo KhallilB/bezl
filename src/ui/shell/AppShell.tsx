@@ -2,6 +2,7 @@ import { Button } from "@kb.ui/react";
 import type { ReactNode } from "react";
 import { LightIcon } from "../journey/icons";
 import { type JourneyTask, lightLabel, type ProviderUsage, taskLight } from "../journey/model";
+import { OnboardingSteps } from "../onboarding/OnboardingSteps";
 import "./page.css";
 import "./shell.css";
 
@@ -35,7 +36,14 @@ function InboxIcon() {
 }
 
 /** The task list before the first task: one sentence and one action. */
-export function EmptyTasks({ onNewTask }: { onNewTask: () => void }) {
+export function EmptyTasks({
+  onNewTask,
+  firstRun = false,
+}: {
+  onNewTask: () => void;
+  /** Shows first run's last step. */
+  firstRun?: boolean;
+}) {
   return (
     <section className="shell-empty page" aria-labelledby="shell-empty-title">
       <header className="page-header">
@@ -46,6 +54,7 @@ export function EmptyTasks({ onNewTask }: { onNewTask: () => void }) {
           Describe a change, choose who writes and who reviews, and Bezl sets up a worktree for it.
         </p>
       </header>
+      {firstRun ? <OnboardingSteps current="first" /> : null}
       <div>
         <Button variant="secondary" onClick={onNewTask}>
           <PlusIcon />

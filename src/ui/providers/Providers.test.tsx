@@ -335,3 +335,33 @@ describe("Providers", () => {
     expect(within(github).getByText("Checking")).toBeVisible();
   });
 });
+
+describe("Providers on first run", () => {
+  const start = () => screen.queryByRole("button", { name: "Start your first task" });
+
+  test("Agents is the current step, and a writer unlocks Start your first task", async () => {
+    const onContinue = vi.fn();
+    render(<Providers checks={[claudeFound, codexProbed]} firstRun onContinue={onContinue} />);
+    const steps = screen.getByRole("list", { name: "Getting started" });
+    expect(within(steps).getByText("Agents").closest("li")).toHaveAttribute("aria-current", "step");
+    await userEvent.click(start() as HTMLElement);
+    expect(onContinue).toHaveBeenCalledOnce();
+  });
+
+  test("with no writer the action stays, disabled, and says why", () => {
+    render(<Providers checks={noWriter} firstRun onContinue={() => {}} />);
+    expect(start()).toBeDisabled();
+    expect(start()).toHaveAccessibleDescription(/No writer available/);
+  });
+
+  test("no action until preflight returns", () => {
+    render(<Providers checks={null} checking firstRun onContinue={() => {}} />);
+    expect(start()).toBeNull();
+  });
+
+  test("outside first run there are no steps and no action", () => {
+    render(<Providers checks={[claudeFound, codexProbed]} />);
+    expect(screen.queryByRole("list", { name: "Getting started" })).toBeNull();
+    expect(start()).toBeNull();
+  });
+});

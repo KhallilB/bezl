@@ -70,7 +70,16 @@ function SectionList({ section }: { section: Section }) {
 
 type PaneProps = TaskPageProps & { view: StageView };
 
-function StagePane({ task, stage, view, onStage, onKeep, needsYou, onNeedsYou }: PaneProps) {
+function StagePane({
+  task,
+  stage,
+  view,
+  onStage,
+  onKeep,
+  onNewTask,
+  needsYou,
+  onNeedsYou,
+}: PaneProps) {
   // Keeping is the decision Review waits on; once made, the buttons go.
   const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
   const here = needsYou ? itemsFor(needsYou, task.id, stage) : [];
@@ -87,7 +96,9 @@ function StagePane({ task, stage, view, onStage, onKeep, needsYou, onNeedsYou }:
       ) : null}
       {view.problems?.length ? <Problems problems={view.problems} /> : null}
       {view.takes ? <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} /> : null}
-      {view.ship ? <Ship ship={view.ship} onBack={() => onStage("review")} /> : null}
+      {view.ship ? (
+        <Ship ship={view.ship} onBack={() => onStage("review")} onNewTask={onNewTask} />
+      ) : null}
       {view.sections.map((section) => (
         <SectionList key={section.title} section={section} />
       ))}
@@ -104,6 +115,8 @@ export type TaskPageProps = StageStripProps & {
   onNeedsYou?: (items: NeedsYouItem[]) => void;
   /** Shows History in the header when given. */
   onHistory?: () => void;
+  /** Ship offers it once the pull request is open. */
+  onNewTask?: () => void;
 };
 
 /** One task: its header, the stage strip, one status sentence and the open stage. */
