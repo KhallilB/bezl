@@ -21,8 +21,15 @@ import { crew, drafts, issues, paths, startedTask, suggestions } from "../newtas
 import { NewTask } from "../newtask/NewTask";
 import { SetupConfirm } from "../newtask/SetupConfirm";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
-import { claudeFound, codexProbed, noWriter, thisMachine } from "../providers/fixtures";
-import type { ProviderCheck } from "../providers/model";
+import {
+  claudeFound,
+  codexProbed,
+  githubSignedIn,
+  githubSignedOut,
+  noWriter,
+  thisMachine,
+} from "../providers/fixtures";
+import type { GitHubCheck, ProviderCheck } from "../providers/model";
 import { Providers } from "../providers/Providers";
 import { AppShell, EmptyTasks } from "../shell/AppShell";
 import { task } from "../task/fixtures";
@@ -358,10 +365,14 @@ function TaskView({ place, kept, shipped, shared }: TaskViewProps) {
   );
 }
 
-const preflight: Record<Exclude<Preflight, "checking">, ProviderCheck[]> = {
-  ready: [claudeFound, codexProbed],
-  impostor: thisMachine,
-  noWriter,
+const preflight: Record<
+  Exclude<Preflight, "checking">,
+  { checks: ProviderCheck[]; github: GitHubCheck }
+> = {
+  ready: { checks: [claudeFound, codexProbed], github: githubSignedIn },
+  noGitHub: { checks: [claudeFound, codexProbed], github: githubSignedOut },
+  impostor: { checks: thisMachine, github: githubSignedIn },
+  noWriter: { checks: noWriter, github: githubSignedIn },
 };
 
 function View({
@@ -401,10 +412,10 @@ function View({
       );
     case "providers":
       return view.result === "checking" ? (
-        <Providers checks={null} checking firstRun />
+        <Providers checks={null} checking github={null} firstRun />
       ) : (
         <Providers
-          checks={preflight[view.result]}
+          {...preflight[view.result]}
           onCheckAgain={() => onGoTo("preflight")}
           firstRun
           onContinue={() => onGoTo("empty-list")}

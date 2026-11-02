@@ -6,8 +6,14 @@ import { StateIcon } from "../task/icons";
 import {
   canaryShown,
   capabilityRows,
+  type Fix,
   fixes,
   found,
+  type GitHubCheck,
+  githubChecking,
+  githubFixes,
+  githubNote,
+  githubShown,
   homeName,
   limitHit,
   notFound,
@@ -37,6 +43,8 @@ export type ProvidersProps = {
   firstRun?: boolean;
   /** The way on once a CLI can write; disabled, with the reason, when none can. */
   onContinue?: () => void;
+  /** Omitted: no GitHub row. `null`: its check is in flight. */
+  github?: GitHubCheck | null;
 };
 
 /** Backticks mark code, as in the model's fix text. */
@@ -223,8 +231,7 @@ function Tiers({ check }: { check: ProviderCheck }) {
   );
 }
 
-function Fixes({ check }: { check: ProviderCheck }) {
-  const list = fixes(check);
+function Fixes({ list }: { list: Fix[] }) {
   if (list.length === 0) return null;
   return (
     <section className="providers-section">
@@ -272,7 +279,7 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
             {check.pinned ? null : <Badge tone="warning">Untested version</Badge>}
           </Inline>
         ) : null}
-        <Fixes check={check} />
+        <Fixes list={fixes(check)} />
         <SignIn check={check} />
         <ReadOnly check={check} />
         <Tiers check={check} />
@@ -294,6 +301,34 @@ function ProviderPanel({ check }: { check: ProviderCheck }) {
             </ul>
           </section>
         ) : null}
+      </Panel.Body>
+    </Panel>
+  );
+}
+
+function GitHubPanel({ check }: { check: GitHubCheck | null }) {
+  const gh = check?.kind === "found" ? check.detail : null;
+  return (
+    <Panel className="providers-panel" aria-labelledby="github-title">
+      <Panel.Header>
+        <h2 id="github-title" className="providers-title">
+          GitHub
+        </h2>
+        <Shows shown={check ? githubShown(check) : githubChecking} />
+      </Panel.Header>
+      <Panel.Body className="providers-body">
+        {gh ? (
+          <Inline gap="sm">
+            <Code>{gh.path}</Code>
+            <Badge mono preserveCase>
+              {gh.version}
+            </Badge>
+          </Inline>
+        ) : null}
+        <Text size="sm" tone="muted">
+          {githubNote}
+        </Text>
+        {check ? <Fixes list={githubFixes(check)} /> : null}
       </Panel.Body>
     </Panel>
   );
@@ -346,6 +381,7 @@ export function Providers({
   onCheckAgain,
   firstRun = false,
   onContinue,
+  github,
 }: ProvidersProps) {
   const busy = checking || (checks === null && !error);
   return (
@@ -378,18 +414,20 @@ export function Providers({
           </Callout>
         ) : null}
         {checks === null ? null : (
-          <>
-            <Writers
-              checks={checks}
-              action={firstRun ? "Start your first task" : "New task"}
-              onContinue={onContinue}
-            />
-            <div className="providers-grid">
-              {checks.map((c) => (
-                <ProviderPanel key={c.discovery.provider} check={c} />
-              ))}
-            </div>
-          </>
+          <Writers
+            checks={checks}
+            action={firstRun ? "Start your first task" : "New task"}
+            onContinue={onContinue}
+          />
+        )}
+        {/* Above the CLI cards, which run long: a missing sign-in should show on day one. */}
+        {github === undefined ? null : <GitHubPanel check={github} />}
+        {checks === null ? null : (
+          <div className="providers-grid">
+            {checks.map((c) => (
+              <ProviderPanel key={c.discovery.provider} check={c} />
+            ))}
+          </div>
         )}
       </div>
     </div>
