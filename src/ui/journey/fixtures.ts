@@ -8,6 +8,8 @@ import type {
   Shot,
   StageView,
   Take,
+  Trace,
+  TraceNode,
 } from "./model";
 import checklistDesktop from "./samples/projects-checklist-desktop.jpg";
 import checklistPhone from "./samples/projects-checklist-phone.jpg";
@@ -95,6 +97,53 @@ const warm = projects(
     example: true,
   },
 );
+
+const node = (
+  id: string,
+  column: TraceNode["column"],
+  title: string,
+  meta: string,
+  light: TraceNode["light"] = "done",
+): TraceNode => ({ id, column, title, meta, light });
+
+// Attempt A, as Bezl measured it in Check and Codex reviewed it.
+const emptyTrace: Trace = {
+  nodes: [
+    node("i1", "intent", "Shows when there are no projects", "Tests check"),
+    node("i2", "intent", "One clear way to create the first project", "You check", "needsYou"),
+    node("i3", "intent", "Passes accessibility checks", "Bezl checks"),
+    node("projects", "change", "Projects()", "Projects.tsx"),
+    node("empty", "change", "EmptyState", "EmptyState.tsx"),
+    node("link", "change", "ImportLink", "Projects.tsx:41", "needsYou"),
+    node("tests", "measured", "bun run test", "48 passed"),
+    node("axe", "measured", "Accessibility", "0 issues"),
+    node("shots", "measured", "Screenshots", "375 and 1280 px"),
+    node("review", "measured", "Codex review", "1 issue", "needsYou"),
+    node(
+      "import",
+      "decide",
+      "Import from GitHub does nothing yet",
+      "Codex vs Claude Code",
+      "needsYou",
+    ),
+    node("look", "decide", "Does it look right?", "your call", "needsYou"),
+  ],
+  links: [
+    { from: "i1", to: "projects" },
+    { from: "i1", to: "empty" },
+    { from: "i2", to: "empty" },
+    { from: "i2", to: "link" },
+    { from: "i3", to: "empty" },
+    { from: "projects", to: "tests" },
+    { from: "empty", to: "tests" },
+    { from: "empty", to: "axe" },
+    { from: "empty", to: "shots" },
+    { from: "link", to: "review" },
+    { from: "review", to: "import", via: "link" },
+    { from: "shots", to: "look" },
+  ],
+  coverage: { covered: 41, uncovered: 0, unknown: 4, excluded: 6 },
+};
 
 const emptyAssumed: Assumption[] = [
   {
@@ -206,6 +255,7 @@ const emptyState: JourneyTask = {
   ],
   assumptions: emptyAssumed,
   examples: [warm],
+  trace: emptyTrace,
   stages: {
     define: "done",
     plan: "done",
@@ -449,12 +499,40 @@ const snapshotDone = [
   line("Snapshots stay in .git/bezl", "Bezl checks", "done", "proven"),
 ];
 
+const snapshotTrace: Trace = {
+  nodes: [
+    node("s1", "intent", "Restores the colours and the cursor", "Tests check", "failed"),
+    node("s2", "intent", "Snapshots stay in .git/bezl", "Bezl checks"),
+    node("viewer", "change", "SnapshotViewer", "Snapshots.tsx · new"),
+    node("restore", "change", "restoreSnapshot()", "snapshot.ts:23", "needsYou"),
+    node("save", "change", "saveSnapshot()", "snapshot.ts:8"),
+    node("browser", "measured", "Browser tests", "1 failed", "failed"),
+    node("coverage", "measured", "Coverage", "1 function never runs", "needsYou"),
+    node("paths", "measured", "Where files are written", "all in .git/bezl"),
+    node("cursor", "decide", "Cursor lands one row low", "Snapshots.browser.test.tsx:58", "failed"),
+    node("untested", "decide", "No test covers restoreSnapshot", "snapshot.ts:23", "needsYou"),
+  ],
+  links: [
+    { from: "s1", to: "viewer" },
+    { from: "s1", to: "restore" },
+    { from: "s2", to: "save" },
+    { from: "viewer", to: "browser" },
+    { from: "restore", to: "coverage" },
+    { from: "save", to: "browser" },
+    { from: "save", to: "paths" },
+    { from: "browser", to: "cursor", via: "viewer" },
+    { from: "coverage", to: "untested", via: "restore" },
+  ],
+  coverage: { covered: 162, uncovered: 14, unknown: 0, excluded: 8 },
+};
+
 const snapshot: JourneyTask = {
   id: "snapshot",
   title: "Terminal snapshot",
   repo: "bezl",
   current: "check",
   doneWhen: snapshotDone,
+  trace: snapshotTrace,
   stages: {
     define: "done",
     plan: "done",
@@ -516,6 +594,7 @@ const snapshot: JourneyTask = {
             "  received row 13",
           ],
           writer: "Codex",
+          why: "cursor",
         },
         {
           title: "No test covers restoreSnapshot",
@@ -527,6 +606,7 @@ const snapshot: JourneyTask = {
             "No test reaches it in bun run test coverage",
           ],
           writer: "Codex",
+          why: "untested",
         },
       ],
       passed: [

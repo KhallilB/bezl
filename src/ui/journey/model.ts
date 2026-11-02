@@ -85,6 +85,8 @@ export type Problem = {
   evidence: string[];
   /** Who the problem goes to: the writer of its take. */
   writer: string;
+  /** Its node in the task's trace. */
+  why?: string;
 };
 
 export type ShipSummary = {
@@ -125,6 +127,68 @@ export function ciText(ci: CiStatus): string {
     return `${passed} of ${checks(all)} ${passed === 1 ? "has" : "have"} passed, and ${running} ${running === 1 ? "is" : "are"} still running.`;
   const where = ci.on === "merge" ? `the merged commit ${ci.commit}` : "the pull request";
   return `${all === 1 ? "The check" : `All ${checks(all)}`} passed on ${where}.`;
+}
+
+export type TraceColumn = "intent" | "change" | "measured" | "decide";
+
+export const traceColumns: { id: TraceColumn; name: string }[] = [
+  { id: "intent", name: "From the goal" },
+  { id: "change", name: "What changed" },
+  { id: "measured", name: "What Bezl ran" },
+  { id: "decide", name: "What needs you" },
+];
+
+export type TraceNode = {
+  id: string;
+  column: TraceColumn;
+  title: string;
+  meta: string;
+  light: Light;
+};
+
+/** `via` is the code a finding is about, so tracing it skips the rest of that run. */
+export type TraceLink = { from: string; to: string; via?: string };
+
+export type Coverage = { covered: number; uncovered: number; unknown: number; excluded: number };
+
+/** How each done-when line reaches what Bezl measured and what needs you. */
+export type Trace = { nodes: TraceNode[]; links: TraceLink[]; coverage?: Coverage };
+
+/** Everything upstream and downstream of one node. */
+export function lineage({ links }: Trace, start: string): Set<string> {
+  const lit = new Set([start]);
+  const up = (cur: string) => {
+    for (const l of links)
+      if (l.to === cur && !lit.has(l.from)) {
+        lit.add(l.from);
+        if (l.via) lit.add(l.via);
+        up(l.via ?? l.from);
+      }
+  };
+  const down = (cur: string) => {
+    // Starting from a run shows all its findings; otherwise only those on lit code.
+    for (const l of links)
+      if (l.from === cur && !lit.has(l.to) && (!l.via || cur === start || lit.has(l.via))) {
+        lit.add(l.to);
+        down(l.to);
+      }
+  };
+  up(start);
+  down(start);
+  return lit;
+}
+
+/** Every changed line lands in one bucket; empty buckets go unsaid. */
+export function coverageText(c: Coverage): string {
+  const total = c.covered + c.uncovered + c.unknown + c.excluded;
+  const parts: [number, string][] = [
+    [c.covered, "run in a test"],
+    [c.uncovered, "never run"],
+    [c.unknown, "Bezl can't measure"],
+    [c.excluded, "excluded"],
+  ];
+  const said = parts.filter(([n]) => n > 0).map(([n, what]) => `${n} ${what}`);
+  return `${total} changed lines: ${said.join(", ")}`;
 }
 
 export type ShotSize = "phone" | "desktop";
@@ -179,6 +243,7 @@ export type JourneyTask = {
   assumptions?: Assumption[];
   /** Examples of choices not built yet, shown while you point at one. */
   examples?: Shot[];
+  trace?: Trace;
 };
 
 export type DoneWhen = { text: string; checker: string; light: Light; status: string };

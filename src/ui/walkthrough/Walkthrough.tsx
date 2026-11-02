@@ -17,6 +17,7 @@ import { HistoryPage } from "../history/HistoryPage";
 import { keptTasks, shippedTasks, tasks, usage } from "../journey/fixtures";
 import type { JourneyTask, StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
+import type { SideTab } from "../journey/Workbench";
 import { crew, drafts, issues, paths, startedTask, suggestions } from "../newtask/fixtures";
 import { NewTask } from "../newtask/NewTask";
 import { SetupConfirm } from "../newtask/SetupConfirm";
@@ -333,16 +334,18 @@ type TaskViewProps = {
   place: Place;
   kept: boolean;
   shipped?: "checking" | "merged" | undefined;
+  side?: SideTab | undefined;
   shared: Shared;
 };
 
-function TaskView({ place, kept, shipped, shared }: TaskViewProps) {
+function TaskView({ place, kept, shipped, side, shared }: TaskViewProps) {
   const list = shipped ? shippedTasks[shipped] : kept ? keptTasks : tasks;
   const open = list.find((t) => t.id === place.taskId) ?? list[0];
   if (!open) return null;
   return (
     <TasksShell list={list} current={open.id} shared={shared}>
       <TaskPage
+        key={`${open.id}-${side ?? ""}`}
         task={open}
         stage={place.stage}
         onStage={(stage) => shared.onPlace({ ...place, stage })}
@@ -350,6 +353,7 @@ function TaskView({ place, kept, shipped, shared }: TaskViewProps) {
         onNewTask={() => shared.onGoTo("new-task")}
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}
+        {...(side ? { side } : {})}
         {...((kept || shipped) && open.id === history.taskId
           ? { onHistory: () => shared.onGoTo("history") }
           : {})}
@@ -472,6 +476,7 @@ function View({
           place={place ?? view}
           kept={view.kept ?? false}
           shipped={view.shipped}
+          side={view.side}
           shared={shared}
         />
       );

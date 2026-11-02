@@ -28,6 +28,8 @@ export type NeedsYouItem = {
   blocks?: string;
   /** The choice id Bezl would pick; you still decide. */
   recommended?: string;
+  /** The task's trace node that says why Bezl asks. */
+  why?: string;
   waited: string;
   choices: NeedsYouChoice[];
 };

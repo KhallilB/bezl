@@ -156,7 +156,14 @@ export function Takes({
 const problemCount = (n: number) => (n === 1 ? "1 problem" : `${n} problems`);
 
 /** Problems first, one open at a time with what Bezl saw; one send for all. */
-export function Problems({ problems }: { problems: Problem[] }) {
+export function Problems({
+  problems,
+  onWhy,
+}: {
+  problems: Problem[];
+  /** Opens the trace at a problem. */
+  onWhy?: ((id: string) => void) | undefined;
+}) {
   const id = useId();
   const [open, setOpen] = useState(0);
   const [sent, setSent] = useState(false);
@@ -188,6 +195,15 @@ export function Problems({ problems }: { problems: Problem[] }) {
                 <p>{p.detail}</p>
                 <span className="journey-mono journey-problem-where">{p.where}</span>
                 <pre className="journey-evidence">{p.evidence.join("\n")}</pre>
+                {p.why && onWhy ? (
+                  <button
+                    type="button"
+                    className="journey-link"
+                    onClick={() => onWhy(p.why as string)}
+                  >
+                    See the trace
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </li>

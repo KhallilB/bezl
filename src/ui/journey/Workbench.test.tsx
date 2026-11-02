@@ -43,7 +43,7 @@ describe("context line", () => {
 
   test("the goal opens Intent: what's proven, what you decided and what was assumed", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    await userEvent.click(screen.getByRole("button", { name: "3 of 4 proven" }));
+    await userEvent.click(screen.getByRole("button", { name: /When someone has no projects/ }));
     expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
     const done = within(side()).getByRole("list", { name: "Done when" });
     expect(within(done).getAllByRole("listitem")).toHaveLength(4);
@@ -182,9 +182,56 @@ describe("Preview", () => {
     render(<Harness id="empty-state" stage="review" />);
     preview().focus();
     await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Trace" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Trace" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{End}");
     expect(screen.getByRole("tab", { name: "Intent" })).toHaveFocus();
-    expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
     await userEvent.keyboard("{Home}");
     expect(preview()).toHaveFocus();
+  });
+});
+
+describe("Trace", () => {
+  const trace = () => screen.getByRole("tab", { name: "Trace" });
+
+  test("starts from what needs you, then shows how one connects", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(trace());
+    expect(within(side()).getByText(/51 changed lines: 41 run in a test/)).toBeVisible();
+    await userEvent.click(
+      within(side()).getByRole("button", { name: /Import from GitHub does nothing yet/ }),
+    );
+    const chain = within(side()).getByRole("list", { name: "How it connects" });
+    expect(within(chain).getByRole("button", { name: /Codex review/ })).toBeVisible();
+    expect(within(chain).getByRole("button", { name: /ImportLink/ })).toBeVisible();
+    expect(within(chain).queryByRole("button", { name: /Projects\(\)/ })).toBeNull();
+  });
+
+  test("Why Bezl asks opens the trace at that question", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(screen.getByRole("button", { name: "Why Bezl asks" }));
+    expect(trace()).toHaveAttribute("aria-selected", "true");
+    expect(
+      within(side()).getByRole("button", { name: /Import from GitHub does nothing yet/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("the evidence opens Trace", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(screen.getByRole("button", { name: "3 of 4 proven" }));
+    expect(trace()).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("a problem opens the trace at itself", async () => {
+    render(<Harness id="snapshot" stage="check" />);
+    await userEvent.click(screen.getByRole("button", { name: "See the trace" }));
+    expect(
+      within(side()).getByRole("button", { name: /Cursor lands one row low/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("nothing measured, no Trace", () => {
+    render(<Harness id="debounce" stage="build" />);
+    expect(screen.queryByRole("tab", { name: "Trace" })).toBeNull();
   });
 });

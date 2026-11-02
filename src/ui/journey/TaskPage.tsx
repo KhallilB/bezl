@@ -71,13 +71,21 @@ function SectionList({ section }: { section: Section }) {
 
 type PaneProps = TaskPageProps & { view: StageView };
 
-function StagePane({ task, stage, view, onStage, onKeep, onNewTask }: PaneProps) {
+function StagePane({
+  task,
+  stage,
+  view,
+  onStage,
+  onKeep,
+  onNewTask,
+  onWhy,
+}: PaneProps & { onWhy?: ((id: string) => void) | undefined }) {
   // Keeping is the decision Review waits on; once made, the buttons go.
   const keep = stage === "review" && task.stages.review === "needsYou" ? onKeep : undefined;
   return (
     <>
       {view.quote ? <blockquote className="journey-quote">{view.quote}</blockquote> : null}
-      {view.problems?.length ? <Problems problems={view.problems} /> : null}
+      {view.problems?.length ? <Problems problems={view.problems} onWhy={onWhy} /> : null}
       {view.takes ? <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} /> : null}
       {view.ship ? (
         <Ship
@@ -105,13 +113,18 @@ export type TaskPageProps = StageStripProps & {
   onHistory?: () => void;
   /** Ship offers it once the pull request is open. */
   onNewTask?: () => void;
+  /** The side tab to open on; Preview when the stage has screenshots. */
+  side?: SideTab;
 };
 
 /** One task: header, stages, context line, status; then the stage beside its intent. */
-export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageProps) {
+export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest }: TaskPageProps) {
   const view = task.views[stage];
   const { needsYou, onNeedsYou } = rest;
-  const [tab, setTab] = useState<SideTab>("preview");
+  const [tab, setTab] = useState<SideTab>(first ?? "preview");
+  const [focus, setFocus] = useState<string | null>(
+    first === "trace" ? (view.problems?.[0]?.why ?? null) : null,
+  );
   const [example, setExample] = useState<string | null>(null);
   const [answered, setAnswered] = useState<Answer[]>([]);
   const [raised, setRaised] = useState<string | null>(null);
@@ -126,6 +139,12 @@ export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageP
     setTab(t);
     side.current?.scrollIntoView?.({ block: "nearest" });
   };
+  const why = task.trace
+    ? (id: string) => {
+        setFocus(id);
+        open("trace");
+      }
+    : undefined;
   return (
     <article className="journey page" aria-labelledby={`task-${task.id}`}>
       <header className="page-header">
@@ -143,7 +162,12 @@ export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageP
           ) : null}
         </div>
         <StageStrip task={task} stage={stage} onStage={onStage} />
-        <ContextBar context={contextOf(task)} preview={shots.length > 0} onOpen={open} />
+        <ContextBar
+          context={contextOf(task)}
+          preview={shots.length > 0}
+          trace={Boolean(task.trace)}
+          onOpen={open}
+        />
         <p className="page-status">
           <strong>{view.lead}</strong>
           {view.rest ? ` ${view.rest}` : null}
@@ -159,6 +183,7 @@ export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageP
               items={here}
               answered={mine.filter((a) => a.item.stage === stage)}
               prefer={raised}
+              onWhy={why}
               onExample={(id) => {
                 setExample(id);
                 if (id) setTab("preview");
@@ -177,6 +202,7 @@ export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageP
             stage={stage}
             view={view}
             onStage={onStage}
+            onWhy={why}
             {...rest}
           />
           {view.handled?.length ? <HandledList handled={view.handled} /> : null}
@@ -187,6 +213,9 @@ export function TaskPage({ task, stage, onStage, onHistory, ...rest }: TaskPageP
             onTab={setTab}
             shots={shots}
             example={shown}
+            trace={task.trace}
+            focus={focus}
+            onFocus={setFocus}
             goal={contextOf(task).goal}
             doneWhen={task.doneWhen ?? []}
             decisions={[

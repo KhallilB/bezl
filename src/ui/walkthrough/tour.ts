@@ -1,4 +1,5 @@
 import type { StageId } from "../journey/model";
+import type { SideTab } from "../journey/Workbench";
 import type { drafts } from "../newtask/fixtures";
 import { oneOf, type Scene, type Theme, themes } from "./states";
 
@@ -31,6 +32,8 @@ export type TourView =
       stage: StageId;
       kept?: boolean;
       shipped?: "checking" | "merged";
+      /** The side tab it opens on. */
+      side?: SideTab;
     }
   | { kind: "approvals"; cleared?: boolean }
   | { kind: "history" }
@@ -193,6 +196,13 @@ export const steps: Step[] = [
     title: "Problems first",
     note: "Failing checks and changed code without a test come first, each with the evidence Bezl saw, and one button sends them all to the writer together. Checks that passed stay folded away.",
     view: { kind: "task", taskId: "snapshot", stage: "check" },
+  },
+  {
+    id: "trace",
+    chapter: "Your tasks",
+    title: "Follow the evidence",
+    note: "Trace follows a problem back through the code it's about to the line of your goal it puts at risk, with every changed line accounted for. Why Bezl asks, beside a question, opens it at that question.",
+    view: { kind: "task", taskId: "snapshot", stage: "check", side: "trace" },
   },
   {
     id: "review-takes",

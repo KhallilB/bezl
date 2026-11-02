@@ -11,20 +11,25 @@ import {
   type Shot,
   stageLabel,
   type TaskContext,
+  type Trace,
 } from "./model";
 import { Preview } from "./Preview";
+import { TraceView } from "./TraceView";
 
-export type SideTab = "preview" | "intent";
+export type SideTab = "preview" | "trace" | "intent";
 
 /** One line under the stages: the goal, what changed, how much is proven. */
 export function ContextBar({
   context,
   preview,
+  trace,
   onOpen,
 }: {
   context: TaskContext;
   /** This stage has screenshots, so what changed can open them. */
   preview: boolean;
+  /** Bezl measured something, so the evidence opens its trace. */
+  trace: boolean;
   onOpen: (tab: SideTab) => void;
 }) {
   return (
@@ -53,7 +58,11 @@ export function ContextBar({
       </li>
       <li>
         <span className="journey-context-label">Evidence</span>
-        <button type="button" className="journey-context-link" onClick={() => onOpen("intent")}>
+        <button
+          type="button"
+          className="journey-context-link"
+          onClick={() => onOpen(trace ? "trace" : "intent")}
+        >
           {context.evidence}
         </button>
       </li>
@@ -122,6 +131,7 @@ export function Questions({
   prefer,
   onAnswer,
   onExample,
+  onWhy,
 }: {
   items: NeedsYouItem[];
   answered: Answer[];
@@ -129,6 +139,8 @@ export function Questions({
   prefer?: string | null;
   onAnswer: (item: NeedsYouItem, choice: NeedsYouChoice) => void;
   onExample?: OnExample;
+  /** Opens the trace at a question's evidence. */
+  onWhy?: ((id: string) => void) | undefined;
 }) {
   const id = useId();
   const [picked, setPicked] = useState<string | null>(null);
@@ -181,6 +193,15 @@ export function Questions({
                   ) : null}
                   {item.blocks ? (
                     <p className="journey-blocks">{`Holds up ${item.blocks}`}</p>
+                  ) : null}
+                  {item.why && onWhy ? (
+                    <button
+                      type="button"
+                      className="journey-link"
+                      onClick={() => onWhy(item.why as string)}
+                    >
+                      Why Bezl asks
+                    </button>
                   ) : null}
                   {choice ? (
                     <p className="journey-then">
@@ -321,16 +342,21 @@ function Intent({ goal, doneWhen, decisions, assumptions, raised, onChange }: In
 type SideProps = IntentProps & {
   tab: SideTab;
   onTab: (t: SideTab) => void;
+  trace?: Trace | undefined;
+  /** The trace node the chain is drawn from; null lists what needs you. */
+  focus: string | null;
+  onFocus: (id: string | null) => void;
   shots: Shot[];
   /** An example to show in place of the screenshots while a choice is pointed at. */
   example: Shot | null;
 };
 
 /** Beside every stage: what it looks like and what it's for, kept in view while you decide. */
-export function Side({ tab, onTab, shots, example, ...intent }: SideProps) {
+export function Side({ tab, onTab, shots, example, trace, focus, onFocus, ...intent }: SideProps) {
   const id = useId();
   const tabs: { id: SideTab; name: string }[] = [
     ...(shots.length || example ? [{ id: "preview" as const, name: "Preview" }] : []),
+    ...(trace ? [{ id: "trace" as const, name: "Trace" }] : []),
     { id: "intent", name: "Intent" },
   ];
   const shown = tabs.some((t) => t.id === tab) ? tab : "intent";
@@ -375,7 +401,13 @@ export function Side({ tab, onTab, shots, example, ...intent }: SideProps) {
         aria-labelledby={`${id}-${shown}`}
         className="journey-side-panel"
       >
-        {shown === "preview" ? <Preview shots={shots} example={example} /> : <Intent {...intent} />}
+        {shown === "preview" ? (
+          <Preview shots={shots} example={example} />
+        ) : shown === "trace" && trace ? (
+          <TraceView trace={trace} focus={focus} onFocus={onFocus} />
+        ) : (
+          <Intent {...intent} />
+        )}
       </div>
     </aside>
   );
