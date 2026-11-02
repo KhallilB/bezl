@@ -10,8 +10,8 @@ export const kindLabel: Record<NeedsYouKind, string> = {
   dispute: "Disputed issue",
 };
 
-/** `next` says what happens once you choose it. */
-export type NeedsYouChoice = { id: string; label: string; next: string };
+/** `next` says what happens once you choose it; `example` names a Shot that shows it. */
+export type NeedsYouChoice = { id: string; label: string; next: string; example?: string };
 
 export type NeedsYouItem = {
   id: string;
@@ -28,6 +28,8 @@ export type NeedsYouItem = {
   blocks?: string;
   /** The choice id Bezl would pick; you still decide. */
   recommended?: string;
+  /** The task's trace node that says why Bezl asks. */
+  why?: string;
   waited: string;
   choices: NeedsYouChoice[];
 };

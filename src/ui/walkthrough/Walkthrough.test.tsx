@@ -42,9 +42,27 @@ describe("Walkthrough tour", () => {
     render(<Walkthrough />);
     expect(within(dock()).getByText("What it's for, how big, how sure")).toBeVisible();
     const context = screen.getByRole("list", { name: "This task" });
-    await userEvent.click(within(context).getByRole("button", { name: "3 of 4 proven" }));
+    await userEvent.click(within(context).getByRole("button", { name: /When someone has no/ }));
     expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("list", { name: "Decided" })).toBeVisible();
+  });
+
+  test("the preview step shows the change as Bezl captured it", async () => {
+    at("?screen=walkthrough&step=preview");
+    render(<Walkthrough />);
+    expect(within(dock()).getByText("See it before you decide")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(screen.getByRole("button", { name: "A, loading" }));
+    expect(screen.getByRole("img", { name: "Projects, A, loading, at 375 px" })).toBeVisible();
+  });
+
+  test("the trace step follows a problem back to the goal, arriving from the step before", async () => {
+    at("?screen=walkthrough&step=problems");
+    render(<Walkthrough />);
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(within(dock()).getByText("Follow the evidence")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Trace" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("list", { name: "How it connects" })).toBeVisible();
   });
 
   test("starts at the first step, where Back is off", () => {

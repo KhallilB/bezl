@@ -1,6 +1,6 @@
-import { Button, Input } from "@kb.ui/react";
+import { Badge, Button, Input, Panel, Status } from "@kb.ui/react";
 import { useId, useState } from "react";
-import { LightIcon } from "./icons";
+import { LightIcon, lightTone } from "./icons";
 import "./journey.css";
 import {
   type CiStatus,
@@ -84,48 +84,57 @@ function TakeCard({ take, onKeep }: { take: Take; onKeep?: ((id: string) => void
       data-light={take.light}
       aria-label={`Attempt ${take.id}, ${take.model}`}
     >
-      <header className="journey-take-head">
-        <span className="journey-take-letter" aria-hidden="true">
-          {take.id}
-        </span>
-        <h2>{take.model}</h2>
-        <span className="journey-take-state">
-          <LightIcon light={take.light} />
-          {take.state}
-        </span>
-      </header>
-      {take.activity ? <p className="journey-take-activity">{take.activity}</p> : null}
-      {take.verdict ? (
-        <p className="journey-verdict">
-          <strong>{`${take.verdict.by}:`}</strong> {take.verdict.text}
-        </p>
-      ) : null}
-      {take.findings?.length ? (
-        <ul className="journey-findings" aria-label={`Issues on attempt ${take.id}`}>
-          {take.findings.map((f) => (
-            <li key={f.text} className="journey-row journey-finding" data-light={f.light}>
-              <span className="journey-row-icon">
-                <LightIcon light={f.light} />
-                <span className="journey-sr">{`${lightLabel[f.light]}: `}</span>
-              </span>
-              <span className="journey-row-text">
-                {f.text}
-                {f.where ? <span className="journey-finding-where">{f.where}</span> : null}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {take.files?.length ? (
-        <Files files={take.files} label={`Files attempt ${take.id} changed`} />
-      ) : null}
-      {onKeep ? (
-        <footer className="journey-take-actions">
-          <Button variant="secondary" onClick={() => onKeep(take.id)}>
-            {`Keep attempt ${take.id}`}
-          </Button>
-        </footer>
-      ) : null}
+      <Panel className="journey-take-panel">
+        <Panel.Header className="journey-take-head">
+          <Badge mono aria-hidden="true">
+            {take.id}
+          </Badge>
+          <h2>{take.model}</h2>
+          <Status
+            appearance="chip"
+            tone={lightTone[take.light]}
+            icon={<LightIcon light={take.light} />}
+          >
+            {take.state}
+          </Status>
+        </Panel.Header>
+        <Panel.Body className="journey-take-body">
+          {take.activity ? <p className="journey-take-activity">{take.activity}</p> : null}
+          {take.verdict ? (
+            <p className="journey-verdict">
+              <strong>{`${take.verdict.by}:`}</strong> {take.verdict.text}
+            </p>
+          ) : null}
+          {take.findings?.length ? (
+            <ul className="journey-findings" aria-label={`Issues on attempt ${take.id}`}>
+              {take.findings.map((f) => (
+                <li key={f.text} className="journey-row journey-finding" data-light={f.light}>
+                  <span className="journey-row-icon">
+                    <LightIcon light={f.light} />
+                    <span className="journey-sr">{`${lightLabel[f.light]}: `}</span>
+                  </span>
+                  <span className="journey-row-text">
+                    {f.text}
+                    {f.where ? <span className="journey-finding-where">{f.where}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {take.files?.length ? (
+            <Panel.Well>
+              <Files files={take.files} label={`Files attempt ${take.id} changed`} />
+            </Panel.Well>
+          ) : null}
+        </Panel.Body>
+        {onKeep ? (
+          <Panel.Footer>
+            <Button variant="secondary" onClick={() => onKeep(take.id)}>
+              {`Keep attempt ${take.id}`}
+            </Button>
+          </Panel.Footer>
+        ) : null}
+      </Panel>
     </article>
   );
 }
@@ -156,7 +165,14 @@ export function Takes({
 const problemCount = (n: number) => (n === 1 ? "1 problem" : `${n} problems`);
 
 /** Problems first, one open at a time with what Bezl saw; one send for all. */
-export function Problems({ problems }: { problems: Problem[] }) {
+export function Problems({
+  problems,
+  onWhy,
+}: {
+  problems: Problem[];
+  /** Opens the trace at a problem. */
+  onWhy?: ((id: string) => void) | undefined;
+}) {
   const id = useId();
   const [open, setOpen] = useState(0);
   const [sent, setSent] = useState(false);
@@ -170,26 +186,35 @@ export function Problems({ problems }: { problems: Problem[] }) {
       <ul className="journey-problems" aria-labelledby={id}>
         {problems.map((p, i) => (
           <li key={p.title} className="journey-problem" data-light="failed">
-            <button
-              type="button"
-              className="journey-problem-head"
-              aria-expanded={open === i}
-              aria-controls={`${id}-${i}`}
-              onClick={() => setOpen(open === i ? -1 : i)}
-            >
-              <span className="journey-row-icon">
-                <LightIcon light="failed" />
-              </span>
-              <span className="journey-row-text">{p.title}</span>
-              <span className="journey-row-meta">{p.kind}</span>
-            </button>
-            {open === i ? (
-              <div id={`${id}-${i}`} className="journey-problem-body">
-                <p>{p.detail}</p>
-                <span className="journey-mono journey-problem-where">{p.where}</span>
-                <pre className="journey-evidence">{p.evidence.join("\n")}</pre>
-              </div>
-            ) : null}
+            <Panel density="compact" tone={open === i ? "critical" : "quiet"}>
+              <button
+                type="button"
+                className="journey-problem-head"
+                aria-expanded={open === i}
+                aria-controls={`${id}-${i}`}
+                onClick={() => setOpen(open === i ? -1 : i)}
+              >
+                <span className="journey-row-icon">
+                  <LightIcon light="failed" />
+                </span>
+                <span className="journey-row-text">{p.title}</span>
+                <span className="journey-row-meta">
+                  <Badge tone="danger">{p.kind}</Badge>
+                </span>
+              </button>
+              {open === i ? (
+                <div id={`${id}-${i}`} className="journey-problem-body">
+                  <p>{p.detail}</p>
+                  <span className="journey-mono journey-problem-where">{p.where}</span>
+                  <pre className="journey-evidence">{p.evidence.join("\n")}</pre>
+                  {p.why && onWhy ? (
+                    <Button size="sm" variant="ghost" onClick={() => onWhy(p.why as string)}>
+                      See the trace
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </Panel>
           </li>
         ))}
       </ul>

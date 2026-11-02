@@ -85,6 +85,8 @@ export type Problem = {
   evidence: string[];
   /** Who the problem goes to: the writer of its take. */
   writer: string;
+  /** Its node in the task's trace. */
+  why?: string;
 };
 
 export type ShipSummary = {
@@ -127,7 +129,90 @@ export function ciText(ci: CiStatus): string {
   return `${all === 1 ? "The check" : `All ${checks(all)}`} passed on ${where}.`;
 }
 
+export type TraceColumn = "intent" | "change" | "measured" | "decide";
+
+export const traceColumns: { id: TraceColumn; name: string }[] = [
+  { id: "intent", name: "From the goal" },
+  { id: "change", name: "What changed" },
+  { id: "measured", name: "What Bezl ran" },
+  { id: "decide", name: "What needs you" },
+];
+
+export type TraceNode = {
+  id: string;
+  column: TraceColumn;
+  title: string;
+  meta: string;
+  light: Light;
+};
+
+/** `via` is the code a finding is about, so tracing it skips the rest of that run. */
+export type TraceLink = { from: string; to: string; via?: string };
+
+export type Coverage = { covered: number; uncovered: number; unknown: number; excluded: number };
+
+/** How each done-when line reaches what Bezl measured and what needs you. */
+export type Trace = { nodes: TraceNode[]; links: TraceLink[]; coverage?: Coverage };
+
+/** Everything upstream and downstream of one node. */
+export function lineage({ links }: Trace, start: string): Set<string> {
+  const lit = new Set([start]);
+  const up = (cur: string) => {
+    for (const l of links)
+      if (l.to === cur && !lit.has(l.from)) {
+        lit.add(l.from);
+        if (l.via) lit.add(l.via);
+        up(l.via ?? l.from);
+      }
+  };
+  const down = (cur: string) => {
+    // Starting from a run shows all its findings; otherwise only those on lit code.
+    for (const l of links)
+      if (l.from === cur && !lit.has(l.to) && (!l.via || cur === start || lit.has(l.via))) {
+        lit.add(l.to);
+        down(l.to);
+      }
+  };
+  up(start);
+  down(start);
+  return lit;
+}
+
+/** Every changed line lands in one bucket; empty buckets go unsaid. */
+export function coverageText(c: Coverage): string {
+  const total = c.covered + c.uncovered + c.unknown + c.excluded;
+  const parts: [number, string][] = [
+    [c.covered, "run in a test"],
+    [c.uncovered, "never run"],
+    [c.unknown, "Bezl can't measure"],
+    [c.excluded, "excluded"],
+  ];
+  const said = parts.filter(([n]) => n > 0).map(([n, what]) => `${n} ${what}`);
+  return `${total} changed lines: ${said.join(", ")}`;
+}
+
+export type ShotSize = "phone" | "desktop";
+
+export const shotWidth: Record<ShotSize, number> = { phone: 375, desktop: 1280 };
+
+/** A finding Bezl placed on a screenshot; x and y are percentages of it. */
+export type ShotPin = { size: ShotSize; x: number; y: number; text: string };
+
+/** One state of a screen Bezl captured at both sizes; an example is a choice not built yet. */
+export type Shot = {
+  id: string;
+  name: string;
+  screen: string;
+  from: string;
+  commit: string;
+  images: Record<ShotSize, string>;
+  example?: boolean;
+  findings?: ShotPin[];
+};
+
 export type StageView = {
+  /** Screens as Bezl captured them at this stage. */
+  shots?: Shot[];
   /** Questions Bezl answered, sent back or merged, so they never reached you. */
   handled?: Handled[];
   /** The status sentence: a bold lead, then the rest. */
@@ -156,6 +241,9 @@ export type JourneyTask = {
   /** Answers you gave earlier, kept with the stage that asked. */
   decisions?: Decision[];
   assumptions?: Assumption[];
+  /** Examples of choices not built yet, shown while you point at one. */
+  examples?: Shot[];
+  trace?: Trace;
 };
 
 export type DoneWhen = { text: string; checker: string; light: Light; status: string };
@@ -176,9 +264,10 @@ export type Handled = {
   by: "answered" | "returned" | "merged" | "dropped";
 };
 
-export type TaskContext = { goal: string; touches: string; evidence: string };
+export type TaskContext = { goal: string; touches: string; screens: number; evidence: string };
 
 const files = (n: number) => (n === 1 ? "1 file" : `${n} files`);
+const screens = (n: number) => (n === 1 ? "1 screen" : `${n} screens`);
 
 /** Ship's kept attempt wins; otherwise the latest stage with attempts. */
 function changed(task: JourneyTask): string {
@@ -200,9 +289,15 @@ export function contextOf(task: JourneyTask): TaskContext {
   const lines = task.doneWhen ?? [];
   const proven = lines.filter((l) => l.light === "done").length;
   const checked = lines.some((l) => l.light !== "waiting");
+  const shown = new Set(stageIds.flatMap((id) => task.views[id].shots ?? []).map((s) => s.screen));
+  const touches = changed(task);
   return {
     goal: task.views.define.quote ?? task.title,
-    touches: changed(task),
+    touches:
+      shown.size && touches !== "Nothing changed yet"
+        ? `${touches} · ${screens(shown.size)}`
+        : touches,
+    screens: shown.size,
     evidence: checked ? `${proven} of ${lines.length} proven` : "Not checked yet",
   };
 }

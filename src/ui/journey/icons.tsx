@@ -1,4 +1,14 @@
+import type { StatusTone } from "@kb.ui/react";
 import type { Light, TaskLight } from "./model";
+
+/** kbui Status tone per light, so chips match Providers and Terminals. */
+export const lightTone: Record<Light, StatusTone> = {
+  done: "success",
+  working: "running",
+  needsYou: "warning",
+  failed: "blocked",
+  waiting: "neutral",
+};
 
 /** Shape differs per light, so meaning never rests on colour alone. */
 export function LightIcon({ light }: { light: Light | TaskLight }) {
