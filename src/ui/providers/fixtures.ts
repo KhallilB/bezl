@@ -86,6 +86,7 @@ export const claudeFound: ProviderCheck = {
     found: { path: "/Users/me/.local/bin/claude", version: "2.1.312" },
     rejected: [],
   },
+  pinned: true,
   signin: { kind: "canary", detail: { kind: "signedIn", detail: { model: "claude-haiku-5-5" } } },
   usage: {
     tokens: {
@@ -175,6 +176,7 @@ export const thisMachine: ProviderCheck[] = [
       found: null,
       rejected: [{ path: "/Users/me/.bun/bin/codex", reason: { kind: "says", detail: "0.2.3" } }],
     },
+    pinned: false,
     signin: { kind: "noBinary" },
     usage: unknown,
     readOnly: { kind: "noBinary" },
@@ -195,6 +197,7 @@ export const codexFound: ProviderCheck = {
       },
     ],
   },
+  pinned: true,
   signin: {
     kind: "homes",
     detail: [

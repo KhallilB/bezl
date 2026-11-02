@@ -14,7 +14,7 @@ env -u CLAUDECODE cargo test -p bezl --lib providers::contract::tests::live -- -
 
 - `BEZL_LIVE_CLAUDE`, `BEZL_LIVE_CODEX`: binary paths. Without them, the first real one on `PATH` is used.
 - `BEZL_LIVE_CODEX_HOME`: a signed-in Codex home. It defaults to `CODEX_HOME`, else `~/.codex`.
-- Cost on 2026-10-30: about $0.004–0.008 of Claude Code (canary, stream canary and probe; signed-out runs are free), plus two Codex calls of about 26k and 52k input tokens. The Codex `exec` run is not ephemeral, so it leaves one session in that Codex home.
+- Cost on 2026-10-30: about $0.004–0.008 of Claude Code (canary, stream canary and probe; signed-out runs are free), plus two Codex calls of about 26k and 52k input tokens. On 2026-11-01 Claude Code cost $0.137, $0.13 of it the stream canary. The Codex `exec` run is not ephemeral, so it leaves one session in that Codex home.
 
 An installed version that is not pinned fails, and is reported as unpinned, never parsed against another version's captures.
 

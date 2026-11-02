@@ -6,6 +6,7 @@ use super::Provider;
 pub const PINNED: &[(Provider, &str)] = &[
     (Provider::ClaudeCode, "2.1.312"),
     (Provider::Codex, "0.163.0"),
+    (Provider::Codex, "0.166.0"),
 ];
 
 /// Unpinned is untested: no capture shows Bezl parses its output.
@@ -407,7 +408,7 @@ mod tests {
         assert!(!pinned(ClaudeCode, "0.163.0"));
         assert_eq!(
             pinned_dir(Codex, "9.9.9"),
-            Err("codex 9.9.9 is not pinned (pinned: 0.163.0); \
+            Err("codex 9.9.9 is not pinned (pinned: 0.163.0, 0.166.0); \
                  capture it as fixtures/README.md says"
                 .into())
         );

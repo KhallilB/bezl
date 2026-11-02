@@ -25,6 +25,24 @@ describe("Providers", () => {
     expect(status.closest(".kb-status")).toHaveAttribute("data-tone", "success");
   });
 
+  test("marks a found version without contract captures as Untested version", () => {
+    const unpinned: ProviderCheck = {
+      ...codexFound,
+      discovery: {
+        ...codexFound.discovery,
+        found: { path: "/opt/codex/bin/codex", version: "0.199.0" },
+      },
+      pinned: false,
+    };
+    render(<Providers checks={[claudeFound, unpinned]} />);
+    const codex = screen.getByRole("region", { name: "Codex" });
+    const untested = within(codex).getByText("Untested version");
+    expect(untested).toBeVisible();
+    expect(untested).toHaveAttribute("data-tone", "warning");
+    const claude = screen.getByRole("region", { name: "Claude Code" });
+    expect(within(claude).queryByText("Untested version")).toBeNull();
+  });
+
   test("shows each Claude canary result with its own label and tone", () => {
     const claudeWith = (canary: ClaudeSignIn): ProviderCheck => ({
       ...claudeFound,
