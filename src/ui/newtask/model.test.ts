@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   type BriefDraft,
+  briefFromIssue,
   type CrewProvider,
   readiness,
   reviewerChoices,
@@ -110,5 +111,40 @@ describe("reviewerChoices", () => {
     });
     expect(choices.find((c) => c.id === "claude")?.disabled).toBeUndefined();
     expect(choices.find((c) => c.id === "codex")?.note).toBeUndefined();
+  });
+});
+
+describe("briefFromIssue", () => {
+  const issue = {
+    number: 128,
+    title: "Projects page shows an empty table for new users",
+    body: "New users land here right after sign-up and see nothing to do.\n\n- [ ] The empty state shows when there are no projects\n- [x] There's one clear way to create the first project\n",
+    url: "https://github.com/acme/studio-web/issues/128",
+  };
+
+  test("the title and prose become the brief, and checklist items become done checks", () => {
+    const draft = briefFromIssue(issue);
+    expect(draft.text).toBe(
+      "Projects page shows an empty table for new users\n\nNew users land here right after sign-up and see nothing to do.",
+    );
+    expect(draft.doneWhen).toEqual([
+      { text: "The empty state shows when there are no projects", checker: "you" },
+      { text: "There's one clear way to create the first project", checker: "you" },
+    ]);
+    expect(draft.issue).toEqual({ number: 128, url: issue.url });
+  });
+
+  test("reads Windows line endings, as GitHub often stores them", () => {
+    const draft = briefFromIssue({ ...issue, body: issue.body.replaceAll("\n", "\r\n") });
+    expect(draft.doneWhen).toHaveLength(2);
+    expect(draft.text).not.toContain("\r");
+  });
+
+  test("an issue with no body is just its title", () => {
+    expect(briefFromIssue({ ...issue, body: "" })).toEqual({
+      text: issue.title,
+      doneWhen: [],
+      issue: { number: 128, url: issue.url },
+    });
   });
 });

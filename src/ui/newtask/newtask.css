@@ -37,6 +37,78 @@
   gap: var(--kb-space-6);
 }
 
+/* Start from a GitHub issue: a toggle, the open issues, then a note once one is picked. */
+.newtask-issues,
+.newtask-issue-list {
+  display: grid;
+  justify-items: start;
+  gap: var(--kb-space-3);
+}
+
+.newtask-issue-list {
+  justify-items: stretch;
+  width: 100%;
+}
+
+.newtask-issue-list > p,
+.newtask-issue-picked p {
+  margin: 0;
+  color: var(--newtask-soft);
+  font-size: var(--kb-size-sm);
+}
+
+.newtask-issue {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--kb-space-3);
+  width: 100%;
+  padding: var(--kb-space-2) var(--kb-space-3);
+  border: 0;
+  border-radius: var(--kb-radius-md);
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--newtask-ring);
+  color: var(--kb-color-fg);
+  font: inherit;
+  font-size: var(--kb-size-sm);
+  text-align: start;
+  cursor: pointer;
+}
+
+.newtask-issue-list ul {
+  display: grid;
+  gap: var(--kb-space-2);
+}
+
+.newtask-issue:hover {
+  background: color-mix(in oklab, var(--kb-color-fg) 5%, transparent);
+}
+
+.newtask-issue:focus-visible {
+  outline: 2px solid var(--kb-color-info);
+  outline-offset: 2px;
+}
+
+.newtask-issue-number,
+.newtask-issue-labels {
+  color: var(--kb-color-muted);
+  font-family: var(--newtask-mono);
+  font-size: var(--kb-size-xs);
+}
+
+.newtask-issue-picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kb-space-2) var(--kb-space-3);
+}
+
+.newtask-issue-picked a {
+  color: var(--kb-color-info);
+  text-underline-offset: 0.2em;
+}
+
 .newtask-parts {
   display: grid;
   gap: var(--kb-space-3);

@@ -10,6 +10,16 @@ export type BriefDraft = {
   doneWhen: DoneWhen[];
   avoid?: string;
   example?: string;
+  /** The issue it was filled from, linked from the task. */
+  issue?: { number: number; url: string };
+};
+
+export type GitHubIssue = {
+  number: number;
+  title: string;
+  body: string;
+  url: string;
+  labels?: string[];
 };
 
 export type CheckId = "what" | "who" | "done" | "avoid" | "example";
@@ -96,4 +106,20 @@ export function reviewerChoices(providers: CrewProvider[], writerId: string): Ch
       ? { id: p.id, label: p.name, note: "The writer and reviewer come from the same company" }
       : { id: p.id, label: p.name };
   });
+}
+
+const checklistItem = /^\s*[-*] \[[ xX]\] (.+)$/;
+
+/** Issue prose fills the brief; its checklist becomes done checks only you can judge. */
+export function briefFromIssue({ number, title, body, url }: GitHubIssue): BriefDraft {
+  const lines = body.split(/\r?\n/);
+  const doneWhen = lines.flatMap((l) => {
+    const item = checklistItem.exec(l)?.[1]?.trim();
+    return item ? [{ text: item, checker: "you" as const }] : [];
+  });
+  const prose = lines
+    .filter((l) => !checklistItem.test(l))
+    .join("\n")
+    .trim();
+  return { text: prose ? `${title}\n\n${prose}` : title, doneWhen, issue: { number, url } };
 }

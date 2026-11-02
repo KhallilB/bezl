@@ -1,4 +1,4 @@
-import type { JourneyTask, ProviderUsage, StageView, Take } from "./model";
+import type { CiCheck, CiStatus, JourneyTask, ProviderUsage, StageView, Take } from "./model";
 
 // Sample data only; shapes match what M5 projects from the task log.
 
@@ -384,6 +384,16 @@ export const usage: ProviderUsage[] = [
   { name: "Codex", used: "22%" },
 ];
 
+const ciNames = ["Lint", "Unit tests", "Browser tests"];
+const ci = (states: CiCheck["state"][]): CiCheck[] =>
+  ciNames.map((name, i) => ({
+    name,
+    state: states[i] ?? "running",
+    url: `https://github.com/acme/studio-web/actions/runs/${9120 + i}`,
+  }));
+
+const prChecks: CiStatus = { on: "pullRequest", checks: ci(["passed", "passed", "running"]) };
+
 /** Same list after you keep attempt A: Review done, Ship waits on you. */
 const kept: JourneyTask = {
   ...emptyState,
@@ -421,9 +431,44 @@ const kept: JourneyTask = {
           { stage: "review", text: "Codex said “Clear, and it reuses EmptyState”" },
         ],
         pullRequest: { number: 42, url: "https://github.com/acme/studio-web/pull/42" },
+        ci: prChecks,
       },
     },
   },
 };
 
 export const keptTasks: JourneyTask[] = tasks.map((t) => (t.id === kept.id ? kept : t));
+
+/** Kept task after Open: GitHub runs the pull request's checks, then the merged commit's. */
+function shipped(
+  light: "working" | "done",
+  lead: string,
+  rest: string,
+  status: CiStatus,
+): JourneyTask[] {
+  const ship = kept.views.ship;
+  const task: JourneyTask = {
+    ...kept,
+    stages: { ...kept.stages, ship: light },
+    views: {
+      ...kept.views,
+      ship: { ...ship, lead, rest, ...(ship.ship ? { ship: { ...ship.ship, ci: status } } : {}) },
+    },
+  };
+  return keptTasks.map((t) => (t.id === task.id ? task : t));
+}
+
+export const shippedTasks = {
+  checking: shipped(
+    "working",
+    "Pull request #42 is open.",
+    "GitHub is running its checks, and Bezl shows them here as they finish.",
+    prChecks,
+  ),
+  merged: shipped(
+    "done",
+    "Merged.",
+    "GitHub ran every check again on the merged commit, so you know the change works where it landed.",
+    { on: "merge", commit: "3f9c2ab", checks: ci(["passed", "passed", "passed"]) },
+  ),
+};

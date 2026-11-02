@@ -14,10 +14,10 @@ import { needsYou } from "../approvals/fixtures";
 import type { NeedsYouItem } from "../approvals/model";
 import { history } from "../history/fixtures";
 import { HistoryPage } from "../history/HistoryPage";
-import { keptTasks, tasks, usage } from "../journey/fixtures";
+import { keptTasks, shippedTasks, tasks, usage } from "../journey/fixtures";
 import type { JourneyTask, StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
-import { crew, drafts, paths, startedTask, suggestions } from "../newtask/fixtures";
+import { crew, drafts, issues, paths, startedTask, suggestions } from "../newtask/fixtures";
 import { NewTask } from "../newtask/NewTask";
 import { SetupConfirm } from "../newtask/SetupConfirm";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
@@ -336,8 +336,15 @@ function TasksShell({
   );
 }
 
-function TaskView({ place, kept, shared }: { place: Place; kept: boolean; shared: Shared }) {
-  const list = kept ? keptTasks : tasks;
+type TaskViewProps = {
+  place: Place;
+  kept: boolean;
+  shipped?: "checking" | "merged" | undefined;
+  shared: Shared;
+};
+
+function TaskView({ place, kept, shipped, shared }: TaskViewProps) {
+  const list = shipped ? shippedTasks[shipped] : kept ? keptTasks : tasks;
   const open = list.find((t) => t.id === place.taskId) ?? list[0];
   if (!open) return null;
   return (
@@ -350,7 +357,7 @@ function TaskView({ place, kept, shared }: { place: Place; kept: boolean; shared
         onNewTask={() => shared.onGoTo("new-task")}
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}
-        {...(kept && open.id === history.taskId
+        {...((kept || shipped) && open.id === history.taskId
           ? { onHistory: () => shared.onGoTo("history") }
           : {})}
       />
@@ -429,7 +436,7 @@ function View({
       return (
         <AppShell tasks={[]} usage={usage} onOpenTask={() => {}}>
           <NewTask
-            key={`${view.draft}-${view.focus}`}
+            key={`${view.draft}-${view.focus}-${view.issues}`}
             repo="studio-web"
             branch="main"
             initial={drafts[view.draft]}
@@ -438,6 +445,9 @@ function View({
             paths={paths}
             onStart={() => onGoTo("setup")}
             {...(view.focus ? { focus: view.focus } : {})}
+            issues={issues}
+            issuesOpen={view.issues === "open"}
+            {...(view.issues === "picked" ? { pickedIssue: 128 } : {})}
           />
         </AppShell>
       );
@@ -468,7 +478,14 @@ function View({
       );
     }
     case "task":
-      return <TaskView place={place ?? view} kept={view.kept ?? false} shared={shared} />;
+      return (
+        <TaskView
+          place={place ?? view}
+          kept={view.kept ?? false}
+          shipped={view.shipped}
+          shared={shared}
+        />
+      );
     case "approvals":
       return place ? (
         <TaskView place={place} kept={false} shared={shared} />

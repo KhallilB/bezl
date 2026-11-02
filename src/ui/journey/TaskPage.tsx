@@ -97,7 +97,12 @@ function StagePane({
       {view.problems?.length ? <Problems problems={view.problems} /> : null}
       {view.takes ? <Takes takes={view.takes} steer={stage === "build"} onKeep={keep} /> : null}
       {view.ship ? (
-        <Ship ship={view.ship} onBack={() => onStage("review")} onNewTask={onNewTask} />
+        <Ship
+          ship={view.ship}
+          shipped={task.stages.ship === "working" || task.stages.ship === "done"}
+          onBack={() => onStage("review")}
+          onNewTask={onNewTask}
+        />
       ) : null}
       {view.sections.map((section) => (
         <SectionList key={section.title} section={section} />
