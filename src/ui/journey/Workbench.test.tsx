@@ -53,6 +53,18 @@ test("the side is the workspace, labelled so", () => {
   expect(screen.getByRole("complementary", { name: "Workspace" })).toBeVisible();
 });
 
+test("with no screenshots, the workspace opens on what Bezl measured", () => {
+  render(<Harness id="snapshot" stage="check" />);
+  expect(screen.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
+  expect(within(side()).getByRole("list", { name: "What needs you" })).toBeVisible();
+});
+
+test("with only the intent to show, there is no full screen", () => {
+  render(<Harness id="debounce" stage="build" />);
+  expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.queryByRole("button", { name: "Full screen" })).toBeNull();
+});
+
 describe("summary", () => {
   test("one line under the stages: the goal, the change's reach and how sure Bezl is", () => {
     render(<Harness id="empty-state" stage="review" />);
@@ -381,5 +393,34 @@ describe("Full screen", () => {
     await userEvent.keyboard("{Escape}");
     const inline = screen.getByRole("region", { name: "Next step" });
     expect(within(inline).getByRole("status")).toHaveTextContent(/Sent 2 problems to Codex/);
+  });
+});
+
+describe("Honest labels", () => {
+  test("the chain says the goal's link to code is the plan's claim, not measured", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(screen.getByRole("tab", { name: "Evidence" }));
+    await userEvent.click(
+      within(side()).getByRole("button", { name: /Import from GitHub does nothing yet/ }),
+    );
+    const chain = screen.getByRole("list", { name: "How it connects" });
+    expect(within(chain).getByText("Linked to the goal by the plan, not measured")).toBeVisible();
+  });
+
+  test("the map tells the plan's claims from what Bezl measured", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    const full = screen.getByRole("dialog", { name: "Empty state for Projects" });
+    await userEvent.click(within(full).getByRole("tab", { name: "Evidence" }));
+    expect(within(full).getByText(/Dotted: the plan's claim/)).toBeVisible();
+  });
+
+  test("the risk says what it was measured from", async () => {
+    render(<Harness id="empty-state" stage="review" />);
+    await userEvent.click(screen.getByRole("button", { name: /Low risk/ }));
+    expect(screen.getByRole("tab", { name: "Intent" })).toHaveAttribute("aria-selected", "true");
+    expect(
+      within(side()).getByText(/Measured from 3 files changed, all inside the allowed paths/),
+    ).toBeVisible();
   });
 });

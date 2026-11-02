@@ -341,3 +341,22 @@ describe("Walkthrough needs you and look back", () => {
     expect(screen.getByText("Ready to ship.")).toBeVisible();
   });
 });
+
+describe("Walkthrough, M5 journey", () => {
+  test("a step opens the workspace full screen, with your path", () => {
+    at("?screen=walkthrough&step=full-screen");
+    render(<Walkthrough />);
+    const full = screen.getByRole("dialog", { name: "Empty state for Projects" });
+    expect(within(full).getByRole("list", { name: "Your path" })).toBeVisible();
+  });
+
+  test("a take a restart interrupted waits for you: run the step again, or stop", async () => {
+    at("?screen=walkthrough&step=come-back");
+    render(<Walkthrough />);
+    expect(within(dock()).getByText("Coming back after a restart")).toBeVisible();
+    const bar = screen.getByRole("region", { name: "Next step" });
+    expect(within(bar).getByRole("button", { name: "Stop" })).toBeVisible();
+    await userEvent.click(within(bar).getByRole("button", { name: "Run the step again" }));
+    expect(within(bar).getByRole("status")).toHaveTextContent(/fresh Claude Code/);
+  });
+});

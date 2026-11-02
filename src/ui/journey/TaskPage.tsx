@@ -119,7 +119,28 @@ function StagePane({
   const [opened, setOpened] = useState(
     task.stages.ship === "working" || task.stages.ship === "done",
   );
+  const [restart, setRestart] = useState<"again" | "stopped" | null>(null);
+  const writer = view.takes?.[0]?.model ?? "the writer";
   const next = () => {
+    if (view.interrupted) {
+      return restart ? (
+        <p className="journey-next-text" role="status">
+          {restart === "again"
+            ? `Started a fresh ${writer} from the task record and its copy of your code.`
+            : "Stopped. Its copy of your code stays as it was left."}
+        </p>
+      ) : (
+        <>
+          <p className="journey-next-text">Bezl never picks a step back up on its own.</p>
+          <Button variant="primary" onClick={() => setRestart("again")}>
+            Run the step again
+          </Button>
+          <Button variant="ghost" onClick={() => setRestart("stopped")}>
+            Stop
+          </Button>
+        </>
+      );
+    }
     if (view.problems?.length) {
       return (
         <SendBack
@@ -206,10 +227,20 @@ export type TaskPageProps = StageStripProps & {
   onNewTask?: () => void;
   /** The workspace tab to open on; Design when the stage has screenshots. */
   side?: SideTab;
+  /** Opens with the workspace full screen. */
+  full?: boolean;
 };
 
 /** One task: header, stages, context line, status; then the stage beside its intent. */
-export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest }: TaskPageProps) {
+export function TaskPage({
+  task,
+  stage,
+  onStage,
+  onHistory,
+  side: first,
+  full,
+  ...rest
+}: TaskPageProps) {
   const view = task.views[stage];
   const { needsYou, onNeedsYou } = rest;
   const [tab, setTab] = useState<SideTab>(first ?? "design");
@@ -313,6 +344,7 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
           <div ref={side} className="journey-side-wrap">
             <Workspace
               title={task.title}
+              startFull={full}
               design={design}
               onAsk={setAsk}
               onBar={setBar}
@@ -324,6 +356,7 @@ export function TaskPage({ task, stage, onStage, onHistory, side: first, ...rest
               focus={focus}
               onFocus={setFocus}
               goal={contextOf(task).goal}
+              impact={task.impact}
               doneWhen={task.doneWhen ?? []}
               decisions={[
                 ...(task.decisions ?? []),

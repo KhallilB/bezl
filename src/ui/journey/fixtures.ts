@@ -267,7 +267,11 @@ const emptyState: JourneyTask = {
   id: "empty-state",
   title: "Empty state for Projects",
   repo: "studio-web",
-  impact: { risk: "low", reach: "Projects page only" },
+  impact: {
+    risk: "low",
+    reach: "Projects page only",
+    from: "3 files changed, all inside the allowed paths",
+  },
   current: "review",
   doneWhen: emptyDone,
   decisions: [
@@ -364,7 +368,11 @@ const denyScopes: JourneyTask = {
   id: "deny-scopes",
   title: "Refuse tokens with no scopes",
   repo: "bezl",
-  impact: { risk: "medium", reach: "Token checks on every request" },
+  impact: {
+    risk: "medium",
+    reach: "Token checks on every request",
+    from: "the request middleware every route runs",
+  },
   current: "build",
   doneWhen: denyDone,
   stages: {
@@ -434,7 +442,7 @@ const denyScopes: JourneyTask = {
     ship: {
       lead: "Nothing to ship yet.",
       by: "Waits on Review",
-      rest: "Ship opens once you choose which attempt to keep.",
+      rest: "Ship opens once you approve the attempt on Review.",
       sections: [],
     },
   },
@@ -449,7 +457,11 @@ const debounce: JourneyTask = {
   id: "debounce",
   title: "Debounce terminal resize",
   repo: "bezl",
-  impact: { risk: "low", reach: "Terminal resize only" },
+  impact: {
+    risk: "low",
+    reach: "Terminal resize only",
+    from: "1 file changed, inside the allowed paths",
+  },
   current: "build",
   doneWhen: debounceDone,
   stages: {
@@ -511,7 +523,7 @@ const debounce: JourneyTask = {
     ship: {
       lead: "Nothing to ship yet.",
       by: "Waits on Review",
-      rest: "Ship opens once you choose which attempt to keep.",
+      rest: "Ship opens once you approve the attempt on Review.",
       sections: [],
     },
   },
@@ -558,7 +570,11 @@ const snapshot: JourneyTask = {
   id: "snapshot",
   title: "Terminal snapshot",
   repo: "bezl",
-  impact: { risk: "medium", reach: "Terminal snapshots and restore" },
+  impact: {
+    risk: "medium",
+    reach: "Terminal snapshots and restore",
+    from: "2 files changed, one shared by every terminal",
+  },
   current: "check",
   doneWhen: snapshotDone,
   trace: snapshotTrace,
@@ -674,7 +690,7 @@ const snapshot: JourneyTask = {
     ship: {
       lead: "Nothing to ship yet.",
       by: "Waits on Review",
-      rest: "Ship opens once you choose which attempt to keep.",
+      rest: "Ship opens once you approve the attempt on Review.",
       sections: [],
     },
   },
@@ -783,3 +799,33 @@ export const shippedTasks = {
     { on: "merge", commit: "3f9c2ab", checks: ci(["passed", "passed", "passed"]) },
   ),
 };
+
+/** Debounce after Bezl quit mid-Build: the take waits on you to run the step again or stop. */
+const interrupted: JourneyTask = {
+  ...debounce,
+  stages: { ...debounce.stages, build: "needsYou" },
+  views: {
+    ...debounce.views,
+    build: {
+      lead: "Interrupted.",
+      by: "Claude Code",
+      rest: "Bezl quit while Claude Code was writing. Its copy of your code is as it was left, with the last terminal snapshot.",
+      sections: [],
+      interrupted: true,
+      takes: [
+        {
+          id: "A",
+          model: "Claude Code",
+          state: "Interrupted",
+          light: "needsYou",
+          activity: "Stopped while editing src/ui/terminals/xterm.ts",
+          files: [{ path: "src/ui/terminals/xterm.ts", added: 9, removed: 3 }],
+        },
+      ],
+    },
+  },
+};
+
+export const interruptedTasks: JourneyTask[] = tasks.map((t) =>
+  t.id === interrupted.id ? interrupted : t,
+);

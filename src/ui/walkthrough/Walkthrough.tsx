@@ -14,7 +14,7 @@ import { needsYou } from "../approvals/fixtures";
 import type { NeedsYouItem } from "../approvals/model";
 import { history } from "../history/fixtures";
 import { HistoryPage } from "../history/HistoryPage";
-import { keptTasks, shippedTasks, tasks, usage } from "../journey/fixtures";
+import { interruptedTasks, keptTasks, shippedTasks, tasks, usage } from "../journey/fixtures";
 import type { JourneyTask, StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
 import type { SideTab } from "../journey/Workbench";
@@ -342,17 +342,25 @@ type TaskViewProps = {
   kept: boolean;
   shipped?: "checking" | "merged" | undefined;
   side?: SideTab | undefined;
+  full?: boolean | undefined;
+  interrupted?: boolean | undefined;
   shared: Shared;
 };
 
-function TaskView({ place, kept, shipped, side, shared }: TaskViewProps) {
-  const list = shipped ? shippedTasks[shipped] : kept ? keptTasks : tasks;
+function TaskView({ place, kept, shipped, side, full, interrupted, shared }: TaskViewProps) {
+  const list = shipped
+    ? shippedTasks[shipped]
+    : kept
+      ? keptTasks
+      : interrupted
+        ? interruptedTasks
+        : tasks;
   const open = list.find((t) => t.id === place.taskId) ?? list[0];
   if (!open) return null;
   return (
     <TasksShell list={list} current={open.id} shared={shared}>
       <TaskPage
-        key={`${open.id}-${side ?? ""}`}
+        key={`${open.id}-${side ?? ""}-${full ? "full" : ""}`}
         task={open}
         stage={place.stage}
         onStage={(stage) => shared.onPlace({ ...place, stage })}
@@ -361,6 +369,7 @@ function TaskView({ place, kept, shipped, side, shared }: TaskViewProps) {
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}
         {...(side ? { side } : {})}
+        {...(full ? { full } : {})}
         {...((kept || shipped) && open.id === history.taskId
           ? { onHistory: () => shared.onGoTo("history") }
           : {})}
@@ -488,6 +497,8 @@ function View({
           kept={view.kept ?? false}
           shipped={view.shipped}
           side={view.side}
+          full={view.full}
+          interrupted={view.interrupted}
           shared={shared}
         />
       );

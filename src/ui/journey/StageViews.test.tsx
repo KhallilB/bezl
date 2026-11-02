@@ -53,15 +53,14 @@ describe("Build", () => {
 describe("Check", () => {
   test("problems come first, one open at a time with its evidence", async () => {
     open(tasks, "snapshot", "check");
-    const problems = within(screen.getByRole("list", { name: "Problems" })).getAllByRole("button", {
-      expanded: false,
-    });
-    const first = screen.getByRole("button", { name: /Cursor lands one row low/ });
+    const list = within(screen.getByRole("list", { name: "Problems" }));
+    const problems = list.getAllByRole("button", { expanded: false });
+    const first = list.getByRole("button", { name: /Cursor lands one row low/ });
     expect(first).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/received row 13/)).toBeVisible();
     expect(problems).toHaveLength(1);
 
-    await userEvent.click(screen.getByRole("button", { name: /No test covers restoreSnapshot/ }));
+    await userEvent.click(list.getByRole("button", { name: /No test covers restoreSnapshot/ }));
     expect(first).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText(/received row 13/)).toBeNull();
     expect(screen.getByText(/No test reaches it/)).toBeVisible();
