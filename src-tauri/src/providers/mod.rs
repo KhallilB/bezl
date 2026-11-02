@@ -4,6 +4,7 @@ pub mod claude;
 mod codex;
 pub mod contract;
 mod exec;
+pub mod github;
 mod identity;
 pub mod preflight;
 pub mod probe;
