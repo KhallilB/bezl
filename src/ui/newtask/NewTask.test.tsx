@@ -152,6 +152,8 @@ describe("NewTask crew", () => {
   test("offers what passed preflight and greys the rest with the reason", async () => {
     setup({ step: "review" });
     await change("Crew");
+    // The name holds the visible word, so voice control can say it.
+    expect(screen.getByRole("button", { name: "Done Crew" })).toHaveTextContent("Done");
     const writer = screen.getByRole("radiogroup", { name: "Writes" });
     expect(within(writer).getByRole("radio", { name: /Local model/ })).toHaveAttribute(
       "aria-disabled",
