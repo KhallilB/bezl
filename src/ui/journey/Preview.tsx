@@ -16,7 +16,7 @@ function Toggle<T extends string>({
   value: T;
   options: [T, string][];
   onChange: (v: T) => void;
-  /** Label shown above it; the review has room, the side does not. */
+  /** Label shown above it; full screen has room, the page does not. */
   shown?: boolean;
   className?: string;
 }) {
@@ -186,7 +186,7 @@ function PinList({
   ) : null;
 }
 
-/** What you picked and noted in Design; shared by the side and full screen. */
+/** What you picked and noted on the screenshots; shared by the page and full screen. */
 export function useDesign(shots: Shot[]) {
   const [picked, setPicked] = useState(shots[0]?.id);
   const [size, setSize] = useState<ShotSize>("phone");

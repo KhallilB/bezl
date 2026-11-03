@@ -26,7 +26,7 @@ import warmPhone from "./samples/projects-warm-phone.jpg";
 const define = (quote: string, done: DoneWhen[]): StageView => ({
   lead: "Ready to start.",
   by: "You, from the issue",
-  rest: "The goal covers everything a coding agent needs.",
+  rest: "The goal has what a coding agent needs to start.",
   quote,
   sections: [
     {
@@ -240,6 +240,7 @@ const emptyCompare: Comparison = {
         before: { light: "failed", text: "An empty table shows" },
         after: { light: "done", text: "Proven" },
       },
+      proof: { shot: "a", node: "i1", where: "src/components/EmptyState.tsx" },
     },
     {
       group: "Done when",
@@ -248,9 +249,20 @@ const emptyCompare: Comparison = {
         before: { light: "failed", text: "An empty table, no way in" },
         after: { light: "needsYou", text: "The import link does nothing yet" },
       },
+      proof: { shot: "a", node: "i2", where: "src/pages/Projects.tsx:41" },
     },
-    { group: "Done when", label: emptyDone[2]?.text ?? "", cells: same("done", "0 issues") },
-    { group: "Done when", label: emptyDone[3]?.text ?? "", cells: same("done", "All 47 pass") },
+    {
+      group: "Done when",
+      label: emptyDone[2]?.text ?? "",
+      cells: same("done", "0 issues"),
+      proof: { node: "i3", where: "src/components/EmptyState.tsx" },
+    },
+    {
+      group: "Done when",
+      label: emptyDone[3]?.text ?? "",
+      cells: same("done", "All 47 pass"),
+      proof: { node: "tests" },
+    },
     {
       group: "Checks",
       label: "Tests",
@@ -258,6 +270,7 @@ const emptyCompare: Comparison = {
         before: { light: "done", text: "47" },
         after: { light: "done", text: "48, one for zero projects" },
       },
+      proof: { node: "tests", where: "src/pages/Projects.test.tsx" },
     },
     { group: "Checks", label: "New dependencies", cells: same("done", "None") },
   ],
@@ -326,7 +339,7 @@ const emptyState: JourneyTask = {
       lead: "Everything passed.",
       by: "Bezl ran 3 checks",
       shots: [shotA, loadingA],
-      rest: "Two problems at first, but Claude Code fixed them once they were sent back.",
+      rest: "Two problems came up. Claude Code fixed both after they were sent back.",
       sections: [],
       passed: [
         { text: "bun run test", meta: "48 passed", mono: true, light: "done" },
@@ -337,7 +350,7 @@ const emptyState: JourneyTask = {
     review: {
       lead: "Ready to ship?",
       by: "Codex reviewed Claude Code's attempt",
-      rest: "Codex reviewed it against your done-when lines. Each line shows how it is on main and after the change.",
+      rest: "Codex checked it against your done-when list. Each line shows main next to the change. Open a line to see its proof.",
       sections: [],
       takes: reviewed("Ready"),
       compare: emptyCompare,
@@ -345,7 +358,7 @@ const emptyState: JourneyTask = {
       handled: [
         {
           text: "Codex: two naming nits",
-          outcome: "Dropped, because nothing in the changed lines backs them up.",
+          outcome: "Dropped: nothing in the changed code backs them up.",
           by: "dropped",
         },
       ],
@@ -406,7 +419,7 @@ const denyScopes: JourneyTask = {
     build: {
       lead: "Codex has a question.",
       by: "Codex, waiting on you",
-      rest: "It stopped before overwriting a file and is waiting for your answer.",
+      rest: "It stopped before writing over a file. It needs your answer to go on.",
       sections: [],
       takes: [
         {
@@ -645,7 +658,7 @@ const snapshot: JourneyTask = {
       },
       lead: "2 things need a look.",
       by: "Bezl ran 6 checks",
-      rest: "Everything else passed, so these are all that's left.",
+      rest: "Everything else passed. Fix these and it's done.",
       sections: [],
       problems: [
         {
@@ -789,13 +802,13 @@ export const shippedTasks = {
   checking: shipped(
     "working",
     "Pull request #42 is open.",
-    "GitHub is running its checks, and Bezl shows them here as they finish.",
+    "GitHub is running its checks. Each one shows here when it finishes.",
     prChecks,
   ),
   merged: shipped(
     "done",
     "Merged.",
-    "GitHub ran every check again on the merged commit, so you know the change works where it landed.",
+    "GitHub ran every check again after the merge. The change works where it landed.",
     { on: "merge", commit: "3f9c2ab", checks: ci(["passed", "passed", "passed"]) },
   ),
 };
@@ -809,7 +822,7 @@ const interrupted: JourneyTask = {
     build: {
       lead: "Interrupted.",
       by: "Claude Code",
-      rest: "Bezl quit while Claude Code was writing. Its copy of your code is as it was left, with the last terminal snapshot.",
+      rest: "Bezl closed while Claude Code was writing. Its copy of your code is as it was left, with the last terminal snapshot.",
       sections: [],
       interrupted: true,
       takes: [

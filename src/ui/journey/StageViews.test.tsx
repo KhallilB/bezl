@@ -144,6 +144,51 @@ describe("Review", () => {
     expect(within(table()).queryByRole("row", { name: /Existing tests still pass/ })).toBeNull();
   });
 
+  test("each done-when line opens to its proof: the screen, where in the code and the trace", async () => {
+    open(tasks, "empty-state", "review");
+    const label = within(row(/one clear way to create the first project/)).getByRole("button", {
+      name: /one clear way to create the first project/,
+    });
+    expect(label).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(label);
+    expect(label).toHaveAttribute("aria-expanded", "true");
+    const proof = document.getElementById(label.getAttribute("aria-controls") ?? "");
+    if (!proof) throw new Error("no proof row");
+    expect(within(proof).getByRole("img", { name: "Projects, After" })).toBeVisible();
+    expect(within(proof).getByText("src/pages/Projects.tsx:41")).toBeVisible();
+    expect(within(proof).getByRole("button", { name: "See the screen" })).toBeVisible();
+    expect(within(proof).getByRole("button", { name: "See the trace" })).toBeVisible();
+    await userEvent.click(label);
+    expect(label).toHaveAttribute("aria-expanded", "false");
+    expect(document.getElementById(proof.id)).toBeNull();
+  });
+
+  test("See the screen picks that line's screenshot in Screens and moves you there", async () => {
+    open(tasks, "empty-state", "review");
+    const screens = screen.getByRole("region", { name: "Screens" });
+    await userEvent.click(within(screens).getByRole("button", { name: "Before" }));
+    await userEvent.click(within(table()).getByRole("button", { name: /one clear way/ }));
+    await userEvent.click(within(table()).getByRole("button", { name: "See the screen" }));
+    expect(within(screens).getByRole("img", { name: "Projects, After, at 375 px" })).toBeVisible();
+    expect(screens.contains(document.activeElement)).toBe(true);
+  });
+
+  test("See the trace shows that line in Evidence and moves you there", async () => {
+    open(tasks, "empty-state", "review");
+    await userEvent.click(within(table()).getByRole("button", { name: /one clear way/ }));
+    await userEvent.click(within(table()).getByRole("button", { name: "See the trace" }));
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(
+      within(evidence).getByRole("button", { name: /One clear way to create the first project/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(evidence.contains(document.activeElement)).toBe(true);
+  });
+
+  test("a line with nothing to show stays plain text", () => {
+    open(tasks, "empty-state", "review");
+    expect(within(row(/New dependencies/)).queryByRole("button")).toBeNull();
+  });
+
   test("the next step says why it's ready, and Ship it hands it to Ship", async () => {
     const { onShip } = open(tasks, "empty-state", "review");
     expect(within(bar()).getByText(/Ready to ship:/)).toBeVisible();

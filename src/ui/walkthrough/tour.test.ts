@@ -40,9 +40,10 @@ describe("steps", () => {
   test("notes name what each screen now shows", () => {
     const note = (id: string) => steps.find((s) => s.id === id)?.note ?? "";
     expect(note("task-read")).toContain("Limits");
-    expect(note("context")).toContain("measured from");
-    expect(note("preview")).toContain("only when Bezl captured screenshots");
-    expect(note("trace")).toContain("the plan's claim");
+    expect(note("context")).toContain("based on");
+    expect(note("preview")).toContain("only when Bezl took screenshots");
+    expect(note("trace")).toContain("the plan says");
+    expect(note("review")).toContain("Open a line");
     expect(note("preflight")).toContain("GitHub");
   });
 });
