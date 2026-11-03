@@ -4,6 +4,16 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { steps } from "./tour";
 import { Walkthrough } from "./Walkthrough";
 
+// React Flow measures its pane; jsdom has neither of these.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+globalThis.DOMMatrixReadOnly ??= class {
+  m22 = 1;
+} as unknown as typeof DOMMatrixReadOnly;
+
 function at(search: string) {
   window.history.replaceState(null, "", `/${search}`);
 }
@@ -37,26 +47,28 @@ describe("Walkthrough tour", () => {
     ).toBeVisible();
   });
 
-  test("the context step keeps the goal, the change and its proof on one line", async () => {
+  test("the context step shows the goal and what you asked for, line by line", () => {
     at("?screen=walkthrough&step=context");
     render(<Walkthrough />);
     expect(within(dock()).getByText("What it's for, how big, how sure")).toBeVisible();
-    const summary = screen.getByRole("list", { name: "This task" });
-    await userEvent.click(within(summary).getByRole("button", { name: "3 of 4 done" }));
-    const intent = screen.getByRole("region", { name: "Intent" });
-    expect(within(intent).getByRole("list", { name: "Decided" })).toBeVisible();
+    expect(
+      within(screen.getByRole("list", { name: "This task" })).getByText("Low risk"),
+    ).toBeVisible();
+    expect(screen.getByRole("list", { name: "You asked for" })).toBeVisible();
   });
 
   test("the preview step shows the change as Bezl captured it", async () => {
     at("?screen=walkthrough&step=preview");
     render(<Walkthrough />);
     expect(within(dock()).getByText("See it before you decide")).toBeVisible();
-    const screens = screen.getByRole("region", { name: "Screens" });
-    await userEvent.click(within(screens).getByRole("button", { name: "After, loading" }));
+    const line = screen.getByRole("region", {
+      name: "There's one clear way to create the first project",
+    });
+    await userEvent.click(within(line).getByRole("button", { name: "After, loading" }));
     expect(
-      within(screens).getByRole("img", { name: "Projects, After, loading, at 375 px" }),
+      within(line).getByRole("img", { name: "Projects, After, loading, at 375 px" }),
     ).toBeVisible();
-    await userEvent.click(within(screens).getByRole("button", { name: "Full screen" }));
+    await userEvent.click(within(line).getByRole("button", { name: "Open the map" }));
     expect(screen.getByRole("dialog", { name: "Empty state for Projects" })).toBeVisible();
   });
 
@@ -64,9 +76,12 @@ describe("Walkthrough tour", () => {
     at("?screen=walkthrough&step=problems");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(within(dock()).getByText("Follow the evidence")).toBeVisible();
-    const evidence = screen.getByRole("region", { name: "Evidence" });
-    expect(within(evidence).getByRole("list", { name: "How it connects" })).toBeVisible();
+    expect(within(dock()).getByText("Follow a line into the code")).toBeVisible();
+    const line = screen.getByRole("region", {
+      name: "A snapshot restores the colours and the cursor position",
+    });
+    expect(within(line).getByRole("list", { name: "Problems" })).toBeVisible();
+    expect(within(line).getByRole("list", { name: "In the code" })).toBeVisible();
   });
 
   test("starts at the first step, where Back is off", () => {
@@ -318,7 +333,7 @@ describe("Walkthrough needs you and look back", () => {
 });
 
 describe("Walkthrough, M5 journey", () => {
-  test("a step opens full screen, with your path", () => {
+  test("a step opens the map, with your path", () => {
     at("?screen=walkthrough&step=full-screen");
     render(<Walkthrough />);
     const full = screen.getByRole("dialog", { name: "Empty state for Projects" });

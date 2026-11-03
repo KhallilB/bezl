@@ -1,5 +1,5 @@
 // View models for the task journey; M5 fills them from the task's event log.
-import type { NeedsYouItem } from "../approvals/model";
+import type { NeedsYouChoice, NeedsYouItem } from "../approvals/model";
 
 export const stageIds = ["define", "plan", "build", "check", "review", "ship"] as const;
 export type StageId = (typeof stageIds)[number];
@@ -328,7 +328,14 @@ export type Risk = "low" | "medium" | "high";
 /** How far the change reaches; `from` names what the risk is based on. */
 export type Impact = { risk: Risk; reach: string; from: string };
 
-export type DoneWhen = { text: string; checker: string; light: Light; status: string };
+export type DoneWhen = {
+  text: string;
+  checker: string;
+  light: Light;
+  status: string;
+  /** Its node in the task's trace. */
+  node?: string;
+};
 
 export type Decision = { stage: StageId; text: string };
 
@@ -365,11 +372,15 @@ function sizeLabel(set: FileChange[]): string {
 }
 
 /** Ship's kept attempt wins; otherwise the latest stage with attempts. */
-function changed(task: JourneyTask): { label: string; any: boolean } {
+function fileSets(task: JourneyTask): FileChange[][] {
   const kept = task.views.ship.ship?.files;
   const { review, build } = task.views;
   const takes = [review.takes, build.takes].find((t) => t?.length) ?? [];
-  const sets = kept ? [kept] : takes.map((t) => t.files ?? []).filter((f) => f.length > 0);
+  return kept ? [kept] : takes.map((t) => t.files ?? []).filter((f) => f.length > 0);
+}
+
+function changed(task: JourneyTask): { label: string; any: boolean } {
+  const sets = fileSets(task);
   if (sets.length === 0) return { label: "Nothing changed yet", any: false };
   const paths = new Set(sets.flat().map((f) => f.path));
   if (sets.length > 1)
@@ -395,3 +406,193 @@ export function contextOf(task: JourneyTask): TaskContext {
 }
 
 export type ProviderUsage = { name: string; used: string };
+
+/** A line's state as one word; reuses the lights. */
+export const lineWord: Record<Light, string> = {
+  done: "Works",
+  failed: "Fails",
+  needsYou: "Needs you",
+  waiting: "Not checked yet",
+  working: "Checking",
+};
+
+export type Asked = { item: NeedsYouItem; choice: NeedsYouChoice };
+
+/** A done-when line, or the loose entry, with everything tied to it at this stage. */
+/** A Review check that is no done-when line: main's cell, then now's. */
+export type OtherCheck = { label: string; was?: CompareCell; now?: CompareCell };
+
+export type LineEntry = {
+  /** `line-<index>`; `other` for Review's other checks; `loose` for what ties to no line. */
+  key: string;
+  title: string;
+  light?: Light;
+  /** One short reason; on Review, `was` (main's light) stands in for it. */
+  reason?: string;
+  was?: Light;
+  checker?: string;
+  node?: string;
+  questions: NeedsYouItem[];
+  answered: Asked[];
+  problems: Problem[];
+  shots: string[];
+  /** Changed code and what ran, from the trace. */
+  code: TraceNode[];
+  ran: TraceNode[];
+  /** Only the plan links this code to the line. */
+  claimed: boolean;
+  /** Changed files tied to no line; loose entry only. */
+  files: FileChange[];
+  /** Other entry only. */
+  checks: OtherCheck[];
+};
+
+const count = (n: number, one: string, many: string) => (n === 1 ? `1 ${one}` : `${n} ${many}`);
+
+// A file is tied when a changed node's meta names it, e.g. "Projects.tsx:41".
+const fileOf = (meta: string) => meta.split(/[:\s]/)[0] ?? "";
+
+/** Lines, then the loose entry if anything ties to none; questions and problems by their trace node. */
+export function entriesOf(
+  task: JourneyTask,
+  stage: StageId,
+  open: NeedsYouItem[],
+  answered: Asked[],
+): LineEntry[] {
+  const view = task.views[stage];
+  const trace = task.trace;
+  const lines = task.doneWhen ?? [];
+  // Which lines a node holds up: the done-when nodes upstream of it.
+  const linesOf = (node?: string): number[] => {
+    if (!trace || !node) return [];
+    const lit = lineage(trace, node);
+    return lines.flatMap((l, i) => (l.node && lit.has(l.node) ? [i] : []));
+  };
+  const checked = stageIds.indexOf(stage) >= stageIds.indexOf("check");
+  const built = stageIds.indexOf(stage) >= stageIds.indexOf("build");
+  const stageShots = new Set((view.shots ?? []).map((s) => s.id));
+  const entries: LineEntry[] = lines.map((line, i) => {
+    const lit = trace && line.node ? lineage(trace, line.node) : new Set<string>();
+    const nodes = trace?.nodes.filter((n) => lit.has(n.id)) ?? [];
+    const row = view.compare?.rows.find((r) => r.label === line.text);
+    const proofNode = trace?.nodes.find((n) => n.id === row?.proof?.node);
+    const ran = nodes.filter((n) => n.column === "measured");
+    if (proofNode && !lit.has(proofNode.id)) ran.push(proofNode);
+    const shots = [row?.proof?.shot, ...nodes.map((n) => n.shot)].filter(
+      (s): s is string => Boolean(s) && stageShots.has(s as string),
+    );
+    return {
+      key: `line-${i}`,
+      title: line.text,
+      checker: line.checker,
+      ...(line.node ? { node: line.node } : {}),
+      questions: open.filter((q) => linesOf(q.why).includes(i)),
+      answered: answered.filter((a) => linesOf(a.item.why).includes(i)),
+      problems: (view.problems ?? []).filter((p) => linesOf(p.why).includes(i)),
+      shots: [...new Set(shots)],
+      code: nodes.filter((n) => n.column === "change"),
+      ran,
+      claimed: Boolean(trace?.links.some((l) => l.from === line.node && planClaim(trace, l))),
+      files: [],
+      checks: [],
+    };
+  });
+  for (const [i, e] of entries.entries()) {
+    const line = lines[i] as DoneWhen;
+    const after = view.compare?.rows.find((r) => r.label === line.text);
+    const [before, now] = (view.compare?.columns ?? []).map((c) => after?.cells[c.id]);
+    if (e.questions.length) {
+      e.light = "needsYou";
+      e.reason = count(e.questions.length, "question for you", "questions for you");
+    } else if (e.problems.length) {
+      e.light = "failed";
+      e.reason =
+        e.problems.length === 1
+          ? (e.problems[0] as Problem).title
+          : `${e.problems.length} problems`;
+    } else if (before && now) {
+      e.light = now.light;
+      e.was = before.light;
+    } else if (!checked) {
+      e.light = "waiting";
+      e.reason = line.checker;
+    } else {
+      e.light = line.light;
+      e.reason = line.status;
+    }
+  }
+  const tied = new Set(entries.flatMap((e) => e.code.map((n) => fileOf(n.meta))));
+  const files = built
+    ? [
+        ...new Map(
+          fileSets(task)
+            .flat()
+            .map((f) => [f.path, f]),
+        ).values(),
+      ].filter((f) => !tied.has(f.path.split("/").at(-1) ?? ""))
+    : [];
+  const loose: LineEntry = {
+    key: "loose",
+    title: "Not tied to a line",
+    questions: open.filter((q) => linesOf(q.why).length === 0),
+    answered: answered.filter((a) => linesOf(a.item.why).length === 0),
+    problems: (view.problems ?? []).filter((p) => linesOf(p.why).length === 0),
+    shots: [],
+    code: [],
+    ran: [],
+    claimed: false,
+    files,
+    checks: [],
+  };
+  if (loose.questions.length) loose.light = "needsYou";
+  else if (loose.problems.length) loose.light = "failed";
+  const parts = [
+    loose.questions.length ? count(loose.questions.length, "question", "questions") : "",
+    loose.problems.length ? count(loose.problems.length, "problem", "problems") : "",
+    files.length ? count(files.length, "changed file", "changed files") : "",
+  ].filter(Boolean);
+  if (parts.length) loose.reason = parts.join(", ");
+  const empty = !loose.questions.length && !loose.answered.length && !loose.problems.length;
+  const other = otherOf(view.compare, lines);
+  return [...entries, ...(other ? [other] : []), ...(empty && !files.length ? [] : [loose])];
+}
+
+/** Review's rows that match no line, as one entry; its light is the worst of now. */
+function otherOf(compare: Comparison | undefined, lines: DoneWhen[]): LineEntry | null {
+  const [before, now] = compare?.columns ?? [];
+  const checks = (compare?.rows ?? [])
+    .filter((r) => !lines.some((l) => l.text === r.label))
+    .map((r) => ({
+      label: r.label,
+      ...(before && r.cells[before.id] ? { was: r.cells[before.id] } : {}),
+      ...(now && r.cells[now.id] ? { now: r.cells[now.id] } : {}),
+    }));
+  if (!checks.length) return null;
+  const lights = checks.map((c) => c.now?.light);
+  const light: Light = lights.includes("failed")
+    ? "failed"
+    : lights.includes("needsYou")
+      ? "needsYou"
+      : "done";
+  return {
+    key: "other",
+    title: "Other checks",
+    light,
+    reason: count(checks.length, "check", "checks"),
+    questions: [],
+    answered: [],
+    problems: [],
+    shots: [],
+    code: [],
+    ran: [],
+    claimed: false,
+    files: [],
+    checks,
+  };
+}
+
+/** The first entry that needs you, else the first that fails, else the first. */
+export function firstPick(entries: LineEntry[]): string {
+  const by = (light: Light) => entries.find((e) => e.light === light);
+  return (by("needsYou") ?? by("failed") ?? entries[0])?.key ?? "";
+}

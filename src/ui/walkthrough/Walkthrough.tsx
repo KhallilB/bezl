@@ -15,7 +15,6 @@ import { HistoryPage } from "../history/HistoryPage";
 import { interruptedTasks, keptTasks, shippedTasks, tasks, usage } from "../journey/fixtures";
 import type { JourneyTask, StageId } from "../journey/model";
 import { TaskPage } from "../journey/TaskPage";
-import type { Part } from "../journey/Workbench";
 import { crew, drafts, issues, read, startedTask } from "../newtask/fixtures";
 import { NewTask } from "../newtask/NewTask";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
@@ -249,13 +248,12 @@ type TaskViewProps = {
   place: Place;
   kept: boolean;
   shipped?: "checking" | "merged" | undefined;
-  tab?: Part | undefined;
   full?: boolean | undefined;
   interrupted?: boolean | undefined;
   shared: Shared;
 };
 
-function TaskView({ place, kept, shipped, tab, full, interrupted, shared }: TaskViewProps) {
+function TaskView({ place, kept, shipped, full, interrupted, shared }: TaskViewProps) {
   const list = shipped
     ? shippedTasks[shipped]
     : kept
@@ -268,7 +266,7 @@ function TaskView({ place, kept, shipped, tab, full, interrupted, shared }: Task
   return (
     <TasksShell list={list} current={open.id} shared={shared}>
       <TaskPage
-        key={`${open.id}-${tab ?? ""}-${full ? "full" : ""}`}
+        key={`${open.id}-${full ? "full" : ""}`}
         task={open}
         stage={place.stage}
         onStage={(stage) => shared.onPlace({ ...place, stage })}
@@ -276,7 +274,6 @@ function TaskView({ place, kept, shipped, tab, full, interrupted, shared }: Task
         onNewTask={() => shared.onGoTo("new-task")}
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}
-        {...(tab ? { tab } : {})}
         {...(full ? { full } : {})}
         {...((kept || shipped) && open.id === history.taskId
           ? { onHistory: () => shared.onGoTo("history") }
@@ -388,7 +385,6 @@ function View({
           place={place ?? view}
           kept={view.kept ?? false}
           shipped={view.shipped}
-          tab={view.tab}
           full={view.full}
           interrupted={view.interrupted}
           shared={shared}

@@ -1,11 +1,14 @@
 import { describe, expect, test } from "vitest";
+import { needsYou } from "../approvals/fixtures";
 import { tasks } from "./fixtures";
 import {
   ciText,
   contextOf,
   coverageText,
   diffLabel,
+  entriesOf,
   estimate,
+  firstPick,
   lightLabel,
   lineage,
   pathOf,
@@ -363,4 +366,106 @@ test("a link from the goal to code is the plan's claim; every other link is meas
   if (!trace) throw new Error("no trace");
   expect(planClaim(trace, { from: "i2", to: "link" })).toBe(true);
   expect(planClaim(trace, { from: "link", to: "review" })).toBe(false);
+});
+
+describe("entriesOf", () => {
+  const task = (id: string) => {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) throw new Error(`no fixture ${id}`);
+    return t;
+  };
+  const asked = (id: string) => needsYou.filter((i) => i.taskId === id);
+  const dispute = needsYou.find((i) => i.id === "empty-state-dispute");
+  if (!dispute) throw new Error("no dispute");
+
+  test("Review's checks that are no line come after the lines, before the loose entry", () => {
+    const entries = entriesOf(task("empty-state"), "review", asked("empty-state"), []);
+    expect(entries.map((e) => e.key)).toEqual([
+      "line-0",
+      "line-1",
+      "line-2",
+      "line-3",
+      "other",
+      "loose",
+    ]);
+    const other = entries[4];
+    expect(other).toMatchObject({ title: "Other checks", light: "done", reason: "2 checks" });
+    expect(other?.checks.map((c) => [c.label, c.was?.text, c.now?.text])).toEqual([
+      ["Tests", "47", "48, one for zero projects"],
+      ["New dependencies", "None", "None"],
+    ]);
+    expect(entriesOf(task("snapshot"), "check", [], []).map((e) => e.key)).not.toContain("other");
+  });
+
+  test("a line per done-when line, each tied to what its trace reaches", () => {
+    const [shows, oneWay, , tests, , loose] = entriesOf(
+      task("empty-state"),
+      "review",
+      asked("empty-state"),
+      [],
+    );
+    expect(shows).toMatchObject({ key: "line-0", light: "done", was: "failed", shots: ["a"] });
+    expect(oneWay?.questions.map((q) => q.id)).toEqual(["empty-state-dispute"]);
+    expect(oneWay).toMatchObject({ light: "needsYou", reason: "1 question for you" });
+    expect(oneWay?.was).toBeUndefined();
+    expect(oneWay?.code.map((n) => n.title)).toEqual(["EmptyState", "ImportLink"]);
+    expect(oneWay?.ran.map((n) => n.title)).toContain("Codex review");
+    expect(oneWay?.claimed).toBe(true);
+    expect(tests?.ran.map((n) => n.title)).toEqual(["bun run test"]);
+    expect(loose).toMatchObject({ key: "loose" });
+    expect(loose?.files.map((f) => f.path)).toEqual(["src/pages/Projects.test.tsx"]);
+  });
+
+  test("an answered question leaves the line's state to what the review found", () => {
+    const [, oneWay] = entriesOf(
+      task("empty-state"),
+      "review",
+      [],
+      [{ item: dispute, choice: dispute.choices[0] as (typeof dispute.choices)[number] }],
+    );
+    expect(oneWay?.questions).toEqual([]);
+    expect(oneWay?.answered).toHaveLength(1);
+    expect(oneWay).toMatchObject({ light: "needsYou", was: "failed" });
+    expect(oneWay?.reason).toBeUndefined();
+  });
+
+  test("problems land on the line their trace leads back to", () => {
+    const entries = entriesOf(task("snapshot"), "check", [], []);
+    expect(entries.map((e) => e.key)).toEqual(["line-0", "line-1"]);
+    expect(entries[0]).toMatchObject({ light: "failed", reason: "2 problems" });
+    expect(entries[1]).toMatchObject({ light: "done", reason: "proven" });
+  });
+
+  test("before Check a line is not checked yet; what maps to no line is loose", () => {
+    const entries = entriesOf(task("deny-scopes"), "build", asked("deny-scopes"), []);
+    expect(entries[0]).toMatchObject({ light: "waiting", reason: "Tests check" });
+    const loose = entries.at(-1);
+    expect(loose?.questions).toHaveLength(2);
+    expect(loose?.files.map((f) => f.path)).toEqual(["crates/bezl-domain/tests/policy.rs"]);
+    expect(loose?.light).toBe("needsYou");
+  });
+
+  test("nothing loose, no loose entry; before Build no files", () => {
+    expect(entriesOf(task("empty-state"), "define", [], []).map((e) => e.key)).toEqual([
+      "line-0",
+      "line-1",
+      "line-2",
+      "line-3",
+    ]);
+  });
+});
+
+describe("firstPick", () => {
+  const pick = (id: string, stage: "build" | "check" | "review", open = false) => {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) throw new Error(`no fixture ${id}`);
+    return firstPick(entriesOf(t, stage, open ? needsYou.filter((i) => i.taskId === id) : [], []));
+  };
+
+  test("the first entry that needs you, else the first that fails, else the first", () => {
+    expect(pick("empty-state", "review", true)).toBe("line-1");
+    expect(pick("snapshot", "check")).toBe("line-0");
+    expect(pick("deny-scopes", "build", true)).toBe("loose");
+    expect(pick("debounce", "build")).toBe("line-0");
+  });
 });

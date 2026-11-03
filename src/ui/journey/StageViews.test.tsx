@@ -14,6 +14,9 @@ function open(list: JourneyTask[], id: string, stage: StageId) {
 }
 
 const take = (name: RegExp) => screen.getByRole("article", { name });
+/** A take's compact row; it opens the full card in place. */
+const takeRow = (name: RegExp) =>
+  within(screen.getByRole("list", { name: "Attempts" })).getByRole("button", { name });
 const bar = () => screen.getByRole("region", { name: "Next step" });
 
 describe("Next step", () => {
@@ -33,8 +36,14 @@ describe("Next step", () => {
 });
 
 describe("Build", () => {
-  test("the attempt shows its coding agent, state and one activity line", () => {
+  test("the attempt starts as one row that opens its card in place", async () => {
     open(tasks, "debounce", "build");
+    const row = takeRow(/Claude Code/);
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(row).toHaveAccessibleName(/Writing.*Editing src\/ui\/terminals\/xterm\.ts/);
+    expect(screen.queryByRole("article", { name: /attempt/ })).toBeNull();
+    await userEvent.click(row);
+    expect(row).toHaveAttribute("aria-expanded", "true");
     const a = take(/Claude Code's attempt/);
     expect(within(a).getByText("Writing")).toBeVisible();
     expect(within(a).getByText("Editing src/ui/terminals/xterm.ts")).toBeVisible();
@@ -42,6 +51,7 @@ describe("Build", () => {
 
   test("a message reaches the writer, which reads it at its next step", async () => {
     open(tasks, "debounce", "build");
+    await userEvent.click(takeRow(/Claude Code/));
     const box = screen.getByRole("textbox", { name: "Message Claude Code" });
     await userEvent.type(box, "Keep the trailing resize");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -117,76 +127,39 @@ describe("Check", () => {
 });
 
 describe("Review", () => {
-  const table = () => screen.getByRole("table", { name: "Before and after" });
-  const row = (name: RegExp) => within(table()).getByRole("row", { name });
+  const lines = () => within(screen.getByRole("list", { name: "You asked for" }));
 
-  test("one attempt, with the other coding agent's review", () => {
+  test("one attempt, with the other coding agent's review", async () => {
     open(tasks, "empty-state", "review");
+    const row = takeRow(/Claude Code/);
+    expect(row).toHaveAccessibleName(/Clear, and it reuses EmptyState.*1 issue.*3 files/);
+    await userEvent.click(row);
     expect(screen.getAllByRole("article", { name: /attempt/ })).toHaveLength(1);
     const a = take(/Claude Code's attempt/);
     expect(within(a).getByText(/Clear, and it reuses EmptyState/)).toBeVisible();
     expect(within(a).queryByRole("button", { name: /Keep/ })).toBeNull();
   });
 
-  test("each done-when line as it is on main and after the attempt", () => {
+  test("each done-when line says how it was on main and how it is now", () => {
     open(tasks, "empty-state", "review");
-    expect(within(table()).getByRole("columnheader", { name: "On main" })).toBeVisible();
-    expect(within(table()).getByRole("columnheader", { name: "After" })).toBeVisible();
-    const line = row(/one clear way to create the first project/);
-    expect(within(line).getByText("An empty table, no way in")).toBeVisible();
-    expect(within(line).getByText("The import link does nothing yet")).toBeVisible();
+    expect(lines().getByRole("button", { name: /no projects/ })).toHaveAccessibleName(
+      /main.*Fails.*now.*Works/,
+    );
+    expect(lines().getByRole("button", { name: /Existing tests/ })).toHaveAccessibleName(
+      /main.*Works.*now.*Works/,
+    );
   });
 
-  test("only what differs hides the lines main already met", async () => {
+  test("checks that are not done-when lines are a line of their own, before and after", async () => {
     open(tasks, "empty-state", "review");
-    expect(row(/Existing tests still pass/)).toBeVisible();
-    await userEvent.click(screen.getByRole("switch", { name: "Only what differs" }));
-    expect(within(table()).queryByRole("row", { name: /Existing tests still pass/ })).toBeNull();
-  });
-
-  test("each done-when line opens to its proof: the screen, where in the code and the trace", async () => {
-    open(tasks, "empty-state", "review");
-    const label = within(row(/one clear way to create the first project/)).getByRole("button", {
-      name: /one clear way to create the first project/,
-    });
-    expect(label).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(label);
-    expect(label).toHaveAttribute("aria-expanded", "true");
-    const proof = document.getElementById(label.getAttribute("aria-controls") ?? "");
-    if (!proof) throw new Error("no proof row");
-    expect(within(proof).getByRole("img", { name: "Projects, After" })).toBeVisible();
-    expect(within(proof).getByText("src/pages/Projects.tsx:41")).toBeVisible();
-    expect(within(proof).getByRole("button", { name: "See the screen" })).toBeVisible();
-    expect(within(proof).getByRole("button", { name: "See the trace" })).toBeVisible();
-    await userEvent.click(label);
-    expect(label).toHaveAttribute("aria-expanded", "false");
-    expect(document.getElementById(proof.id)).toBeNull();
-  });
-
-  test("See the screen picks that line's screenshot in Screens and moves you there", async () => {
-    open(tasks, "empty-state", "review");
-    const screens = screen.getByRole("region", { name: "Screens" });
-    await userEvent.click(within(screens).getByRole("button", { name: "Before" }));
-    await userEvent.click(within(table()).getByRole("button", { name: /one clear way/ }));
-    await userEvent.click(within(table()).getByRole("button", { name: "See the screen" }));
-    expect(within(screens).getByRole("img", { name: "Projects, After, at 375 px" })).toBeVisible();
-    expect(screens.contains(document.activeElement)).toBe(true);
-  });
-
-  test("See the trace shows that line in Evidence and moves you there", async () => {
-    open(tasks, "empty-state", "review");
-    await userEvent.click(within(table()).getByRole("button", { name: /one clear way/ }));
-    await userEvent.click(within(table()).getByRole("button", { name: "See the trace" }));
-    const evidence = screen.getByRole("region", { name: "Evidence" });
-    expect(
-      within(evidence).getByRole("button", { name: /One clear way to create the first project/ }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(evidence.contains(document.activeElement)).toBe(true);
-  });
-
-  test("a line with nothing to show stays plain text", () => {
-    open(tasks, "empty-state", "review");
-    expect(within(row(/New dependencies/)).queryByRole("button")).toBeNull();
+    const row = lines().getByRole("button", { name: /Other checks/ });
+    expect(row).toHaveAccessibleName(/Works.*2 checks/);
+    await userEvent.click(row);
+    const pane = within(screen.getByRole("region", { name: "Other checks" }));
+    const other = within(pane.getByRole("list", { name: "Before and after" }));
+    expect(other.getByText("Tests")).toBeVisible();
+    expect(other.getByText("47")).toBeVisible();
+    expect(other.getByText("48, one for zero projects")).toBeVisible();
   });
 
   test("the next step says why it's ready, and Ship it hands it to Ship", async () => {

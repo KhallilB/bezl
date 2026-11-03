@@ -11,24 +11,21 @@ import {
   Switch,
 } from "@kb.ui/react";
 import type { ReactNode } from "react";
-import { createContext, Fragment, useContext, useId, useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { LightIcon, lightTone } from "./icons";
 import "./journey.css";
 import {
   type CiStatus,
-  type Comparison,
   ciText,
   diffLabel,
   estimate,
   type FileChange,
   lightLabel,
   type Problem,
-  type Proof,
   type Row,
   type SendBackOptions,
   type ShipSummary,
-  type Shot,
   stageLabel,
   type Take,
 } from "./model";
@@ -150,18 +147,52 @@ function TakeCard({ take, lone }: { take: Take; lone: boolean }) {
   );
 }
 
-/** The attempt (or attempts); Build adds the message box under a working one. */
+const plural = (n: number, one: string) => (n === 1 ? `1 ${one}` : `${n} ${one}s`);
+
+/** A row per attempt; each opens its card in place, and Build's message box with a working one. */
 export function Takes({ takes, steer }: { takes: Take[]; steer: boolean }) {
-  const writing = steer ? takes.find((t) => t.light === "working") : undefined;
+  const id = useId();
+  const [open, setOpen] = useState<string | null>(null);
+  const lone = takes.length === 1;
   return (
-    <div className="journey-takes-wrap">
-      <div className="journey-takes">
-        {takes.map((t) => (
-          <TakeCard key={t.id} take={t} lone={takes.length === 1} />
-        ))}
-      </div>
-      {writing ? <Steer model={writing.model} /> : null}
-    </div>
+    <ul className="journey-takes" aria-label="Attempts">
+      {takes.map((t) => {
+        const expanded = open === t.id;
+        const counts = [
+          t.findings?.length ? plural(t.findings.length, "issue") : "",
+          t.files?.length ? plural(t.files.length, "file") : "",
+        ].filter(Boolean);
+        return (
+          <li key={t.id} className="journey-take-item" data-light={t.light}>
+            <button
+              type="button"
+              className="journey-take-row"
+              aria-expanded={expanded}
+              aria-controls={`${id}-${t.id}`}
+              onClick={() => setOpen(expanded ? null : t.id)}
+            >
+              <span className="journey-row-icon">
+                <LightIcon light={t.light} />
+              </span>
+              <span className="journey-take-model">{lone ? t.model : `${t.id} · ${t.model}`}</span>
+              <span className="journey-take-state">{t.state}</span>
+              <span className="journey-take-line">
+                {t.verdict ? `${t.verdict.by}: ${t.verdict.text}` : (t.activity ?? "")}
+              </span>
+              {counts.length ? (
+                <span className="journey-take-counts">{counts.join(" · ")}</span>
+              ) : null}
+            </button>
+            {expanded ? (
+              <div id={`${id}-${t.id}`} className="journey-take-open">
+                <TakeCard take={t} lone={lone} />
+                {steer && t.light === "working" ? <Steer model={t.model} /> : null}
+              </div>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -171,18 +202,21 @@ const problemCount = (n: number) => (n === 1 ? "1 problem" : `${n} problems`);
 export function Problems({
   problems,
   onWhy,
+  level = "h2",
 }: {
   problems: Problem[];
-  /** Shows a problem in Evidence. */
+  /** Opens the map at a problem. */
   onWhy?: ((id: string) => void) | undefined;
+  level?: "h2" | "h3";
 }) {
   const id = useId();
+  const Heading = level;
   const [open, setOpen] = useState(0);
   return (
     <section className="journey-section" aria-labelledby={id}>
-      <h2 id={id} className="page-label">
+      <Heading id={id} className="page-label">
         Problems
-      </h2>
+      </Heading>
       <ul className="journey-problems" aria-labelledby={id}>
         {problems.map((p, i) => (
           <li key={p.title} className="journey-problem" data-light="failed">
@@ -209,7 +243,7 @@ export function Problems({
                   <pre className="journey-evidence">{p.evidence.join("\n")}</pre>
                   {p.why && onWhy ? (
                     <Button size="sm" variant="ghost" onClick={() => onWhy(p.why as string)}>
-                      See the trace
+                      Show in the map
                     </Button>
                   ) : null}
                 </div>
@@ -228,170 +262,6 @@ function sendText(problems: Problem[]): { what: string; writers: string } {
     what: problemCount(problems.length),
     writers: [...new Set(problems.map((p) => p.writer))].join(" and "),
   };
-}
-
-/** A line's proof, under it: its screenshot, where in the code, and where to look next. */
-function ProofView({
-  proof,
-  shot,
-  onShot,
-  onNode,
-}: {
-  proof: Proof;
-  shot: Shot | undefined;
-  onShot?: ((id: string) => void) | undefined;
-  onNode?: ((id: string) => void) | undefined;
-}) {
-  const { node, where } = proof;
-  return (
-    <div className="journey-proof">
-      {shot ? (
-        <img
-          className="journey-proof-shot"
-          src={shot.images.desktop}
-          alt={`${shot.screen}, ${shot.name}`}
-        />
-      ) : null}
-      <div className="journey-proof-body">
-        {where ? (
-          <p className="journey-proof-where">
-            <span className="journey-eyebrow">Code</span>
-            <span className="journey-mono">{where}</span>
-          </p>
-        ) : null}
-        <div className="journey-proof-actions">
-          {shot && onShot ? (
-            <Button size="sm" variant="secondary" onClick={() => onShot(shot.id)}>
-              See the screen
-            </Button>
-          ) : null}
-          {node && onNode ? (
-            <Button size="sm" variant="secondary" onClick={() => onNode(node)}>
-              See the trace
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Review: each line as it is on main and after the attempt; a line opens to its proof. */
-export function Compare({
-  compare,
-  shots = [],
-  onShot,
-  onNode,
-}: {
-  compare: Comparison;
-  /** The stage's screenshots, for each line's thumbnail. */
-  shots?: Shot[] | undefined;
-  /** Shows a screenshot in Screens. */
-  onShot?: ((id: string) => void) | undefined;
-  /** Shows a trace node in Evidence. */
-  onNode?: ((id: string) => void) | undefined;
-}) {
-  const id = useId();
-  const [diff, setDiff] = useState(false);
-  const [opened, setOpened] = useState<number[]>([]);
-  const { columns, rows } = compare;
-  const shown = diff
-    ? rows.filter((r) => new Set(columns.map((c) => r.cells[c.id]?.text)).size > 1)
-    : rows;
-  const groups = [...new Set(shown.map((r) => r.group))];
-  const shotOf = (p?: Proof) => shots.find((s) => s.id === p?.shot);
-  // Only a line with something to show opens.
-  const showable = (p?: Proof) =>
-    Boolean(p && ((shotOf(p) && onShot) || p.where || (p.node && onNode)));
-  return (
-    <section className="journey-section journey-compare" aria-label="Compare">
-      <Switch label="Only what differs" checked={diff} onCheckedChange={setDiff} />
-      <table className="journey-table" aria-label="Before and after">
-        <thead>
-          <tr>
-            <th scope="col">
-              <span className="journey-sr">What</span>
-            </th>
-            {columns.map((c) => (
-              <th key={c.id} scope="col">
-                {c.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        {groups.map((g) => (
-          <tbody key={g}>
-            <tr>
-              <th scope="colgroup" colSpan={columns.length + 1} className="page-label">
-                {g}
-              </th>
-            </tr>
-            {shown
-              .filter((r) => r.group === g)
-              .map((r) => {
-                const i = rows.indexOf(r);
-                const proof = showable(r.proof) ? r.proof : undefined;
-                const open = Boolean(proof) && opened.includes(i);
-                return (
-                  <Fragment key={r.label}>
-                    <tr>
-                      <th scope="row">
-                        {proof ? (
-                          <button
-                            type="button"
-                            className="journey-compare-label journey-disclose"
-                            aria-expanded={open}
-                            aria-controls={`${id}-${i}`}
-                            onClick={() =>
-                              setOpened(open ? opened.filter((o) => o !== i) : [...opened, i])
-                            }
-                          >
-                            {r.label}
-                          </button>
-                        ) : (
-                          r.label
-                        )}
-                      </th>
-                      {columns.map((c) => {
-                        const cell = r.cells[c.id];
-                        return (
-                          <td key={c.id} data-light={cell?.light}>
-                            {cell ? (
-                              <>
-                                <span className="journey-compare-col" aria-hidden="true">
-                                  {c.name}
-                                </span>
-                                <span className="journey-row-icon">
-                                  <LightIcon light={cell.light} />
-                                  <span className="journey-sr">{`${lightLabel[cell.light]}: `}</span>
-                                </span>
-                                {cell.text}
-                              </>
-                            ) : null}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    {open && proof ? (
-                      <tr id={`${id}-${i}`} className="journey-proof-row">
-                        <td colSpan={columns.length + 1}>
-                          <ProofView
-                            proof={proof}
-                            shot={shotOf(proof)}
-                            onShot={onShot}
-                            onNode={onNode}
-                          />
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
-                );
-              })}
-          </tbody>
-        ))}
-      </table>
-    </section>
-  );
 }
 
 /** Send-back's choices; held by the stage so the bar can move to full screen and back. */
@@ -444,7 +314,7 @@ export function SendBack({
           <Fieldset legend="What goes with it">
             <Checkbox
               label="What Bezl saw"
-              description="Each problem's evidence always goes."
+              description="What Bezl saw for each problem always goes."
               checked
               disabled
               onCheckedChange={() => {}}
@@ -500,7 +370,7 @@ export function SendBack({
   );
 }
 
-/** Where the stage's questions and bar go while full screen is open; null keeps them in place. */
+/** Where the picked line's questions and the bar go while the map is open; null keeps them in place. */
 export const FullSlots = createContext<{ ask: HTMLElement | null; bar: HTMLElement | null }>({
   ask: null,
   bar: null,

@@ -211,16 +211,99 @@
   white-space: nowrap;
 }
 
-/* Takes: one card each, side by side while there is room. */
-.journey-takes-wrap {
+/* Takes: a compact row each; the card opens in place under it. */
+.journey-takes {
+  display: grid;
+  gap: var(--kb-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-take-item {
+  display: grid;
+  gap: var(--kb-space-2);
+  min-width: 0;
+}
+
+.journey-take-row {
+  display: grid;
+  grid-template-columns: 1rem auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--kb-space-3);
+  width: 100%;
+  padding: var(--kb-space-2) var(--kb-space-3);
+  border: 1px solid var(--kb-color-border);
+  border-radius: var(--kb-radius-md);
+  background: var(--kb-material-recessed-face);
+  color: inherit;
+  font: inherit;
+  font-size: var(--kb-size-sm);
+  text-align: start;
+  cursor: pointer;
+}
+
+.journey-take-row:hover {
+  background: var(--journey-ring);
+}
+
+.journey-take-row:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 1px;
+}
+
+.journey-take-row[aria-expanded="true"] {
+  border-color: var(--kb-material-raised-border);
+  background: var(--kb-material-raised-face);
+}
+
+.journey-take-model {
+  font-size: var(--kb-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.journey-take-state {
+  color: var(--journey-ink, var(--kb-color-muted));
+  font-size: var(--kb-size-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.journey-take-line {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kb-color-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journey-take-counts {
+  color: var(--kb-color-muted);
+  font-family: var(--journey-mono);
+  font-size: var(--kb-size-xs);
+  white-space: nowrap;
+}
+
+.journey-take-open {
   display: grid;
   gap: var(--kb-space-4);
 }
 
-.journey-takes {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
-  gap: var(--kb-space-4);
+/* Narrow: the one-liner and counts drop under the model. */
+@media (max-width: 40rem) {
+  .journey-take-row {
+    grid-template-columns: 1rem auto minmax(0, 1fr);
+  }
+
+  .journey-take-line,
+  .journey-take-counts {
+    grid-column: 2 / -1;
+  }
+
+  .journey-take-line {
+    white-space: normal;
+  }
 }
 
 /* The panel fills the card, so Keep sits level across cards. */
@@ -525,189 +608,6 @@
   box-shadow: var(--kb-material-field-shadow);
 }
 
-/* Compare: a row per line, a column per state; a line opens to its proof. */
-.journey-compare {
-  container: compare / inline-size;
-  justify-items: start;
-}
-
-.journey-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--kb-size-sm);
-}
-
-.journey-table th,
-.journey-table td {
-  padding: var(--kb-space-2) var(--kb-space-3) var(--kb-space-2) 0;
-  border-block-end: 1px solid var(--kb-color-border);
-  font-weight: 400;
-  text-align: start;
-  vertical-align: top;
-}
-
-.journey-table thead th {
-  vertical-align: bottom;
-}
-
-.journey-table thead th:not(:first-child) {
-  width: 30%;
-}
-
-.journey-table th[scope="row"] {
-  color: var(--kb-color-muted);
-}
-
-.journey-table th[scope="colgroup"] {
-  padding-block-start: var(--kb-space-4);
-}
-
-.journey-table td .journey-row-icon {
-  display: inline-flex;
-  margin-inline-end: var(--kb-space-1);
-  vertical-align: -0.2em;
-}
-
-/* Each cell's column name; only the stacked layout shows it. */
-.journey-compare-col {
-  display: none;
-}
-
-/* A done-when label that opens its proof. */
-.journey-compare-label {
-  display: inline-flex;
-  align-items: baseline;
-  padding: 0;
-  border: 0;
-  border-radius: var(--kb-radius-sm);
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.journey-compare-label:hover {
-  color: var(--kb-color-fg);
-}
-
-.journey-compare-label:focus-visible {
-  outline: 2px solid var(--kb-color-ring);
-  outline-offset: 2px;
-}
-
-/* Chevron after a disclosure's label; points down when closed, up when open. */
-.journey-disclose::after {
-  content: "";
-  flex: none;
-  width: 0.375rem;
-  height: 0.375rem;
-  margin-inline-start: var(--kb-space-2);
-  border-block-end: 1.5px solid currentColor;
-  border-inline-end: 1.5px solid currentColor;
-  transform: translateY(-25%) rotate(45deg);
-  transition: transform var(--kb-motion-duration-fast) var(--kb-motion-easing-standard);
-}
-
-.journey-disclose[aria-expanded="true"]::after {
-  transform: translateY(25%) rotate(-135deg);
-}
-
-.journey-proof-row > td {
-  padding-block-start: 0;
-}
-
-.journey-proof {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: start;
-  gap: var(--kb-space-4);
-  padding: var(--kb-space-3);
-  border-radius: var(--kb-radius-md);
-  background: var(--kb-material-recessed-face);
-  box-shadow: var(--kb-material-inlay-shadow);
-}
-
-.journey-proof-shot {
-  display: block;
-  width: 10rem;
-  height: auto;
-  border-radius: var(--kb-radius-sm);
-  box-shadow: var(--kb-material-float-shadow);
-}
-
-.journey-proof-body {
-  display: grid;
-  flex: 1 1 14rem;
-  align-content: start;
-  gap: var(--kb-space-3);
-  min-width: 0;
-}
-
-.journey-proof-where {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--kb-space-2);
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.journey-proof-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--kb-space-2);
-}
-
-/* Narrow: the label takes its own line, the two states sit under it. */
-@container compare (max-width: 34rem) {
-  .journey-table,
-  .journey-table thead,
-  .journey-table tbody {
-    display: block;
-  }
-
-  .journey-table tr {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: var(--kb-space-3);
-    border-block-end: 1px solid var(--kb-color-border);
-  }
-
-  .journey-table th,
-  .journey-table td {
-    width: auto;
-    padding-inline-end: 0;
-    border-block-end: 0;
-  }
-
-  /* Each cell names its column, so the header row only stays for screen readers. */
-  .journey-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .journey-table th[scope="row"],
-  .journey-table th[scope="colgroup"],
-  .journey-proof-row > td {
-    grid-column: 1 / -1;
-  }
-
-  .journey-table th[scope="row"] {
-    padding-block-end: 0;
-  }
-
-  .journey-compare-col {
-    display: block;
-    color: var(--kb-color-muted);
-    font-size: var(--kb-size-xs);
-  }
-}
-
 .journey-link {
   color: var(--kb-color-info);
   font-size: var(--kb-size-sm);
@@ -720,6 +620,193 @@
   }
 }
 
+/* Lines: the list, and the picked line's detail beside it when wide. */
+.journey-lines {
+  display: grid;
+  gap: var(--kb-space-6);
+  min-width: 0;
+}
+
+.journey-lines[data-wide] {
+  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+  align-items: start;
+}
+
+.journey-lines-list {
+  display: grid;
+  align-content: start;
+  gap: var(--kb-space-2);
+  min-width: 0;
+}
+
+.journey-lines-list > ul {
+  display: grid;
+  gap: var(--kb-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.journey-line {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  column-gap: var(--kb-space-3);
+  row-gap: var(--kb-space-1);
+  width: 100%;
+  padding: var(--kb-space-2) var(--kb-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--kb-radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--kb-size-sm);
+  text-align: start;
+  cursor: pointer;
+}
+
+.journey-line > .journey-row-icon {
+  margin-block-start: 0.125rem;
+}
+
+.journey-line:hover {
+  background: var(--journey-ring);
+}
+
+.journey-line:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 1px;
+}
+
+.journey-line[aria-current="true"],
+.journey-line[aria-expanded="true"] {
+  border-color: var(--kb-material-raised-border);
+  background: var(--kb-material-raised-face);
+  box-shadow: var(--kb-material-raised-shadow);
+}
+
+/* Left edge carries the line's colour, so the pick reads without colour too. */
+.journey-line[aria-current="true"] {
+  box-shadow:
+    inset 3px 0 0 var(--journey-ink, var(--kb-color-muted)),
+    var(--kb-material-raised-shadow);
+}
+
+.journey-line-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.journey-line-state {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 2;
+  align-items: center;
+  gap: var(--kb-space-1) var(--kb-space-2);
+  color: var(--kb-color-muted);
+  font-size: var(--kb-size-xs);
+}
+
+.journey-line-word {
+  color: var(--journey-ink, var(--kb-color-muted));
+  font-weight: 500;
+}
+
+.journey-line-reason {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.journey-line-was {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--kb-space-1);
+}
+
+.journey-line-was .journey-row-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Sticky with its own scroll, so a long detail never drags the list away. */
+.journey-detail-wrap {
+  position: sticky;
+  inset-block-start: var(--kb-space-4);
+  max-height: calc(100dvh - 9rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-width: 0;
+  padding: var(--kb-space-4);
+  border: 1px solid var(--kb-color-border);
+  border-radius: var(--kb-radius-lg);
+  background: var(--kb-material-recessed-face);
+}
+
+.journey-detail {
+  display: grid;
+  gap: var(--kb-space-5);
+  min-width: 0;
+}
+
+.journey-lines-item > .journey-detail {
+  margin-block: var(--kb-space-2) var(--kb-space-4);
+  padding-inline-start: var(--kb-space-4);
+  border-inline-start: 2px solid var(--journey-ring);
+}
+
+.journey-detail-name {
+  margin: 0;
+  font-size: var(--kb-size-md);
+  font-weight: 600;
+  line-height: 1.4;
+  scroll-margin-block: var(--kb-space-8);
+}
+
+.journey-detail-name:focus-visible {
+  outline: 2px solid var(--kb-color-ring);
+  outline-offset: 2px;
+  border-radius: var(--kb-radius-sm);
+}
+
+.journey-detail-name:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.journey-detail-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--kb-space-2);
+  margin: 0;
+  font-size: var(--kb-size-sm);
+}
+
+/* In place, the row above already says both; the heading stays for the region's name. */
+.journey-lines-item > .journey-detail > .journey-detail-state {
+  display: none;
+}
+
+.journey-lines-item > .journey-detail > .journey-detail-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Other checks: main against now may wrap on a phone. */
+.journey-other {
+  white-space: normal;
+  text-align: end;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .journey-line {
+    transition: background-color 120ms var(--kb-motion-easing-enter);
+  }
+}
+
 @keyframes journey-in {
   from {
     opacity: 0;
@@ -727,7 +814,7 @@
   }
 }
 
-/* Summary: one line under the stages; each fact opens its evidence. */
+/* Facts: one quiet line under the status. */
 .journey-summary {
   display: flex;
   flex-wrap: wrap;
@@ -798,14 +885,6 @@
   }
 }
 
-/* Screens and Evidence: a heading row with Full screen, then the view. */
-.journey-part-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--kb-space-2);
-}
-
 /* Segmented like kbui's Toolbar: recessed track, the open tab raised like a secondary Button. */
 .journey-tabs {
   display: grid;
@@ -842,24 +921,6 @@
 .journey-tabs [role="tab"]:focus-visible {
   outline: 2px solid var(--kb-color-ring);
   outline-offset: -2px;
-}
-
-/* Intent under the header: the goal across the top, its parts side by side when there is room. */
-.journey-intent-panel {
-  display: grid;
-  gap: var(--kb-space-4);
-}
-
-.journey-intent {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
-  align-items: start;
-  gap: var(--kb-space-6);
-}
-
-.journey-intent .journey-quote {
-  grid-column: 1 / -1;
-  font-size: var(--kb-size-md);
 }
 
 /* Questions: who asked, what waits on it, then choices with what each leads to. */
@@ -1029,10 +1090,6 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-.journey-full-canvas .journey-intent {
-  overflow: auto;
-}
-
 .journey-full-bar:empty {
   display: none;
 }
@@ -1163,17 +1220,10 @@
   margin: 0;
   color: var(--kb-color-muted);
   font-size: var(--kb-size-xs);
-  font-style: italic;
-}
-
-.journey-reach {
-  margin: 0;
-  font-size: var(--kb-size-sm);
 }
 
 .journey-full-canvas > .journey-preview,
-.journey-full-canvas > .journey-map,
-.journey-full-canvas > .journey-intent {
+.journey-full-canvas > .journey-map {
   flex: 1;
   min-height: 0;
 }
@@ -1347,47 +1397,6 @@
   display: grid;
   justify-items: start;
   gap: var(--kb-space-2);
-}
-
-/* Trace: one finding's chain, a column at a time, from the goal to what needs you. */
-.journey-trace {
-  display: grid;
-  gap: var(--kb-space-4);
-}
-
-.journey-coverage {
-  display: grid;
-  gap: var(--kb-space-2);
-  font-size: var(--kb-size-sm);
-}
-
-.journey-coverage p {
-  margin: 0;
-}
-
-.journey-chain,
-.journey-chain-start {
-  display: grid;
-  gap: var(--kb-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Each column joins the next with a short rule, so the chain reads top to bottom. */
-.journey-chain > li {
-  position: relative;
-  display: grid;
-  gap: var(--kb-space-1);
-}
-
-.journey-chain > li + li::before {
-  content: "";
-  position: absolute;
-  inset-block-start: calc(-1 * var(--kb-space-3));
-  inset-inline-start: calc(var(--kb-space-3) + 0.5rem - 0.5px);
-  height: var(--kb-space-3);
-  border-inline-start: 1px solid var(--journey-ring);
 }
 
 .journey-node {

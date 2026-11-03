@@ -103,7 +103,7 @@ export function EvidenceMap({
   return (
     <div className="journey-map">
       <ReactFlow
-        aria-label="Evidence map"
+        aria-label="Map"
         nodes={[...heads, ...cards]}
         edges={edges}
         nodeTypes={nodeTypes}
