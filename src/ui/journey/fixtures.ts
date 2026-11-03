@@ -109,9 +109,15 @@ const emptyTrace: Trace = {
     node("i1", "intent", "Shows when there are no projects", "Tests check"),
     node("i2", "intent", "One clear way to create the first project", "You check", "needsYou"),
     node("i3", "intent", "Passes accessibility checks", "Bezl checks"),
-    node("projects", "change", "Projects()", "Projects.tsx"),
-    node("empty", "change", "EmptyState", "EmptyState.tsx"),
-    node("link", "change", "ImportLink", "Projects.tsx:41", "needsYou"),
+    { ...node("projects", "change", "Projects()", "Projects.tsx"), path: "src/pages/Projects.tsx" },
+    {
+      ...node("empty", "change", "EmptyState", "EmptyState.tsx"),
+      path: "src/components/EmptyState.tsx",
+    },
+    {
+      ...node("link", "change", "ImportLink", "Projects.tsx:41", "needsYou"),
+      path: "src/pages/Projects.tsx",
+    },
     node("tests", "measured", "bun run test", "48 passed"),
     node("axe", "measured", "Accessibility", "0 issues"),
     { ...node("shots", "measured", "Screenshots", "375 and 1280 px"), shot: "a" },
@@ -548,9 +554,18 @@ const snapshotTrace: Trace = {
   nodes: [
     node("s1", "intent", "Restores the colours and the cursor", "Tests check", "failed"),
     node("s2", "intent", "Snapshots stay in .git/bezl", "Bezl checks"),
-    node("viewer", "change", "SnapshotViewer", "Snapshots.tsx · new"),
-    node("restore", "change", "restoreSnapshot()", "snapshot.ts:23", "needsYou"),
-    node("save", "change", "saveSnapshot()", "snapshot.ts:8"),
+    {
+      ...node("viewer", "change", "SnapshotViewer", "Snapshots.tsx · new"),
+      path: "src/ui/terminals/Snapshots.tsx",
+    },
+    {
+      ...node("restore", "change", "restoreSnapshot()", "snapshot.ts:23", "needsYou"),
+      path: "src/ui/terminals/snapshot.ts",
+    },
+    {
+      ...node("save", "change", "saveSnapshot()", "snapshot.ts:8"),
+      path: "src/ui/terminals/snapshot.ts",
+    },
     node("browser", "measured", "Browser tests", "1 failed", "failed"),
     node("coverage", "measured", "Coverage", "1 function never runs", "needsYou"),
     node("paths", "measured", "Where files are written", "all in .git/bezl"),

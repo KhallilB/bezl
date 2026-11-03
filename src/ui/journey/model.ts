@@ -150,6 +150,8 @@ export type TraceNode = {
   light: Light;
   /** The screenshot it can be seen on. */
   shot?: string;
+  /** A changed file's full path; meta names only the file. */
+  path?: string;
 };
 
 /** `via` is the code a finding is about, so tracing it skips the rest of that run. */
@@ -418,10 +420,10 @@ export const lineWord: Record<Light, string> = {
 
 export type Asked = { item: NeedsYouItem; choice: NeedsYouChoice };
 
-/** A done-when line, or the loose entry, with everything tied to it at this stage. */
 /** A Review check that is no done-when line: main's cell, then now's. */
 export type OtherCheck = { label: string; was?: CompareCell; now?: CompareCell };
 
+/** A done-when line, or the loose entry, with everything tied to it at this stage. */
 export type LineEntry = {
   /** `line-<index>`; `other` for Review's other checks; `loose` for what ties to no line. */
   key: string;
@@ -449,8 +451,16 @@ export type LineEntry = {
 
 const count = (n: number, one: string, many: string) => (n === 1 ? `1 ${one}` : `${n} ${many}`);
 
-// A file is tied when a changed node's meta names it, e.g. "Projects.tsx:41".
-const fileOf = (meta: string) => meta.split(/[:\s]/)[0] ?? "";
+// A file is tied by a changed node's path, else by the file its meta names, e.g. "Projects.tsx:41".
+const ties = (n: TraceNode, path: string) =>
+  n.path ? n.path === path : path.split("/").at(-1) === n.meta.split(/[:\s]/)[0];
+
+// A Review row is a line's by proof node when both have one, else by text.
+const rowOf = (r: CompareRow, line: DoneWhen) =>
+  r.proof?.node && line.node ? r.proof.node === line.node : r.label === line.text;
+
+// Worst first: what fails, what needs you, what runs, what hasn't run.
+const worst: Light[] = ["failed", "needsYou", "working", "waiting"];
 
 /** Lines, then the loose entry if anything ties to none; questions and problems by their trace node. */
 export function entriesOf(
@@ -474,7 +484,7 @@ export function entriesOf(
   const entries: LineEntry[] = lines.map((line, i) => {
     const lit = trace && line.node ? lineage(trace, line.node) : new Set<string>();
     const nodes = trace?.nodes.filter((n) => lit.has(n.id)) ?? [];
-    const row = view.compare?.rows.find((r) => r.label === line.text);
+    const row = view.compare?.rows.find((r) => rowOf(r, line));
     const proofNode = trace?.nodes.find((n) => n.id === row?.proof?.node);
     const ran = nodes.filter((n) => n.column === "measured");
     if (proofNode && !lit.has(proofNode.id)) ran.push(proofNode);
@@ -497,9 +507,18 @@ export function entriesOf(
       checks: [],
     };
   });
+  // A shot no line ties, e.g. main's Before, joins each line that shows its screen.
+  const own = new Set(entries.flatMap((e) => e.shots));
+  for (const e of entries) {
+    const screens = new Set(
+      (view.shots ?? []).filter((s) => e.shots.includes(s.id)).map((s) => s.screen),
+    );
+    for (const s of view.shots ?? [])
+      if (!own.has(s.id) && screens.has(s.screen)) e.shots.push(s.id);
+  }
   for (const [i, e] of entries.entries()) {
     const line = lines[i] as DoneWhen;
-    const after = view.compare?.rows.find((r) => r.label === line.text);
+    const after = view.compare?.rows.find((r) => rowOf(r, line));
     const [before, now] = (view.compare?.columns ?? []).map((c) => after?.cells[c.id]);
     if (e.questions.length) {
       e.light = "needsYou";
@@ -521,7 +540,7 @@ export function entriesOf(
       e.reason = line.status;
     }
   }
-  const tied = new Set(entries.flatMap((e) => e.code.map((n) => fileOf(n.meta))));
+  const tied = entries.flatMap((e) => e.code);
   const files = built
     ? [
         ...new Map(
@@ -529,7 +548,7 @@ export function entriesOf(
             .flat()
             .map((f) => [f.path, f]),
         ).values(),
-      ].filter((f) => !tied.has(f.path.split("/").at(-1) ?? ""))
+      ].filter((f) => !tied.some((n) => ties(n, f.path)))
     : [];
   const loose: LineEntry = {
     key: "loose",
@@ -561,7 +580,7 @@ export function entriesOf(
 function otherOf(compare: Comparison | undefined, lines: DoneWhen[]): LineEntry | null {
   const [before, now] = compare?.columns ?? [];
   const checks = (compare?.rows ?? [])
-    .filter((r) => !lines.some((l) => l.text === r.label))
+    .filter((r) => !lines.some((l) => rowOf(r, l)))
     .map((r) => ({
       label: r.label,
       ...(before && r.cells[before.id] ? { was: r.cells[before.id] } : {}),
@@ -569,11 +588,7 @@ function otherOf(compare: Comparison | undefined, lines: DoneWhen[]): LineEntry 
     }));
   if (!checks.length) return null;
   const lights = checks.map((c) => c.now?.light);
-  const light: Light = lights.includes("failed")
-    ? "failed"
-    : lights.includes("needsYou")
-      ? "needsYou"
-      : "done";
+  const light = worst.find((l) => lights.includes(l)) ?? "done";
   return {
     key: "other",
     title: "Other checks",

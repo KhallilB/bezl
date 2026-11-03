@@ -79,7 +79,7 @@ function NodeList({ label, nodes, mono }: { label: string; nodes: TraceNode[]; m
 }
 
 export type DetailProps = {
-  /** The stage's screenshots; a line with a shot shows them. */
+  /** The stage's screenshots; a line shows only its own. */
   shots: Shot[];
   /** An example shown while a choice is pointed at. */
   example: Shot | null;
@@ -147,7 +147,11 @@ function Detail({
       {shown ? (
         <section className="journey-section" aria-label="Screenshots">
           <h3 className="page-label">Screenshots</h3>
-          <Preview shots={entry.shots.length ? shots : []} example={example} design={design} />
+          <Preview
+            shots={shots.filter((s) => entry.shots.includes(s.id))}
+            example={example}
+            design={design}
+          />
         </section>
       ) : null}
       {entry.code.length ? (
@@ -294,10 +298,14 @@ export function Lines({
   const [ref, wide] = useWide();
   // Only a click or Enter moves focus to the detail; arrowing never does.
   const [moved, setMoved] = useState(0);
+  // A resize changes `wide`, never `moved`, so it must not refocus.
+  const handled = useRef(0);
   const current = entries.find((e) => e.key === picked);
   const pane = current ? <Detail id={`${id}-detail`} entry={current} {...detail} /> : null;
   useEffect(() => {
-    if (moved && wide) document.getElementById(`${id}-detail-name`)?.focus();
+    if (moved === handled.current) return;
+    handled.current = moved;
+    if (wide) document.getElementById(`${id}-detail-name`)?.focus();
   }, [moved, wide, id]);
   const move = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
     const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: entries.length - 1 }[e.key];

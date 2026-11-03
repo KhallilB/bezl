@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import { needsYou } from "../approvals/fixtures";
 import { tasks } from "./fixtures";
 import {
+  type CompareRow,
+  type Comparison,
   ciText,
   contextOf,
   coverageText,
@@ -9,6 +11,8 @@ import {
   entriesOf,
   estimate,
   firstPick,
+  type JourneyTask,
+  type Light,
   lightLabel,
   lineage,
   pathOf,
@@ -404,7 +408,13 @@ describe("entriesOf", () => {
       asked("empty-state"),
       [],
     );
-    expect(shows).toMatchObject({ key: "line-0", light: "done", was: "failed", shots: ["a"] });
+    // Main's screenshot of the same screen ties to no line, so it comes along as Before.
+    expect(shows).toMatchObject({
+      key: "line-0",
+      light: "done",
+      was: "failed",
+      shots: ["a", "today"],
+    });
     expect(oneWay?.questions.map((q) => q.id)).toEqual(["empty-state-dispute"]);
     expect(oneWay).toMatchObject({ light: "needsYou", reason: "1 question for you" });
     expect(oneWay?.was).toBeUndefined();
@@ -443,6 +453,90 @@ describe("entriesOf", () => {
     expect(loose?.questions).toHaveLength(2);
     expect(loose?.files.map((f) => f.path)).toEqual(["crates/bezl-domain/tests/policy.rs"]);
     expect(loose?.light).toBe("needsYou");
+  });
+
+  const review = (rows: CompareRow[]): JourneyTask => {
+    const t = task("empty-state");
+    const compare = t.views.review.compare as Comparison;
+    return {
+      ...t,
+      views: { ...t.views, review: { ...t.views.review, compare: { ...compare, rows } } },
+    };
+  };
+  const cells = (light: Light) => ({
+    before: { light: "done" as Light, text: "" },
+    after: { light, text: "" },
+  });
+
+  test("other checks light the worst of now: working and waiting are not Works", () => {
+    const other = (lights: Light[]) =>
+      entriesOf(
+        review(lights.map((l) => ({ group: "Checks", label: l, cells: cells(l) }))),
+        "review",
+        [],
+        [],
+      ).find((e) => e.key === "other")?.light;
+    expect(other(["done", "working"])).toBe("working");
+    expect(other(["done", "waiting"])).toBe("waiting");
+    expect(other(["waiting", "working"])).toBe("working");
+    expect(other(["working", "needsYou"])).toBe("needsYou");
+    expect(other(["needsYou", "failed"])).toBe("failed");
+  });
+
+  test("a Review row joins its line by proof node before text, and counts once", () => {
+    const entries = entriesOf(
+      review([
+        {
+          group: "Done when",
+          label: "Renamed since Define",
+          cells: cells("failed"),
+          proof: { node: "i1" },
+        },
+      ]),
+      "review",
+      [],
+      [],
+    );
+    expect(entries[0]).toMatchObject({ light: "failed", was: "done" });
+    expect(entries.map((e) => e.key)).not.toContain("other");
+  });
+
+  test("a changed file is tied by its full path, not a shared name", () => {
+    const t = task("empty-state");
+    const change = (id: string, path: string) =>
+      ({ id, column: "change", title: id, meta: "index.ts:3", light: "done", path }) as const;
+    const tied: JourneyTask = {
+      ...t,
+      doneWhen: [{ text: "Works", checker: "Tests check", light: "done", status: "", node: "i" }],
+      trace: {
+        nodes: [
+          { id: "i", column: "intent", title: "Works", meta: "", light: "done" },
+          change("c", "src/a/index.ts"),
+        ],
+        links: [{ from: "i", to: "c" }],
+      },
+      views: {
+        ...t.views,
+        review: { ...t.views.review, takes: [] },
+        build: {
+          ...t.views.build,
+          takes: [
+            {
+              id: "A",
+              model: "Claude Code",
+              state: "Ready",
+              light: "done",
+              files: [
+                { path: "src/a/index.ts", added: 1, removed: 0 },
+                { path: "src/b/index.ts", added: 1, removed: 0 },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    const loose = entriesOf(tied, "build", [], []).find((e) => e.key === "loose");
+    expect(loose?.files.map((f) => f.path)).toEqual(["src/b/index.ts"]);
   });
 
   test("nothing loose, no loose entry; before Build no files", () => {

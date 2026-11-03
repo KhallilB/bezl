@@ -168,7 +168,7 @@ function Row({
       <Button
         size="sm"
         variant="ghost"
-        aria-label={`Change ${label}`}
+        aria-label={`${open ? "Done" : "Change"} ${label}`}
         aria-expanded={children ? open : undefined}
         aria-controls={children && open ? `${id}-edit` : undefined}
         onClick={onChange}
