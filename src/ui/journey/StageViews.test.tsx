@@ -20,18 +20,20 @@ const takeRow = (name: RegExp) =>
 const bar = () => screen.getByRole("region", { name: "Next step" });
 
 describe("Next step", () => {
-  test("every stage ends in the same bar", () => {
-    for (const stage of ["define", "plan", "build", "check", "review", "ship"] as const) {
-      open(tasks, "empty-state", stage);
-      expect(bar(), stage).toBeVisible();
+  test("a stage with something to press ends in the bar", () => {
+    for (const [list, stage, name] of [
+      [tasks, "review", "Ship it"],
+      [keptTasks, "ship", "Open pull request"],
+    ] as const) {
+      open([...list], "empty-state", stage);
+      expect(within(bar()).getByRole("button", { name }), stage).toBeVisible();
       cleanup();
     }
   });
 
-  test("with nothing to decide, it says so", () => {
+  test("with nothing to press, there is no bar; the status line says it all", () => {
     open(tasks, "debounce", "build");
-    expect(within(bar()).getByText("Nothing needs you at Build.")).toBeVisible();
-    expect(within(bar()).queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Next step" })).toBeNull();
   });
 });
 
@@ -127,8 +129,6 @@ describe("Check", () => {
 });
 
 describe("Review", () => {
-  const lines = () => within(screen.getByRole("list", { name: "You asked for" }));
-
   test("one attempt, with the other coding agent's review", async () => {
     open(tasks, "empty-state", "review");
     const row = takeRow(/Claude Code/);
@@ -140,20 +140,20 @@ describe("Review", () => {
     expect(within(a).queryByRole("button", { name: /Keep/ })).toBeNull();
   });
 
-  test("each done-when line says how it was on main and how it is now", () => {
+  test("a line that changed since main says so; an unchanged one stays quiet", async () => {
     open(tasks, "empty-state", "review");
-    expect(lines().getByRole("button", { name: /no projects/ })).toHaveAccessibleName(
+    await userEvent.click(screen.getByText(/^\d+ works?$/));
+    const works = within(screen.getByRole("list", { name: "Lines that work" }));
+    expect(works.getByRole("button", { name: /no projects/ })).toHaveAccessibleName(
       /main.*Fails.*now.*Works/,
     );
-    expect(lines().getByRole("button", { name: /Existing tests/ })).toHaveAccessibleName(
-      /main.*Works.*now.*Works/,
-    );
+    expect(works.getByRole("button", { name: /Existing tests/ })).not.toHaveAccessibleName(/main/);
   });
 
   test("checks that are not done-when lines are a line of their own, before and after", async () => {
     open(tasks, "empty-state", "review");
-    const row = lines().getByRole("button", { name: /Other checks/ });
-    expect(row).toHaveAccessibleName(/Works.*2 checks/);
+    await userEvent.click(screen.getByText(/^\d+ works?$/));
+    const row = screen.getByRole("button", { name: /Other checks/ });
     await userEvent.click(row);
     const pane = within(screen.getByRole("region", { name: "Other checks" }));
     const other = within(pane.getByRole("list", { name: "Before and after" }));

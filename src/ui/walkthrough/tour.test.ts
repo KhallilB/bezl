@@ -13,39 +13,26 @@ describe("steps", () => {
     expect(order).toEqual([...chapters]);
   });
 
-  test("tell the product's story, ending at History", () => {
+  test("tell the product's story to History, then what can go wrong", () => {
     expect(chapters).toEqual([
-      "Getting started",
+      "Get set up",
       "Start a task",
-      "Your tasks",
-      "Needs you",
+      "While it runs",
+      "Review and ship",
       "Look back",
+      "When something's off",
     ]);
-    expect(steps.at(-1)?.id).toBe("history");
-  });
-
-  test("put the restart after the task loop, and name Review for what it shows", () => {
     const ids = steps.map((s) => s.id);
-    expect(ids.slice(ids.indexOf("trace"), ids.indexOf("approvals"))).toEqual([
-      "trace",
-      "review",
-      "full-screen",
-      "ship",
-      "pr-checks",
-      "merged",
-      "come-back",
-    ]);
+    expect(ids[ids.indexOf("history") + 1]).toBe("no-writer");
+    expect(ids.at(-1)).toBe("come-back");
   });
 
-  test("notes name what each screen now shows", () => {
-    const note = (id: string) => steps.find((s) => s.id === id)?.note ?? "";
-    expect(note("task-read")).toContain("Limits");
-    expect(note("context")).toContain("You asked for");
-    expect(note("preview")).toContain("only when Bezl took screenshots");
-    expect(note("trace")).toContain("the plan says");
-    expect(note("review")).toContain("main");
-    expect(note("full-screen")).toContain("Open the map");
-    expect(note("preflight")).toContain("GitHub");
+  // The screen does the explaining; a note names one action or one cue.
+  test("notes are one short line, titles a few words", () => {
+    for (const s of steps) {
+      expect(s.note.length, s.id).toBeLessThanOrEqual(64);
+      expect(s.title.split(" ").length, s.id).toBeLessThanOrEqual(5);
+    }
   });
 });
 

@@ -27,7 +27,6 @@ import warmPhone from "./samples/projects-warm-phone.jpg";
 const define = (quote: string): StageView => ({
   lead: "Ready to start.",
   by: "You, from the issue",
-  rest: "The goal has what a coding agent needs to start.",
   quote,
   sections: [],
 });
@@ -316,7 +315,6 @@ const emptyState: JourneyTask = {
     plan: {
       lead: "The plan is done.",
       by: "Claude Code",
-      rest: "All 4 steps are finished.",
       shots: [today],
       sections: [
         {
@@ -333,7 +331,6 @@ const emptyState: JourneyTask = {
     build: {
       lead: "Build is done.",
       by: "Claude Code",
-      rest: "The attempt has finished.",
       shots: [shotA],
       sections: [],
       takes: [{ ...takeA, state: "Finished", light: "done", activity: "Finished in 6 minutes" }],
@@ -342,7 +339,7 @@ const emptyState: JourneyTask = {
       lead: "Everything passed.",
       by: "Bezl ran 3 checks",
       shots: [shotA, loadingA],
-      rest: "Two problems came up. Claude Code fixed both after they were sent back.",
+      rest: "Claude Code fixed the 2 problems you sent back.",
       sections: [],
       passed: [
         { text: "bun run test", meta: "48 passed", mono: true, light: "done" },
@@ -351,9 +348,9 @@ const emptyState: JourneyTask = {
       ],
     },
     review: {
-      lead: "Ready to ship?",
+      lead: "Reviewed.",
       by: "Codex reviewed Claude Code's attempt",
-      rest: "Codex checked it against your done-when list. Each line shows main next to the change. Pick a line to see its screenshot, code and test.",
+      rest: "1 disagreement to settle.",
       sections: [],
       takes: reviewed("Ready"),
       compare: emptyCompare,
@@ -369,7 +366,6 @@ const emptyState: JourneyTask = {
     ship: {
       lead: "Nothing to ship yet.",
       by: "Waits on your review",
-      rest: "Ship opens once you approve the attempt in Review.",
       sections: [],
     },
   },
@@ -419,7 +415,6 @@ const denyScopes: JourneyTask = {
     build: {
       lead: "Codex has a question.",
       by: "Codex, waiting on you",
-      rest: "It stopped before writing over a file. It needs your answer to go on.",
       sections: [],
       takes: [
         {
@@ -443,19 +438,16 @@ const denyScopes: JourneyTask = {
     check: {
       lead: "Checks haven't run yet.",
       by: "Bezl runs them after Build",
-      rest: "They start once Build finishes.",
       sections: [],
     },
     review: {
       lead: "Review hasn't started.",
       by: "Claude Code reviews after Check",
-      rest: "It starts once Check is done.",
       sections: [],
     },
     ship: {
       lead: "Nothing to ship yet.",
       by: "Waits on Review",
-      rest: "Ship opens once you approve the attempt on Review.",
       sections: [],
     },
   },
@@ -521,19 +513,16 @@ const debounce: JourneyTask = {
     check: {
       lead: "Checks haven't run yet.",
       by: "Bezl runs them after Build",
-      rest: "They start once Build finishes.",
       sections: [],
     },
     review: {
       lead: "Review hasn't started.",
       by: "Codex reviews after Check",
-      rest: "It starts once Check is done.",
       sections: [],
     },
     ship: {
       lead: "Nothing to ship yet.",
       by: "Waits on Review",
-      rest: "Ship opens once you approve the attempt on Review.",
       sections: [],
     },
   },
@@ -611,7 +600,6 @@ const snapshot: JourneyTask = {
     plan: {
       lead: "The plan is done.",
       by: "Codex",
-      rest: "All 3 steps are finished.",
       sections: [
         {
           title: "Codex's plan",
@@ -626,7 +614,6 @@ const snapshot: JourneyTask = {
     build: {
       lead: "Build is done.",
       by: "Codex",
-      rest: "The attempt finished in 11 minutes.",
       sections: [],
       takes: [
         {
@@ -660,9 +647,8 @@ const snapshot: JourneyTask = {
         ],
         paths: ["src/ui/terminals/**"],
       },
-      lead: "2 things need a look.",
+      lead: "2 problems to fix.",
       by: "Bezl ran 6 checks",
-      rest: "Everything else passed. Fix these and it's done.",
       sections: [],
       problems: [
         {
@@ -701,13 +687,11 @@ const snapshot: JourneyTask = {
     review: {
       lead: "Review hasn't started.",
       by: "Claude Code reviews after Check",
-      rest: "It starts once Check is done.",
       sections: [],
     },
     ship: {
       lead: "Nothing to ship yet.",
       by: "Waits on Review",
-      rest: "Ship opens once you approve the attempt on Review.",
       sections: [],
     },
   },
@@ -747,7 +731,6 @@ const kept: JourneyTask = {
     review: {
       lead: "You approved it.",
       by: "You approved it",
-      rest: "Ship has the pull request ready.",
       sections: [],
       shots: [reviewedA, today],
       takes: reviewed("Approved"),
@@ -755,7 +738,6 @@ const kept: JourneyTask = {
     ship: {
       lead: "Ready to ship.",
       by: "Bezl opens the pull request",
-      rest: "Open the pull request when you are.",
       sections: [],
       shots: [shotA, today],
       ship: {
@@ -787,7 +769,7 @@ export const keptTasks: JourneyTask[] = tasks.map((t) => (t.id === kept.id ? kep
 function shipped(
   light: "working" | "done",
   lead: string,
-  rest: string,
+  rest: string | undefined,
   status: CiStatus,
 ): JourneyTask[] {
   const ship = kept.views.ship;
@@ -796,7 +778,12 @@ function shipped(
     stages: { ...kept.stages, ship: light },
     views: {
       ...kept.views,
-      ship: { ...ship, lead, rest, ...(ship.ship ? { ship: { ...ship.ship, ci: status } } : {}) },
+      ship: {
+        ...ship,
+        lead,
+        ...(rest ? { rest } : {}),
+        ...(ship.ship ? { ship: { ...ship.ship, ci: status } } : {}),
+      },
     },
   };
   return keptTasks.map((t) => (t.id === task.id ? task : t));
@@ -806,15 +793,14 @@ export const shippedTasks = {
   checking: shipped(
     "working",
     "Pull request #42 is open.",
-    "GitHub is running its checks. Each one shows here when it finishes.",
+    "GitHub is running its checks.",
     prChecks,
   ),
-  merged: shipped(
-    "done",
-    "Merged.",
-    "GitHub ran every check again after the merge. The change works where it landed.",
-    { on: "merge", commit: "3f9c2ab", checks: ci(["passed", "passed", "passed"]) },
-  ),
+  merged: shipped("done", "Merged.", undefined, {
+    on: "merge",
+    commit: "3f9c2ab",
+    checks: ci(["passed", "passed", "passed"]),
+  }),
 };
 
 /** Debounce after Bezl quit mid-Build: the take waits on you to run the step again or stop. */
@@ -826,7 +812,7 @@ const interrupted: JourneyTask = {
     build: {
       lead: "Interrupted.",
       by: "Claude Code",
-      rest: "Bezl closed while Claude Code was writing. Its copy of your code is as it was left, with the last terminal snapshot.",
+      rest: "Bezl closed mid-step. The work so far is kept.",
       sections: [],
       interrupted: true,
       takes: [

@@ -52,9 +52,14 @@ const RESTORES = "A snapshot restores the colours and the cursor position";
 const STAYS = "Snapshots stay in .git/bezl";
 
 const list = () => screen.getByRole("list", { name: "You asked for" });
+/** A line's row, in the leading list or the opened fold of lines that work. */
 const row = (name: string | RegExp) =>
-  within(list()).getByRole("button", { name: typeof name === "string" ? new RegExp(name) : name });
+  within(list().parentElement as HTMLElement).getByRole("button", {
+    name: typeof name === "string" ? new RegExp(name) : name,
+  });
 const detail = (name: string) => screen.getByRole("region", { name });
+/** Opens the fold that holds the lines that work. */
+const openWorks = () => userEvent.click(screen.getByText(/^\d+ works?$/));
 
 describe("header", () => {
   test("the goal in your words, the status and a quiet line of facts", () => {
@@ -65,10 +70,8 @@ describe("header", () => {
     const facts = screen.getByRole("list", { name: "This task" });
     expect(within(facts).getByText("3 files · +86 −4")).toBeVisible();
     expect(within(facts).getByText("Low risk")).toBeVisible();
-    expect(
-      within(facts).getByText(/based on 3 files changed, all inside the allowed paths/),
-    ).toBeVisible();
-    expect(within(facts).getByText("41 of 51 changed lines ran in a test")).toBeVisible();
+    expect(within(facts).getByText("Projects page only")).toBeVisible();
+    expect(within(facts).getByText("41 of 51 lines tested")).toBeVisible();
   });
 
   test("no side pane, no tabs and no Intent toggle", () => {
@@ -87,16 +90,18 @@ describe("header", () => {
 });
 
 describe("You asked for", () => {
-  test("each done-when line with its state at this stage", () => {
+  test("lines that need you lead; lines that work fold under one row", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    expect(row(SHOWS)).toHaveAccessibleName(/Works/);
     expect(row(ONE_WAY)).toHaveAccessibleName(/Needs you.*1 question for you/);
-    // Four lines, Other checks, Not tied to a line.
-    expect(within(list()).getAllByRole("listitem")).toHaveLength(6);
+    expect(within(list()).queryByRole("button", { name: new RegExp(SHOWS) })).toBeNull();
+    expect(row(SHOWS).closest("details")).not.toHaveAttribute("open");
+    await openWorks();
+    expect(row(SHOWS).closest("details")).toHaveAttribute("open");
   });
 
-  test("on Review a line says how it was on main and how it is now", () => {
+  test("on Review a line that changed says how it was on main and how it is now", async () => {
     render(<Harness id="empty-state" stage="review" />);
+    await openWorks();
     expect(row(SHOWS)).toHaveAccessibleName(/main.*Fails.*now.*Works/);
   });
 
@@ -108,7 +113,6 @@ describe("You asked for", () => {
   test("opens on the first line that needs you", () => {
     render(<Harness id="empty-state" stage="review" />);
     expect(row(ONE_WAY)).toHaveAttribute("aria-current", "true");
-    expect(row(SHOWS)).not.toHaveAttribute("aria-current");
     expect(detail(ONE_WAY)).toBeVisible();
   });
 
@@ -129,7 +133,7 @@ describe("You asked for", () => {
     expect(within(code).getByText("ImportLink")).toBeVisible();
     expect(within(code).getByText("Projects.tsx:41")).toBeVisible();
     expect(
-      within(pane).getByText("The plan says this code serves the goal; no test has shown it yet."),
+      within(pane).getByText("Linked by the plan only. No test has shown it yet."),
     ).toBeVisible();
     const ran = within(pane).getByRole("list", { name: "What ran" });
     expect(within(ran).getByText("Codex review")).toBeVisible();
@@ -138,6 +142,7 @@ describe("You asked for", () => {
 
   test("picking a line shows it and moves you to it", async () => {
     render(<Harness id="empty-state" stage="review" />);
+    await openWorks();
     await userEvent.click(row(SHOWS));
     expect(row(SHOWS)).toHaveAttribute("aria-current", "true");
     expect(screen.queryByRole("region", { name: ONE_WAY })).toBeNull();
@@ -147,6 +152,7 @@ describe("You asked for", () => {
 
   test("arrow keys move between lines without picking; Enter picks", async () => {
     render(<Harness id="snapshot" stage="check" />);
+    await openWorks();
     row(RESTORES).focus();
     await userEvent.keyboard("{ArrowDown}");
     expect(row(STAYS)).toHaveFocus();
@@ -161,27 +167,26 @@ describe("You asked for", () => {
     expect(row(STAYS)).toHaveFocus();
   });
 
-  test("Not tied to a line holds what matches no line", () => {
+  test("Not on your list holds what matches no line", () => {
     render(<Harness id="deny-scopes" stage="build" />);
-    expect(row("Not tied to a line")).toHaveAttribute("aria-current", "true");
-    const pane = detail("Not tied to a line");
+    expect(row("Not on your list")).toHaveAttribute("aria-current", "true");
+    const pane = detail("Not on your list");
     expect(within(pane).getAllByRole("button", { expanded: false })).toHaveLength(1);
     expect(within(pane).getByText("crates/bezl-domain/tests/policy.rs")).toBeVisible();
   });
 
   test("with nothing loose there is no such entry", () => {
     render(<Harness id="snapshot" stage="check" />);
-    expect(within(list()).queryByRole("button", { name: /Not tied to a line/ })).toBeNull();
+    expect(within(list()).queryByRole("button", { name: /Not on your list/ })).toBeNull();
   });
 });
 
 describe("questions", () => {
-  test("open one at a time, with what they hold up and Bezl's recommendation", () => {
+  test("open one at a time, with Bezl's recommendation", () => {
     render(<Harness id="deny-scopes" stage="build" />);
     const [first, second] = screen.getAllByRole("button", { expanded: true });
     expect(first).toHaveAccessibleName(/edits you haven't committed/);
     expect(second).toBeUndefined();
-    expect(screen.getByText("Holds up the attempt")).toBeVisible();
     expect(screen.getByRole("button", { name: "Work around them" })).toHaveAccessibleDescription(
       "Recommended",
     );
@@ -232,22 +237,22 @@ describe("questions", () => {
     expect(document.activeElement).toHaveAccessibleName(/internet access/);
   });
 
-  test("what Bezl handled without you stays folded", async () => {
+  test("what Bezl handled without you stays folded under More", async () => {
     render(<Harness id="deny-scopes" stage="build" />);
     const handled = screen.getByText(/Codex asked which error type to use/);
     expect(handled).not.toBeVisible();
-    await userEvent.click(screen.getByText("Bezl handled 1 without you"));
+    await userEvent.click(screen.getByText("More"));
     expect(handled).toBeVisible();
   });
 
   test("changing a guess asks it as a question, not tied to a line", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    await userEvent.click(screen.getByText("Made without asking you (2)"));
+    await userEvent.click(screen.getByText("More"));
     const guesses = screen.getByRole("list", { name: "Made without asking you" });
     await userEvent.click(within(guesses).getAllByRole("button", { name: "Change" })[0] as Element);
-    expect(row("Not tied to a line")).toHaveAttribute("aria-current", "true");
+    expect(row("Not on your list")).toHaveAttribute("aria-current", "true");
     expect(
-      within(detail("Not tied to a line")).getByRole("button", {
+      within(detail("Not on your list")).getByRole("button", {
         name: /What should the empty state say/,
       }),
     ).toHaveAttribute("aria-expanded", "true");
@@ -256,11 +261,11 @@ describe("questions", () => {
 
   test("pointing at a choice shows an example of it, marked as not built", async () => {
     render(<Harness id="empty-state" stage="review" />);
-    await userEvent.click(screen.getByText("Made without asking you (2)"));
+    await userEvent.click(screen.getByText("More"));
     const guesses = screen.getByRole("list", { name: "Made without asking you" });
     await userEvent.click(within(guesses).getAllByRole("button", { name: "Change" })[0] as Element);
     await userEvent.hover(screen.getByRole("button", { name: "Let's start your first project" }));
-    const pane = detail("Not tied to a line");
+    const pane = detail("Not on your list");
     expect(within(pane).getByRole("img", { name: /warm copy/ })).toBeVisible();
     expect(within(pane).getByText("Example, not built yet")).toBeVisible();
   });

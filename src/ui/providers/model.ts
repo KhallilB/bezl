@@ -553,16 +553,9 @@ export function githubShown(check: GitHubCheck): Shown {
 }
 
 /** Visible on the GitHub row; without a sign-in, what that costs. */
-export function githubReason(check: GitHubCheck | null): string {
-  return check && githubShown(check).tone === "success"
-    ? "Reads issues and opens pull requests"
-    : githubNote;
-}
-
 export const githubChecking: Shown = { label: "Checking", tone: "running", icon: "running" };
 
-export const githubNote =
-  "Needed only for Ship. Without it, or in a repository with no GitHub remote, Bezl hides the issue picker, and Ship can't open a pull request: the task finishes on a local branch.";
+export const githubNote = "Optional. Needed only for issues and pull requests.";
 
 export function githubFixes(check: GitHubCheck): Fix[] {
   const login = "`gh auth login`";

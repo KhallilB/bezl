@@ -35,7 +35,7 @@ function InboxIcon() {
   );
 }
 
-/** The task list before the first task: one sentence and one action. */
+/** The task list before the first task: one action. */
 export function EmptyTasks({
   onNewTask,
   firstRun = false,
@@ -50,10 +50,6 @@ export function EmptyTasks({
         <h1 id="shell-empty-title" className="page-title">
           No tasks yet
         </h1>
-        <p className="page-lead">
-          Describe a change, then choose which coding agent writes it and which one reviews it. Bezl
-          gives every task its own copy of your code to work in.
-        </p>
       </header>
       {firstRun ? <OnboardingSteps current="first" /> : null}
       <div>
@@ -65,6 +61,9 @@ export function EmptyTasks({
     </section>
   );
 }
+
+// Usage earns sidebar space only near an agent's limit.
+const NEAR_LIMIT = 80;
 
 /** Narrow, the lists are one scrolling row; centres the open row in it. */
 function keepInView(row: HTMLElement | null) {
@@ -83,6 +82,7 @@ export function AppShell({
   approvals,
   children,
 }: AppShellProps) {
+  const tight = usage.filter((p) => Number.parseInt(p.used, 10) >= NEAR_LIMIT);
   return (
     <div className="shell">
       <aside className="shell-side">
@@ -158,14 +158,16 @@ export function AppShell({
             </ul>
           </nav>
         </div>
-        <dl className="shell-usage" aria-label="Coding agent usage">
-          {usage.map((p) => (
-            <div key={p.name}>
-              <dt>{p.name}</dt>
-              <dd>{p.used}</dd>
-            </div>
-          ))}
-        </dl>
+        {tight.length ? (
+          <dl className="shell-usage" aria-label="Coding agent usage">
+            {tight.map((p) => (
+              <div key={p.name}>
+                <dt>{p.name}</dt>
+                <dd>{p.used}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
       </aside>
       <main className="shell-main">{children}</main>
     </div>

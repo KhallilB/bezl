@@ -18,14 +18,7 @@ import { TaskPage } from "../journey/TaskPage";
 import { crew, drafts, issues, read, startedTask } from "../newtask/fixtures";
 import { NewTask } from "../newtask/NewTask";
 import { ChooseRepository } from "../onboarding/ChooseRepository";
-import {
-  claudeFound,
-  codexReady,
-  githubSignedIn,
-  githubSignedOut,
-  noWriter,
-  thisMachine,
-} from "../providers/fixtures";
+import { claudeFound, codexReady, githubSignedIn, noWriter } from "../providers/fixtures";
 import type { GitHubCheck, ProviderCheck } from "../providers/model";
 import { Providers } from "../providers/Providers";
 import { AppShell, EmptyTasks } from "../shell/AppShell";
@@ -248,12 +241,11 @@ type TaskViewProps = {
   place: Place;
   kept: boolean;
   shipped?: "checking" | "merged" | undefined;
-  full?: boolean | undefined;
   interrupted?: boolean | undefined;
   shared: Shared;
 };
 
-function TaskView({ place, kept, shipped, full, interrupted, shared }: TaskViewProps) {
+function TaskView({ place, kept, shipped, interrupted, shared }: TaskViewProps) {
   const list = shipped
     ? shippedTasks[shipped]
     : kept
@@ -266,7 +258,7 @@ function TaskView({ place, kept, shipped, full, interrupted, shared }: TaskViewP
   return (
     <TasksShell list={list} current={open.id} shared={shared}>
       <TaskPage
-        key={`${open.id}-${full ? "full" : ""}`}
+        key={open.id}
         task={open}
         stage={place.stage}
         onStage={(stage) => shared.onPlace({ ...place, stage })}
@@ -274,7 +266,6 @@ function TaskView({ place, kept, shipped, full, interrupted, shared }: TaskViewP
         onNewTask={() => shared.onGoTo("new-task")}
         needsYou={shared.queue}
         onNeedsYou={shared.onQueue}
-        {...(full ? { full } : {})}
         {...((kept || shipped) && open.id === history.taskId
           ? { onHistory: () => shared.onGoTo("history") }
           : {})}
@@ -283,13 +274,8 @@ function TaskView({ place, kept, shipped, full, interrupted, shared }: TaskViewP
   );
 }
 
-const preflight: Record<
-  Exclude<Preflight, "checking">,
-  { checks: ProviderCheck[]; github: GitHubCheck }
-> = {
+const preflight: Record<Preflight, { checks: ProviderCheck[]; github: GitHubCheck }> = {
   ready: { checks: [claudeFound, codexReady], github: githubSignedIn },
-  noGitHub: { checks: [claudeFound, codexReady], github: githubSignedOut },
-  impostor: { checks: thisMachine, github: githubSignedIn },
   noWriter: { checks: noWriter, github: githubSignedIn },
 };
 
@@ -311,28 +297,19 @@ function View({
   onGoTo: (id: string) => void;
 }) {
   const shared: Shared = {
-    queue: queue ?? (view.kind === "approvals" && view.cleared ? [] : needsYou),
+    queue: queue ?? needsYou,
     onQueue,
     onPlace,
     onGoTo,
   };
   switch (view.kind) {
     case "choose":
-      return (
-        <ChooseRepository
-          onChoose={() => onGoTo("preflight")}
-          {...(view.refused
-            ? { refused: { path: "~/Downloads", reason: "Not a git repository" } }
-            : {})}
-        />
-      );
+      return <ChooseRepository onChoose={() => onGoTo("providers")} />;
     case "providers":
-      return view.result === "checking" ? (
-        <Providers checks={null} checking github={null} firstRun />
-      ) : (
+      return (
         <Providers
           {...preflight[view.result]}
-          onCheckAgain={() => onGoTo("preflight")}
+          onCheckAgain={() => onGoTo("providers")}
           firstRun
           onContinue={() => onGoTo("empty-list")}
         />
@@ -352,7 +329,7 @@ function View({
       return (
         <AppShell tasks={[]} usage={usage} onOpenTask={() => {}}>
           <NewTask
-            key={`${view.draft}-${view.step}-${view.issues}`}
+            key={`${view.draft}-${view.step}`}
             repo="studio-web"
             branch="main"
             initial={drafts[view.draft]}
@@ -362,8 +339,6 @@ function View({
             onStart={() => onGoTo("preparing")}
             {...(view.step ? { step: view.step } : {})}
             issues={issues}
-            issuesOpen={view.issues === "open"}
-            {...(view.issues === "picked" ? { pickedIssue: 128 } : {})}
           />
         </AppShell>
       );
@@ -385,7 +360,6 @@ function View({
           place={place ?? view}
           kept={view.kept ?? false}
           shipped={view.shipped}
-          full={view.full}
           interrupted={view.interrupted}
           shared={shared}
         />

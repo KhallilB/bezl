@@ -100,11 +100,7 @@ export function Approvals({
         <h1 id="approvals-title" className="page-title">
           {items.length === 0 ? "Nothing needs you" : "Approvals"}
         </h1>
-        <p className="page-status">
-          {items.length === 0
-            ? "You're all caught up. Every answer you gave is kept in its task's history."
-            : count(items.length)}
-        </p>
+        {items.length > 0 ? <p className="page-status">{count(items.length)}</p> : null}
       </header>
       <NeedsYouList items={items} onItems={onItems} onOpenTask={onOpenTask} />
     </section>

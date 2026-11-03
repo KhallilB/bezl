@@ -13,7 +13,6 @@ import {
   githubChecking,
   githubFixes,
   githubNote,
-  githubReason,
   githubShown,
   homeName,
   limitHit,
@@ -282,9 +281,12 @@ function AgentRow({
         <Shows shown={shown} />
       </Panel.Header>
       <Panel.Body className="providers-body">
-        <Text size="sm" tone="muted">
-          {reason}
-        </Text>
+        {/* A ready row's badge says it all; the reason shows only when something is off. */}
+        {shown.tone === "success" ? null : (
+          <Text size="sm" tone="muted">
+            {reason}
+          </Text>
+        )}
         <Fixes list={fix} />
         <details className="providers-details">
           <summary>Details</summary>
@@ -357,7 +359,7 @@ function GitHubPanel({ check }: { check: GitHubCheck | null }) {
       id="github-title"
       name="GitHub"
       shown={check ? githubShown(check) : githubChecking}
-      reason={githubReason(check)}
+      reason={githubNote}
       fix={check ? githubFixes(check) : []}
     >
       {gh ? <Where path={gh.path} version={gh.version} /> : null}
@@ -399,9 +401,7 @@ function Writers({
   return (
     <>
       <div id={reason}>
-        <Callout tone="warning" title="No coding agent can write code yet">
-          Fix at least one of the coding agents below, then select Check again.
-        </Callout>
+        <Callout tone="warning" title="No coding agent can write code yet" />
       </div>
       {button ? <div>{button}</div> : null}
     </>
@@ -432,9 +432,6 @@ export function Providers({
               </span>
             ) : null}
           </div>
-          <p className="page-lead">
-            Bezl checked each coding agent on this computer, and your GitHub sign-in.
-          </p>
         </header>
         {firstRun ? <OnboardingSteps current="agents" /> : null}
         {busy ? (
