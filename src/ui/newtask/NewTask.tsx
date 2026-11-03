@@ -1,6 +1,8 @@
 import { Button, Fieldset, Input, RadioGroup, Switch, Textarea } from "@kb.ui/react";
 import { useId, useRef, useState } from "react";
 import {
+  applyRead,
+  type BezlRead,
   type BriefDraft,
   briefFromIssue,
   type CheckId,
@@ -9,8 +11,6 @@ import {
   type GitHubIssue,
   readiness,
   reviewerChoices,
-  type Suggestion,
-  suggest,
   withIssue,
   withoutIssue,
   writerChoices,
@@ -26,7 +26,7 @@ export type StartedTask = {
   blockShip: boolean;
 };
 
-const stepLabel = { goal: "Goal", done: "Done when", who: "Who works on it" } as const;
+const stepLabel = { goal: "Goal", read: "Bezl's read", who: "Who works on it" } as const;
 export type NewTaskStep = keyof typeof stepLabel;
 const order = Object.keys(stepLabel) as NewTaskStep[];
 
@@ -34,8 +34,8 @@ export type NewTaskProps = {
   repo: string;
   branch: string;
   initial: BriefDraft;
-  /** One-click additions per gap; from M6 the code map supplies them. */
-  suggestions: Partial<Record<CheckId, Suggestion>>;
+  /** What Bezl took from the goal and the code; from M6 the code map supplies it. */
+  read: BezlRead;
   /** Agents that passed the agent check; greyed where they can't take the role. */
   providers: CrewProvider[];
   paths: string[];
@@ -79,43 +79,59 @@ const partLabel: Record<Part, string> = {
   example: "Example",
 };
 
-/** An optional part: its why while empty, and the suggestion one click away. */
+/** A part Bezl read: where it came from, or that it couldn't tell; yours to change or drop. */
 function PartField({
   part,
   draft,
   why,
-  suggestion,
+  read,
   onChange,
 }: {
   part: Part;
   draft: BriefDraft;
   why: string;
-  suggestion: string | undefined;
+  read: BezlRead["who"];
   onChange: (value: string) => void;
 }) {
   const value = draft[part] ?? "";
   const empty = !value.trim();
+  const label = partLabel[part];
   return (
     <div className="newtask-part">
-      <Input
-        label={partLabel[part]}
-        value={value}
-        onValueChange={onChange}
-        {...(empty ? { description: why } : {})}
-      />
-      {empty && suggestion ? (
-        <div className="newtask-suggestion">
-          <span>{suggestion}</span>
+      <Input label={label} value={value} onValueChange={onChange} />
+      <div className="newtask-read">
+        {!empty && read && value === read.text ? (
+          <span className="newtask-from">
+            From <cite>{read.from}</cite>
+          </span>
+        ) : null}
+        {empty && read ? (
+          <>
+            <span>{`Bezl read: ${read.text}`}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label={`Use Bezl's read for ${label}`}
+              onClick={() => onChange(read.text)}
+            >
+              Use
+            </Button>
+          </>
+        ) : null}
+        {empty && !read ? (
+          <span>{`Bezl couldn't tell from the goal or the code. ${why}`}</span>
+        ) : null}
+        {empty ? null : (
           <Button
             size="sm"
             variant="ghost"
-            aria-label={`Use suggestion for ${partLabel[part]}`}
-            onClick={() => onChange(suggestion)}
+            aria-label={`Drop ${label}`}
+            onClick={() => onChange("")}
           >
-            Use
+            Drop
           </Button>
-        </div>
-      ) : null}
+        )}
+      </div>
     </div>
   );
 }
@@ -277,12 +293,12 @@ function IssuePicker({
   );
 }
 
-/** New task in three steps: the goal, how you'll know it's done, then who and within what limits. */
+/** New task in three steps: your goal, what Bezl read from it and the code, then who and within what limits. */
 export function NewTask({
   repo,
   branch,
   initial,
-  suggestions,
+  read,
   providers,
   paths,
   onStart,
@@ -291,9 +307,12 @@ export function NewTask({
   issuesOpen = false,
   pickedIssue,
 }: NewTaskProps) {
+  // Bezl reads once, as you leave the goal; after that the parts are yours.
+  const applied = useRef(first !== "goal");
   const [draft, setDraft] = useState(() => {
     const picked = issues?.find((i) => i.number === pickedIssue);
-    return picked ? briefFromIssue(picked) : initial;
+    const start = picked ? briefFromIssue(picked) : initial;
+    return applied.current ? applyRead(start, read) : start;
   });
   const [step, setStep] = useState(first);
   const moved = useRef(false);
@@ -323,6 +342,10 @@ export function NewTask({
   const ready = checks.every((c) => c.met);
   const at = order.indexOf(step);
   const go = (to: NewTaskStep) => {
+    if (to === "read" && !applied.current) {
+      applied.current = true;
+      setDraft((d) => applyRead(d, read));
+    }
     moved.current = true;
     setStep(to);
   };
@@ -337,7 +360,7 @@ export function NewTask({
   };
 
   const nameOf = (id: string) => providers.find((p) => p.id === id)?.name ?? id;
-  const doneAddition = suggestions.done?.doneWhen;
+  const bezlLines = read.done?.lines ?? [];
 
   return (
     <form
@@ -383,28 +406,33 @@ export function NewTask({
             onValueChange={(text) => setDraft((d) => ({ ...d, text }))}
             placeholder="What should change, and why?"
           />
+        </section>
+      ) : null}
+
+      {step === "read" ? (
+        <section className="newtask-step" aria-labelledby="newtask-step">
+          <h2 id="newtask-step" ref={land} tabIndex={-1} className="newtask-question">
+            Here's what Bezl took from it
+          </h2>
+          <p className="newtask-hint">
+            {`From your goal and the code in ${repo}. Change anything that's wrong, or write your own for tighter rails; none of it is required.`}
+          </p>
           <div className="newtask-optional">
-            <h3 className="page-label">Optional, but it helps the agent</h3>
             {(["who", "avoid", "example"] as const).map((part) => (
               <PartField
                 key={part}
                 part={part}
                 draft={draft}
                 why={why(part)}
-                suggestion={suggestions[part]?.[part]}
+                read={read[part]}
                 onChange={(value) => setDraft((d) => ({ ...d, [part]: value }))}
               />
             ))}
           </div>
-        </section>
-      ) : null}
-
-      {step === "done" ? (
-        <section className="newtask-step" aria-labelledby="newtask-step">
-          <h2 id="newtask-step" ref={land} tabIndex={-1} className="newtask-question">
-            How will you know it's done?
-          </h2>
-          <p className="newtask-hint">{why("done")}</p>
+          <p className="newtask-hint newtask-done-why">
+            {read.done ? `How you'll know it's done, from ${read.done.from}. ` : null}
+            {why("done")}
+          </p>
           {draft.doneWhen.length > 0 ? (
             <section className="newtask-section" aria-labelledby="newtask-done">
               <h3 id="newtask-done" className="page-label">
@@ -435,15 +463,17 @@ export function NewTask({
               </ul>
             </section>
           ) : null}
-          {gap("done") && doneAddition?.length ? (
+          {gap("done") && bezlLines.length ? (
             <div className="newtask-suggestion">
-              <span>{`${doneAddition.length} lines from your goal, most of them Bezl can check`}</span>
+              <span>{`Bezl read ${bezlLines.length} lines from your goal`}</span>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setDraft((d) => suggest(d, { doneWhen: doneAddition }))}
+                onClick={() =>
+                  setDraft((d) => applyRead(d, { done: { lines: bezlLines, from: "" } }))
+                }
               >
-                {`Add ${doneAddition.length} suggested lines`}
+                Use them
               </Button>
             </div>
           ) : null}

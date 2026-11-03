@@ -1,7 +1,7 @@
 import type { JourneyTask, StageView } from "../journey/model";
-import type { BriefDraft, CheckId, CrewProvider, DoneWhen, GitHubIssue, Suggestion } from "./model";
+import type { BezlRead, BriefDraft, CrewProvider, DoneWhen, GitHubIssue } from "./model";
 
-// Sample data; from M6 the code map supplies the suggestions.
+// Sample data; from M6 the code map supplies Bezl's read.
 
 export const crew: CrewProvider[] = [
   { id: "claude", name: "Claude Code", vendor: "Anthropic", canWrite: true, readOnly: true },
@@ -18,11 +18,12 @@ const doneWhen: DoneWhen[] = [
 const avoid = "Reuse EmptyState rather than adding a new card component";
 const example = "The Inbox page's empty state";
 
-export const suggestions: Partial<Record<CheckId, Suggestion>> = {
-  who: { who },
-  done: { doneWhen },
-  avoid: { avoid },
-  example: { example },
+/** What Bezl took from the goal and studio-web's code. */
+export const read: BezlRead = {
+  who: { text: who, from: "your goal: “someone has no projects yet”. Sign-up lands on Projects." },
+  avoid: { text: avoid, from: "src/components/EmptyState.tsx, used on 4 pages" },
+  example: { text: example, from: "src/pages/Inbox.tsx shows EmptyState with one action" },
+  done: { lines: doneWhen, from: "your goal, and the accessibility check this repository runs" },
 };
 
 const text =

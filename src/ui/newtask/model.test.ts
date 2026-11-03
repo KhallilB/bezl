@@ -1,11 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
+  applyRead,
+  type BezlRead,
   type BriefDraft,
   briefFromIssue,
   type CrewProvider,
   readiness,
   reviewerChoices,
-  suggest,
   writerChoices,
 } from "./model";
 
@@ -42,19 +43,35 @@ describe("readiness", () => {
   });
 });
 
-describe("suggest", () => {
-  test("fills only the gap it names and keeps the rest", () => {
+describe("applyRead", () => {
+  const read: BezlRead = {
+    who: { text: "New users after sign-up", from: "Your goal" },
+    avoid: { text: "Reuse EmptyState", from: "src/components/EmptyState.tsx" },
+    done: { lines: [{ text: "B", checker: "bezl" }], from: "Your goal" },
+  };
+
+  test("fills what you left empty and adds its lines after yours", () => {
     const draft: BriefDraft = { ...empty, text: "Help people start a project." };
-    const next = suggest(draft, { who: "New users after sign-up" });
-    expect(next).toEqual({ ...draft, who: "New users after sign-up" });
+    expect(applyRead({ ...draft, doneWhen: [{ text: "A", checker: "you" }] }, read)).toEqual({
+      ...draft,
+      who: "New users after sign-up",
+      avoid: "Reuse EmptyState",
+      doneWhen: [
+        { text: "A", checker: "you" },
+        { text: "B", checker: "bezl" },
+      ],
+    });
   });
 
-  test("adds done-when items after the ones already there", () => {
-    const draft: BriefDraft = { ...empty, doneWhen: [{ text: "A", checker: "you" }] };
-    expect(suggest(draft, { doneWhen: [{ text: "B", checker: "bezl" }] }).doneWhen).toEqual([
-      { text: "A", checker: "you" },
-      { text: "B", checker: "bezl" },
-    ]);
+  test("never overwrites what you wrote, nor repeats a line", () => {
+    const draft: BriefDraft = {
+      ...empty,
+      who: "Admins",
+      doneWhen: [{ text: "B", checker: "you" }],
+    };
+    const next = applyRead(draft, read);
+    expect(next.who).toBe("Admins");
+    expect(next.doneWhen).toEqual([{ text: "B", checker: "you" }]);
   });
 });
 
