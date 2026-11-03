@@ -23,7 +23,6 @@ export type TourView =
   | { kind: "empty" }
   /** `issues`: the GitHub issue list starts open, or with #128 picked. */
   | { kind: "newTask"; draft: Draft; step?: NewTaskStep; issues?: "open" | "picked" }
-  | { kind: "setup" }
   | { kind: "started" }
   /** `kept`: the list after the attempt was approved on Review; `shipped`, after its pull request opened. */
   | {
@@ -104,44 +103,23 @@ export const steps: Step[] = [
   {
     id: "new-task",
     chapter: "Start a task",
-    title: "Define the task",
-    note: "New task takes three short steps: your goal, Bezl's read of it, and who works on it. First, describe the change in your own words. That's all you have to write.",
+    title: "Write the goal",
+    note: "New task takes two steps: your goal, then Bezl's read of the whole task. First, describe the change in your own words. That's all you have to write.",
     view: { kind: "newTask", draft: "blank" },
   },
   {
     id: "from-issue",
     chapter: "Start a task",
-    title: "Start from a GitHub issue",
-    note: "If the work is already written up as an issue, pick it instead of starting from scratch. Bezl reads your open issues through your own GitHub sign-in.",
-    view: { kind: "newTask", draft: "blank", issues: "open" },
-  },
-  {
-    id: "issue-filled",
-    chapter: "Start a task",
-    title: "The issue fills in the goal",
-    note: "The issue's title and description become the goal, and its checklist becomes the lines of done when on the next step. You can change any of it.",
+    title: "Or start from a GitHub issue",
+    note: "If the work is already an issue, pick it instead. Its title and description become the goal, and its checklist becomes the lines of done when. Bezl reads your open issues through your own GitHub sign-in.",
     view: { kind: "newTask", draft: "blank", issues: "picked" },
   },
   {
-    id: "bezl-read",
+    id: "task-read",
     chapter: "Start a task",
-    title: "Bezl's read",
-    note: "Step two: from your goal and the code, Bezl fills in who it's for, what to avoid or reuse, an example, and when it's done. Each part says where it came from, and says so plainly when Bezl couldn't tell. Take it as it is, or change, drop or add to any of it to keep the work on tighter rails. Bezl checks its lines after every step; lines you type are yours to check at Review.",
-    view: { kind: "newTask", draft: "partial", step: "read" },
-  },
-  {
-    id: "crew",
-    chapter: "Start a task",
-    title: "Choose who works on it",
-    note: "Step three: pick from coding agents that passed the agent check. A reviewer from the same company as the writer is allowed, but Bezl labels it so you know. Limits lists the paths the attempt may change, and can hold Ship while problems are open. Your task sums it all up before you start.",
-    view: { kind: "newTask", draft: "ready", step: "who" },
-  },
-  {
-    id: "setup",
-    chapter: "Start a task",
-    title: "Setup asks first",
-    note: "Bezl never runs anything in your repository without asking, so a setup command waits until you allow it.",
-    view: { kind: "setup" },
+    title: "Review and start",
+    note: "From your goal and the code, Bezl fills in the rest: who it's for, what to avoid or reuse, an example, when it's done, who writes and reviews, and Limits on the files it may change. Each part says where it came from. Start it as it is, or Change any part for tighter rails. Start names the setup command it runs, only in the task's copy of your code.",
+    view: { kind: "newTask", draft: "partial", step: "review" },
   },
   {
     id: "preparing",

@@ -17,6 +17,7 @@ const doneWhen: DoneWhen[] = [
 ];
 const avoid = "Reuse EmptyState rather than adding a new card component";
 const example = "The Inbox page's empty state";
+export const paths = ["src/pages/Projects.tsx", "src/pages/Projects.test.tsx"];
 
 /** What Bezl took from the goal and studio-web's code. */
 export const read: BezlRead = {
@@ -24,6 +25,7 @@ export const read: BezlRead = {
   avoid: { text: avoid, from: "src/components/EmptyState.tsx, used on 4 pages" },
   example: { text: example, from: "src/pages/Inbox.tsx shows EmptyState with one action" },
   done: { lines: doneWhen, from: "your goal, and the accessibility check this repository runs" },
+  files: { paths, from: "the Projects page and its test, where the empty table renders" },
 };
 
 const text =
@@ -59,8 +61,6 @@ export const issues: GitHubIssue[] = [
   },
 ];
 
-export const paths = ["src/pages/Projects.tsx", "src/pages/Projects.test.tsx"];
-
 const defineView: StageView = {
   lead: "Your goal is saved exactly as you wrote it.",
   quote: text,
@@ -76,9 +76,8 @@ const defineView: StageView = {
   ],
 };
 
-/** Task just started: setup waits on you, then its copy of your code is set up. */
-export function startedTask(setup: "asking" | "allowed"): JourneyTask {
-  const asking = setup === "asking";
+/** Task just started: its copy of your code is being set up. */
+export function startedTask(): JourneyTask {
   return {
     id: "empty-state",
     title: "Empty state for Projects",
@@ -86,7 +85,7 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
     current: "plan",
     stages: {
       define: "done",
-      plan: asking ? "needsYou" : "working",
+      plan: "working",
       build: "waiting",
       check: "waiting",
       review: "waiting",
@@ -95,16 +94,14 @@ export function startedTask(setup: "asking" | "allowed"): JourneyTask {
     views: {
       define: defineView,
       plan: {
-        lead: asking ? "Setup needs your go-ahead." : "Getting things ready.",
-        rest: asking
-          ? "Bezl never runs anything without asking first."
-          : "Bezl is setting up the task's copy of your code, and then it will make the plan.",
+        lead: "Getting things ready.",
+        rest: "Bezl is setting up the task's copy of your code, and then it will make the plan.",
         sections: [
           {
             title: "Its copy of your code",
             rows: [
               { text: "bezl/empty-state from main", mono: true, light: "done" },
-              { text: "bun install", mono: true, light: asking ? "needsYou" : "working" },
+              { text: "bun install", mono: true, light: "working" },
               { text: "Make a plan with Claude Code", light: "waiting" },
             ],
           },

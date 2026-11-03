@@ -39,7 +39,7 @@ describe("steps", () => {
 
   test("notes name what each screen now shows", () => {
     const note = (id: string) => steps.find((s) => s.id === id)?.note ?? "";
-    expect(note("crew")).toContain("Limits");
+    expect(note("task-read")).toContain("Limits");
     expect(note("context")).toContain("measured from");
     expect(note("preview")).toContain("only when Bezl captured screenshots");
     expect(note("trace")).toContain("the plan's claim");
