@@ -54,53 +54,6 @@
   justify-self: stretch;
 }
 
-/* First run's progress: numbered, current lit, done quiet. */
-.onboarding-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--kb-space-2) var(--kb-space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: onboarding-step;
-  font-size: var(--kb-size-sm);
-  color: var(--kb-color-muted);
-}
-
-.onboarding-steps li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--kb-space-2);
-  counter-increment: onboarding-step;
-}
-
-.onboarding-steps li::before {
-  content: counter(onboarding-step);
-  display: inline-grid;
-  place-items: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
-  font-size: 0.75em;
-  line-height: 1;
-}
-
-.onboarding-steps li[data-state="done"]::before {
-  content: "✓";
-}
-
-.onboarding-steps li[data-state="current"] {
-  color: var(--kb-color-fg);
-  font-weight: 600;
-}
-
-.onboarding-steps li[data-state="current"]::before {
-  border-color: var(--kb-color-info);
-  color: var(--kb-color-info);
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .onboarding-card {
     animation: onboarding-in 320ms var(--kb-motion-easing-enter) backwards;

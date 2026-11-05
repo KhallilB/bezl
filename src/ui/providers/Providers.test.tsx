@@ -420,36 +420,20 @@ describe("Providers", () => {
   });
 });
 
-describe("Providers on first run", () => {
-  const start = () => screen.queryByRole("button", { name: "Start your first task" });
-
-  test("Agents is the current step, and a writer unlocks Start your first task", async () => {
+describe("Providers as a page beside your tasks", () => {
+  test("Back to tasks is always there, even when no agent can write", async () => {
     const onContinue = vi.fn();
-    render(<Providers checks={[claudeFound, codexProbed]} firstRun onContinue={onContinue} />);
-    showAll();
-    const steps = screen.getByRole("list", { name: "Getting started" });
-    expect(within(steps).getByText("Agents").closest("li")).toHaveAttribute("aria-current", "step");
-    await userEvent.click(start() as HTMLElement);
+    render(<Providers checks={noWriter} onContinue={onContinue} />);
+    expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Back to tasks" }));
     expect(onContinue).toHaveBeenCalledOnce();
   });
 
-  test("with no writer the action stays, disabled, and says why", () => {
-    render(<Providers checks={noWriter} firstRun onContinue={() => {}} />);
-    showAll();
-    expect(start()).toBeDisabled();
-    expect(start()).toHaveAccessibleDescription(/No coding agent can write code yet/);
-  });
-
-  test("no action until preflight returns", () => {
-    render(<Providers checks={null} checking firstRun onContinue={() => {}} />);
-    showAll();
-    expect(start()).toBeNull();
-  });
-
-  test("outside first run there are no steps and no action", () => {
-    render(<Providers checks={[claudeFound, codexProbed]} />);
-    showAll();
-    expect(screen.queryByRole("list", { name: "Getting started" })).toBeNull();
-    expect(start()).toBeNull();
+  test("while the check runs, each agent has a card that says Checking", () => {
+    render(<Providers checks={null} checking onContinue={() => {}} />);
+    for (const name of ["Claude Code", "Codex"]) {
+      expect(within(screen.getByRole("region", { name })).getByText("Checking")).toBeVisible();
+    }
+    expect(screen.getByRole("button", { name: "Back to tasks" })).toBeEnabled();
   });
 });

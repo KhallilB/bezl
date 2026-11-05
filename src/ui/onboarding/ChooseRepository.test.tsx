@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { ChooseRepository } from "./ChooseRepository";
@@ -23,18 +23,4 @@ test("a refused folder says which and why, and the action stays", () => {
   expect(alert).toHaveTextContent("Not a git repository");
   expect(alert).toHaveTextContent("~/Downloads");
   expect(screen.getByRole("button", { name: "Choose a folder" })).toBeEnabled();
-});
-
-test("first run shows three steps, with Repository current", () => {
-  render(<ChooseRepository onChoose={() => {}} />);
-  const steps = screen.getByRole("list", { name: "Getting started" });
-  expect(
-    within(steps)
-      .getAllByRole("listitem")
-      .map((s) => s.textContent),
-  ).toEqual(["Repository", "Agents", "First task"]);
-  expect(within(steps).getByText("Repository").closest("li")).toHaveAttribute(
-    "aria-current",
-    "step",
-  );
 });

@@ -1,6 +1,5 @@
 import type { StageId } from "../journey/model";
 import type { drafts } from "../newtask/fixtures";
-import type { NewTaskStep } from "../newtask/NewTask";
 import { oneOf, type Theme, themes } from "./states";
 
 export const chapters = [
@@ -21,7 +20,8 @@ export type TourView =
   | { kind: "choose" }
   | { kind: "providers"; result: Preflight }
   | { kind: "empty" }
-  | { kind: "newTask"; draft: Draft; step?: NewTaskStep }
+  /** `withRead`: Bezl's read already shows; `noWriter`: no agent can write, so Start waits. */
+  | { kind: "newTask"; draft: Draft; withRead?: boolean; noWriter?: boolean }
   | { kind: "started" }
   /** `kept`: the list after the attempt was approved on Review; `shipped`, after its pull request opened. */
   | {
@@ -47,24 +47,24 @@ export const steps: Step[] = [
     view: { kind: "choose" },
   },
   {
-    id: "providers",
-    chapter: "Get set up",
-    title: "Check your agents",
-    note: "Green means ready to write code.",
-    view: { kind: "providers", result: "ready" },
-  },
-  {
     id: "empty-list",
     chapter: "Get set up",
     title: "Start your first task",
-    note: "Click New task.",
+    note: "Click New task. Agents get checked meanwhile.",
     view: { kind: "empty" },
+  },
+  {
+    id: "agents",
+    chapter: "Get set up",
+    title: "Your coding agents",
+    note: "Click one in the sidebar to see its check.",
+    view: { kind: "providers", result: "ready" },
   },
   {
     id: "new-task",
     chapter: "Start a task",
     title: "Describe the change",
-    note: "A sentence or two is enough.",
+    note: "A sentence or two. Bezl reads it as you type.",
     view: { kind: "newTask", draft: "blank" },
   },
   {
@@ -72,7 +72,7 @@ export const steps: Step[] = [
     chapter: "Start a task",
     title: "Check, then start",
     note: "Change anything that's off, then press Start task.",
-    view: { kind: "newTask", draft: "partial", step: "review" },
+    view: { kind: "newTask", draft: "partial", withRead: true },
   },
   {
     id: "preparing",
@@ -134,6 +134,13 @@ export const steps: Step[] = [
     id: "no-writer",
     chapter: "When something's off",
     title: "No agent can write yet",
+    note: "Start waits until one can. Open Coding agents.",
+    view: { kind: "newTask", draft: "partial", withRead: true, noWriter: true },
+  },
+  {
+    id: "agents-fix",
+    chapter: "When something's off",
+    title: "Fix an agent",
     note: "Run the fix shown on a card, then Check again.",
     view: { kind: "providers", result: "noWriter" },
   },
