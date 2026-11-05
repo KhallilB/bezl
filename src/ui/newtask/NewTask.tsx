@@ -132,10 +132,9 @@ function PartField({
   );
 }
 
-const lower = (label: string) => label.charAt(0).toLowerCase() + label.slice(1);
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** One part of the task: what it holds and where from; Change opens it in place. */
+/** One part of the task; Change opens it in place, with where Bezl got it. */
 function Row({
   label,
   value,
@@ -157,14 +156,7 @@ function Row({
       <span id={`${id}-label`} className="newtask-row-label">
         {label}
       </span>
-      <div className="newtask-row-value">
-        {value}
-        {from ? (
-          <span className="newtask-from">
-            From <cite>{from}</cite>
-          </span>
-        ) : null}
-      </div>
+      <div className="newtask-row-value">{value}</div>
       <Button
         size="sm"
         variant="ghost"
@@ -177,6 +169,11 @@ function Row({
       </Button>
       {children && open ? (
         <div id={`${id}-edit`} className="newtask-row-edit">
+          {from ? (
+            <span className="newtask-from">
+              From <cite>{from}</cite>
+            </span>
+          ) : null}
           {children}
         </div>
       ) : null}
@@ -235,9 +232,9 @@ function IssuePicker({
     return (
       <div className="newtask-issue-picked">
         <p role="status">
-          {`Filled in from issue #${picked.number}. Change anything you like before you start. `}
+          {"From "}
           <a href={picked.url} target="_blank" rel="noreferrer">
-            {`View issue #${picked.number}`}
+            {`issue #${picked.number}`}
           </a>
         </p>
         <Button size="sm" variant="ghost" onClick={onClear}>
@@ -261,10 +258,6 @@ function IssuePicker({
           <h2 id={`${id}-title`} className="page-label">
             {`Open issues in ${repo}`}
           </h2>
-          <p>
-            Pick one and Bezl fills in the goal from it. You can still change anything before you
-            start.
-          </p>
           <ul aria-labelledby={`${id}-title`}>
             {issues.map((issue) => (
               <li key={issue.number}>
@@ -403,10 +396,6 @@ export function NewTask({
           ) : null}
           <Textarea
             label="Goal"
-            description={
-              gap("what")?.why ??
-              "In your own words. Bezl reads the rest from it and the code, for you to check next."
-            }
             rows={4}
             value={draft.text}
             onValueChange={(text) => setDraft((d) => ({ ...d, text }))}
@@ -418,11 +407,8 @@ export function NewTask({
       {step === "review" ? (
         <section className="newtask-step" aria-labelledby="newtask-step">
           <h2 id="newtask-step" ref={land} tabIndex={-1} className="newtask-question">
-            Here's the task Bezl read
+            Check the task before it starts
           </h2>
-          <p className="newtask-hint">
-            {`From your goal and the code in ${repo}. Start it as it is, or change any part to keep the work on tighter rails.`}
-          </p>
           <ul className="newtask-rows" aria-label="Your task">
             <Row
               label="Goal"
@@ -441,9 +427,7 @@ export function NewTask({
                     value ? (
                       <span>{value}</span>
                     ) : (
-                      <span className="newtask-row-empty">
-                        {bezl ? "Dropped" : "Bezl couldn't tell from the goal or the code."}
-                      </span>
+                      <span className="newtask-row-empty">{bezl ? "Dropped" : "Not found"}</span>
                     )
                   }
                   from={value && bezl && value === bezl.text ? bezl.from : undefined}
@@ -539,7 +523,7 @@ export function NewTask({
               from={
                 sameVendor
                   ? undefined
-                  : "the agents that passed the agent check, with a reviewer from another company"
+                  : "the agents that are ready, with a reviewer from a different company"
               }
               open={open === "crew"}
               onChange={() => toggle("crew")}
@@ -558,7 +542,7 @@ export function NewTask({
               label="Files"
               value={
                 <span>
-                  {`${allowed.length === 0 ? "Any file" : count(allowed.length, "path", "paths")} · ${blockShip ? "Ship waits for open problems" : "Ship isn't held"}`}
+                  {`${allowed.length === 0 ? "Any file" : `Only ${count(allowed.length, "path", "paths")}`}${blockShip ? " · Won't ship with open problems" : ""}`}
                 </span>
               }
               from={
@@ -622,12 +606,7 @@ export function NewTask({
                 label="Setup"
                 value={
                   runSetup ? (
-                    <>
-                      <code>{setup}</code>
-                      <span className="newtask-from">
-                        Runs only in the task's copy of your code, never in yours
-                      </span>
-                    </>
+                    <code>{setup}</code>
                   ) : (
                     <span className="newtask-row-empty">Skipped</span>
                   )
@@ -644,11 +623,6 @@ export function NewTask({
               </Row>
             ) : null}
           </ul>
-          {gaps.length > 0 ? (
-            <p className="newtask-summary-gaps">
-              {`Not filled in: ${gaps.map((g) => lower(g.label)).join(", ")}. You can start anyway; Bezl checks the work against what's here.`}
-            </p>
-          ) : null}
         </section>
       ) : null}
 
@@ -665,13 +639,7 @@ export function NewTask({
               ? "Start task"
               : "Start anyway"}
         </Button>
-        <span>
-          {order[at + 1]
-            ? `Step ${at + 1} of ${order.length}`
-            : willSetup
-              ? `Starting runs ${setup} in the task's copy of your code, then Bezl makes a plan.`
-              : "Bezl will set up the task's own copy of your code and then make a plan."}
-        </span>
+        {order[at + 1] ? <span>{`Step ${at + 1} of ${order.length}`}</span> : null}
       </footer>
     </form>
   );

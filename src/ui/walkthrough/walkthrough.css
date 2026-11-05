@@ -135,7 +135,7 @@
 
 @media (max-width: 40rem) {
   .walkthrough {
-    --walkthrough-dock-space: 9rem;
+    --walkthrough-dock-space: 11rem;
   }
 
   .walkthrough-dock {

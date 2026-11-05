@@ -29,7 +29,7 @@ import {
   Takes,
   useSendBack,
 } from "./StageViews";
-import { type Answer, Facts, FullScreen, HandledList, type MapTab } from "./Workbench";
+import { type Answer, Facts, FullScreen, type MapTab } from "./Workbench";
 
 /** What happened at a stage and who acted, for the strip's tooltip. */
 function StageHint({ view }: { view: StageView }) {
@@ -106,8 +106,6 @@ type PaneProps = TaskPageProps & {
   children?: ReactNode;
 };
 
-const questionCount = (n: number) => (n === 1 ? "the question" : `the ${n} questions`);
-
 function StagePane({ task, stage, view, onStage, onShip, onNewTask, asking, children }: PaneProps) {
   // Approving is the decision Review waits on; once made, the button goes.
   const approve = stage === "review" && task.stages.review === "needsYou" ? onShip : undefined;
@@ -123,11 +121,10 @@ function StagePane({ task, stage, view, onStage, onShip, onNewTask, asking, chil
         <p className="journey-next-text" role="status">
           {restart === "again"
             ? `Started a fresh ${writer} with the task's history and its copy of your code.`
-            : "Stopped. Its copy of your code stays as it was left."}
+            : "Stopped. Its copy of your code is kept as it was."}
         </p>
       ) : (
         <>
-          <p className="journey-next-text">Bezl won't restart a step on its own.</p>
           <Button variant="primary" onClick={() => setRestart("again")}>
             Run the step again
           </Button>
@@ -190,21 +187,23 @@ function StagePane({ task, stage, view, onStage, onShip, onNewTask, asking, chil
         </>
       );
     }
-    if (asking)
-      return <p className="journey-next-text">{`Answer ${questionCount(asking)} to go on.`}</p>;
-    return <p className="journey-next-text">{`Nothing needs you at ${stageLabel[stage]}.`}</p>;
+    // Nothing to press: the status line already says what's happening.
+    return null;
   };
+  const action = next();
   return (
     <>
-      {view.takes ? <Takes takes={view.takes} steer={stage === "build"} /> : null}
+      {/* The attempt's row matters where you steer it, and where its reviewer speaks. */}
+      {view.takes && (stage === "build" || stage === "review") ? (
+        <Takes takes={view.takes} steer={stage === "build"} />
+      ) : null}
       {view.ship ? <Ship ship={view.ship} opened={opened} /> : null}
       {view.sections.map((section) => (
         <SectionList key={section.title} section={section} />
       ))}
       {view.passed?.length ? <Passed rows={view.passed} /> : null}
-      {view.handled?.length ? <HandledList handled={view.handled} /> : null}
       {children}
-      <NextStep>{next()}</NextStep>
+      {action ? <NextStep>{action}</NextStep> : null}
     </>
   );
 }
@@ -314,6 +313,7 @@ export function TaskPage({
               entries={entries}
               picked={picked}
               onPick={(key) => setPick({ stage, key })}
+              handled={view.handled}
               shots={shots}
               example={shown}
               design={design}

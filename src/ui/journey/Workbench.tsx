@@ -7,7 +7,6 @@ import { LightIcon } from "./icons";
 import {
   type Asked,
   type Coverage,
-  type Handled,
   type Impact,
   lightLabel,
   pathOf,
@@ -27,7 +26,7 @@ const riskTone = { low: "success", medium: "warning", high: "danger" } as const;
 // Chips start with a capital, as on Providers.
 const capital = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`;
 
-/** One quiet line under the goal: how big the change is, how risky and why, how much ran in a test. */
+/** One quiet line under the goal: how big, how risky, how much ran in a test. */
 export function Facts({
   context,
   impact,
@@ -46,13 +45,11 @@ export function Facts({
       {impact ? (
         <li>
           <Badge tone={riskTone[impact.risk]}>{`${capital(impact.risk)} risk`}</Badge>
-          <span className="journey-summary-note">{`${impact.reach}, based on ${impact.from}`}</span>
+          <span className="journey-summary-note">{impact.reach}</span>
         </li>
       ) : null}
       <li>
-        {coverage && total
-          ? `${coverage.covered} of ${total} changed lines ran in a test`
-          : context.evidence}
+        {coverage && total ? `${coverage.covered} of ${total} lines tested` : context.evidence}
       </li>
     </ul>
   );
@@ -106,7 +103,7 @@ function Choices({
       </div>
       {shown ? (
         <p className="journey-then">
-          <strong>{`${hint ? shown.label : `Recommended: ${shown.label}`}.`}</strong> {shown.next}
+          <strong>{`${shown.label}.`}</strong> {shown.next}
           {shown.tradeoffs?.length ? (
             <span className="journey-tradeoffs">
               {shown.tradeoffs.map((t) => (
@@ -129,6 +126,7 @@ export function Questions({
   onExample,
   onWhy,
   level = "h2",
+  quiet = false,
 }: {
   items: NeedsYouItem[];
   answered: Answer[];
@@ -139,6 +137,8 @@ export function Questions({
   /** Shows a question's evidence. */
   onWhy?: ((id: string) => void) | undefined;
   level?: "h2" | "h3";
+  /** Heading for screen readers only, where the line above already names it. */
+  quiet?: boolean;
 }) {
   const id = useId();
   const Heading = level;
@@ -158,7 +158,7 @@ export function Questions({
   }, [last, open, id]);
   return (
     <section className="journey-section" aria-labelledby={id}>
-      <Heading id={id} className="page-label">
+      <Heading id={id} className={quiet ? "journey-sr" : "page-label"}>
         Needs you
       </Heading>
       <ul className="journey-problems" aria-labelledby={id}>
@@ -188,13 +188,10 @@ export function Questions({
                 {expanded ? (
                   <div id={`${id}-${item.id}`} className="journey-problem-body">
                     <p className="journey-question-from">
-                      {`${kindLabel[item.kind]} from ${item.from} · waiting ${item.waited}`}
+                      {`${item.from} · waiting ${item.waited}`}
                     </p>
                     {item.context ? (
                       <p className="journey-mono journey-problem-where">{item.context}</p>
-                    ) : null}
-                    {item.blocks ? (
-                      <Badge appearance="plain">{`Holds up ${item.blocks}`}</Badge>
                     ) : null}
                     {item.why && onWhy ? (
                       <Button size="sm" variant="ghost" onClick={() => onWhy(item.why as string)}>
@@ -228,29 +225,6 @@ export function Questions({
         {last ? `You chose ${last.choice.label}. ${last.choice.next}` : null}
       </p>
     </section>
-  );
-}
-
-/** What Bezl's filter did with questions that never reached you; folded. */
-export function HandledList({ handled }: { handled: Handled[] }) {
-  return (
-    <details className="journey-passed journey-handled">
-      <summary>{`Bezl handled ${handled.length} without you`}</summary>
-      <ul>
-        {handled.map((h) => (
-          <li key={h.text} className="journey-row" data-light="done">
-            <span className="journey-row-icon">
-              <LightIcon light="done" />
-            </span>
-            <span className="journey-row-text">
-              {h.text}
-              <small>{h.outcome}</small>
-            </span>
-            <span className="journey-row-meta">{h.by}</span>
-          </li>
-        ))}
-      </ul>
-    </details>
   );
 }
 

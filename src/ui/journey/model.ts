@@ -552,7 +552,7 @@ export function entriesOf(
     : [];
   const loose: LineEntry = {
     key: "loose",
-    title: "Not tied to a line",
+    title: "Not on your list",
     questions: open.filter((q) => linesOf(q.why).length === 0),
     answered: answered.filter((a) => linesOf(a.item.why).length === 0),
     problems: (view.problems ?? []).filter((p) => linesOf(p.why).length === 0),

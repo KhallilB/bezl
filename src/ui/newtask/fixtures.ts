@@ -94,8 +94,7 @@ export function startedTask(): JourneyTask {
     views: {
       define: defineView,
       plan: {
-        lead: "Getting things ready.",
-        rest: "Bezl is setting up the task's copy of your code, and then it will make the plan.",
+        lead: "Setting up.",
         sections: [
           {
             title: "Its copy of your code",
@@ -109,22 +108,18 @@ export function startedTask(): JourneyTask {
       },
       build: {
         lead: "Build hasn't started.",
-        rest: "It starts once the plan is ready.",
         sections: [],
       },
       check: {
         lead: "Checks haven't run yet.",
-        rest: "They start once Build finishes.",
         sections: [],
       },
       review: {
         lead: "Review hasn't started.",
-        rest: "It starts once Check is done.",
         sections: [],
       },
       ship: {
         lead: "Nothing to ship yet.",
-        rest: "Ship opens once you approve the attempt on Review.",
         sections: [],
       },
     },

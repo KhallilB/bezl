@@ -35,7 +35,7 @@ export function readiness(draft: BriefDraft): ReadinessCheck[] {
     {
       id: "what",
       label: "What you want",
-      why: "Describe the goal in a full sentence rather than a title, so the agent builds the right thing.",
+      why: "Write a sentence, not a title, so the agent builds the right thing.",
       met: intent(draft.text),
     },
     {

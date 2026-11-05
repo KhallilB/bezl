@@ -58,7 +58,7 @@ test("the page never scrolls sideways at phone width; the stage strip scrolls in
 
 test("the task title, stage markers, status and the stage's content share one left edge", async () => {
   await page.viewport(1280, 800);
-  const el = await mount("?screen=walkthrough&step=tasks&theme=dark");
+  const el = await mount("?screen=walkthrough&step=review&theme=dark");
   await new Promise((r) => setTimeout(r, 400));
   const left = (selector: string) =>
     Math.round(el.querySelector(selector)?.getBoundingClientRect().left ?? -1);
@@ -115,7 +115,7 @@ test("every screen in the shell is one width, and every task page one wider widt
 
 test("the picked line's detail sits beside the list and shows a phone shot at its width", async () => {
   await page.viewport(1440, 900);
-  const el = await mount("?screen=walkthrough&step=preview&theme=dark");
+  const el = await mount("?screen=walkthrough&step=review&theme=dark");
   const list = el.querySelector(".journey-lines-list")?.getBoundingClientRect();
   const pane = el.querySelector(".journey-detail")?.getBoundingClientRect();
   expect(list && pane && pane.left >= list.right).toBe(true);
@@ -126,7 +126,7 @@ test("the picked line's detail sits beside the list and shows a phone shot at it
 test("at 1440x900 the list starts above the fold on Review and Check", async () => {
   await page.viewport(1440, 900);
   const seen = await each(
-    steps.filter((s) => ["preview", "problems", "review"].includes(s.id)),
+    steps.filter((s) => ["problems", "review"].includes(s.id)),
     (el) => el.querySelector(".journey-line")?.getBoundingClientRect().top ?? Number.NaN,
   );
   for (const [id, top] of Object.entries(seen)) {
@@ -194,7 +194,7 @@ for (const [width, height] of [
 
 test("at phone width the open task's row scrolls into the task bar", async () => {
   await page.viewport(390, 844);
-  const el = await mount("?screen=walkthrough&step=working&theme=dark");
+  const el = await mount("?screen=walkthrough&step=question&theme=dark");
   const bar = el.querySelector(".shell-lists")?.getBoundingClientRect();
   const row = el.querySelector(".shell-task[aria-current]")?.getBoundingClientRect();
   expect(row && bar && row.left >= bar.left && row.right <= bar.right).toBe(true);
@@ -215,8 +215,7 @@ test("Providers is one page as wide as the shell's, its action at the title row'
   await page.viewport(1440, 900);
   const seen = await each(providerSteps, (el) => {
     const frame = el.querySelector(".page")?.getBoundingClientRect();
-    // Preflight is still checking, so it offers no Check again.
-    const action = el.querySelector(".page-action")?.getBoundingClientRect() ?? frame;
+    const action = el.querySelector(".page-action")?.getBoundingClientRect();
     return `${Math.round(frame?.width ?? 0)} ${Math.round((frame?.right ?? 0) - (action?.right ?? 0))}`;
   });
   expect(distinct(seen), JSON.stringify(seen)).toEqual(new Set(["832 0"]));
@@ -226,15 +225,14 @@ test("Providers' card titles match the shell's", async () => {
   await page.viewport(1440, 900);
   const size = (el: Element | null) => (el ? getComputedStyle(el).fontSize : "none");
   const shell = await each(
-    steps.filter((s) => s.id === "working"),
+    steps.filter((s) => s.id === "question"),
     (el) => size(el.querySelector(".journey-take-model")),
   );
   const cards = await each(providerSteps, (el) =>
     [...el.querySelectorAll(".providers-panel h2")].map(size).join(),
   );
-  // Preflight is still checking: no panels yet.
-  for (const [id, sizes] of Object.entries(cards).filter(([, sizes]) => sizes)) {
-    expect(new Set(sizes.split(",")), id).toEqual(new Set([shell.working]));
+  for (const [id, sizes] of Object.entries(cards)) {
+    expect(new Set(sizes.split(",")), id).toEqual(new Set([shell.question]));
   }
 });
 

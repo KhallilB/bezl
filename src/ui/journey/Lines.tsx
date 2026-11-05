@@ -5,6 +5,7 @@ import { LightIcon } from "./icons";
 import {
   type Assumption,
   type Decision,
+  type Handled,
   type Light,
   type LineEntry,
   lineWord,
@@ -104,11 +105,11 @@ function Detail({
   onExample,
   onMap,
 }: DetailProps & { id: string; entry: LineEntry }) {
-  const said = [
-    entry.light ? lineWord[entry.light] : "",
-    entry.reason ?? "",
-    entry.checker && entry.checker !== entry.reason ? entry.checker : "",
-  ].filter(Boolean);
+  // Questions and problems below already say why this line waits.
+  const said =
+    entry.questions.length || entry.problems.length
+      ? []
+      : [entry.light ? lineWord[entry.light] : "", entry.reason ?? ""].filter(Boolean);
   const shown = entry.shots.length > 0 || example;
   return (
     <section id={id} className="journey-detail" aria-labelledby={`${id}-name`}>
@@ -131,6 +132,7 @@ function Detail({
           <Questions
             key={entry.key}
             level="h3"
+            quiet
             items={entry.questions}
             answered={entry.answered}
             prefer={prefer}
@@ -158,9 +160,7 @@ function Detail({
         <section className="journey-section">
           <NodeList label="In the code" nodes={entry.code} mono />
           {entry.claimed ? (
-            <p className="journey-claim">
-              The plan says this code serves the goal; no test has shown it yet.
-            </p>
+            <p className="journey-claim">Linked by the plan only. No test has shown it yet.</p>
           ) : null}
         </section>
       ) : null}
@@ -213,24 +213,45 @@ function Checks({ checks }: { checks: OtherCheck[] }) {
   );
 }
 
-/** Your answers and the agents' guesses, folded under the list so nothing is lost. */
-function Folds({
+/** What Bezl handled, your answers and the agents' guesses: one fold, so nothing is lost. */
+function More({
+  handled,
   decisions,
   assumptions,
   raised,
   onChange,
 }: {
+  handled: Handled[];
   decisions: Decision[];
   assumptions: Assumption[];
   raised: ReadonlySet<string>;
   onChange?: ((a: Assumption) => void) | undefined;
 }) {
-  const id = useId();
+  if (!handled.length && !decisions.length && !assumptions.length) return null;
   return (
-    <>
+    <details className="journey-passed journey-more">
+      <summary>More</summary>
+      {handled.length ? (
+        <section className="journey-section">
+          <h3 className="page-label">Handled without you</h3>
+          <ul aria-label="Handled without you">
+            {handled.map((h) => (
+              <li key={h.text} className="journey-row" data-light="done">
+                <span className="journey-row-icon">
+                  <LightIcon light="done" />
+                </span>
+                <span className="journey-row-text">
+                  {h.text}
+                  <small>{h.outcome}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {decisions.length ? (
-        <details className="journey-passed">
-          <summary>{`Your answers (${decisions.length})`}</summary>
+        <section className="journey-section">
+          <h3 className="page-label">Your answers</h3>
           <ul aria-label="Your answers">
             {decisions.map((d) => (
               <li key={d.text} className="journey-row" data-light="done">
@@ -242,11 +263,11 @@ function Folds({
               </li>
             ))}
           </ul>
-        </details>
+        </section>
       ) : null}
       {assumptions.length ? (
-        <details className="journey-passed">
-          <summary id={id}>{`Made without asking you (${assumptions.length})`}</summary>
+        <section className="journey-section">
+          <h3 className="page-label">Made without asking you</h3>
           <ul aria-label="Made without asking you">
             {assumptions.map((a) => (
               <li key={a.id} className="journey-row" data-light="waiting">
@@ -266,9 +287,9 @@ function Folds({
               </li>
             ))}
           </ul>
-        </details>
+        </section>
       ) : null}
-    </>
+    </details>
   );
 }
 
@@ -277,6 +298,7 @@ type LinesProps = DetailProps & {
   /** The open entry's key; "" closes it in place on a narrow page. */
   picked: string;
   onPick: (key: string) => void;
+  handled?: Handled[] | undefined;
   decisions: Decision[];
   assumptions: Assumption[];
   raised: ReadonlySet<string>;
@@ -288,6 +310,7 @@ export function Lines({
   entries,
   picked,
   onPick,
+  handled = [],
   decisions,
   assumptions,
   raised,
@@ -299,22 +322,31 @@ export function Lines({
   // Only a click or Enter moves focus to the detail; arrowing never does.
   const [moved, setMoved] = useState(0);
   // A resize changes `wide`, never `moved`, so it must not refocus.
-  const handled = useRef(0);
+  const focused = useRef(0);
   const current = entries.find((e) => e.key === picked);
   const pane = current ? <Detail id={`${id}-detail`} entry={current} {...detail} /> : null;
   useEffect(() => {
-    if (moved === handled.current) return;
-    handled.current = moved;
+    if (moved === focused.current) return;
+    focused.current = moved;
     if (wide) document.getElementById(`${id}-detail-name`)?.focus();
   }, [moved, wide, id]);
-  const move = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: entries.length - 1 }[e.key];
+  // Passing lines fold under the ones that need something, unless nothing does.
+  const quiet = entries.filter((e) => e.light === "done");
+  const fold = quiet.length > 0 && quiet.length < entries.length;
+  const lead = fold ? entries.filter((e) => e.light !== "done") : entries;
+  const [showQuiet, setShowQuiet] = useState(false);
+  const move = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const list = e.currentTarget.closest(".journey-lines-list");
+    const rows = [...(list?.querySelectorAll<HTMLElement>("button.journey-line") ?? [])].filter(
+      (r) => !r.closest("details:not([open])"),
+    );
+    const i = rows.indexOf(e.currentTarget);
+    const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: rows.length - 1 }[e.key];
     if (to === undefined) return;
     e.preventDefault();
-    const rows = e.currentTarget.closest("ul")?.querySelectorAll<HTMLElement>(".journey-line");
-    rows?.[Math.min(Math.max(to, 0), entries.length - 1)]?.focus();
+    rows[Math.min(Math.max(to, 0), rows.length - 1)]?.focus();
   };
-  const row = (e: LineEntry, i: number): ReactNode => {
+  const row = (e: LineEntry): ReactNode => {
     const open = e.key === picked;
     return (
       <li key={e.key} className="journey-lines-item">
@@ -329,15 +361,17 @@ export function Lines({
             onPick(!wide && open ? "" : e.key);
             setMoved((n) => n + 1);
           }}
-          onKeyDown={(ev) => move(ev, i)}
+          onKeyDown={move}
         >
           <span className="journey-row-icon">{e.light ? <LightIcon light={e.light} /> : null}</span>
           <span className="journey-line-text">{e.title}</span>
           <span className="journey-line-state">
-            {e.light ? <span className="journey-line-word">{lineWord[e.light]}</span> : null}
-            {e.was && e.light ? (
+            {e.light && e.light !== "done" ? (
+              <span className="journey-line-word">{lineWord[e.light]}</span>
+            ) : null}
+            {e.was && e.light && e.was !== e.light ? (
               <Was was={e.was} now={e.light} />
-            ) : e.reason ? (
+            ) : e.reason && e.light !== "done" ? (
               <span className="journey-line-reason">{e.reason}</span>
             ) : null}
           </span>
@@ -352,8 +386,19 @@ export function Lines({
         <h2 id={`${id}-name`} className="page-label">
           You asked for
         </h2>
-        <ul aria-labelledby={`${id}-name`}>{entries.map(row)}</ul>
-        <Folds
+        <ul aria-labelledby={`${id}-name`}>{lead.map(row)}</ul>
+        {fold ? (
+          <details
+            className="journey-passed"
+            open={showQuiet || quiet.some((e) => e.key === picked)}
+            onToggle={(ev) => setShowQuiet(ev.currentTarget.open)}
+          >
+            <summary>{`${quiet.length} ${quiet.length === 1 ? "works" : "work"}`}</summary>
+            <ul aria-label="Lines that work">{quiet.map(row)}</ul>
+          </details>
+        ) : null}
+        <More
+          handled={handled}
           decisions={decisions}
           assumptions={assumptions}
           raised={raised}

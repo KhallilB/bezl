@@ -51,25 +51,24 @@ describe("NewTask steps", () => {
 });
 
 describe("NewTask goal", () => {
-  test("asks only for the goal, and says why a sentence helps", async () => {
+  test("asks only for the goal, with no instructions to read", () => {
     setup();
     expect(screen.queryByRole("textbox", { name: "Who it's for" })).toBeNull();
-    expect(screen.getByText(/full sentence rather than a title/)).toBeVisible();
-    await userEvent.type(screen.getByRole("textbox", { name: "Goal" }), text);
-    expect(screen.queryByText(/full sentence rather than a title/)).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Goal" })).not.toHaveAccessibleDescription();
   });
 });
 
 describe("NewTask review", () => {
-  test("every part arrives filled in from Bezl's read, each with where it came from", async () => {
+  test("every part arrives filled in from Bezl's read; where it came from shows on Change", async () => {
     setup({ initial: { text, doneWhen: [] } });
     await next();
     expect(within(row("Who it's for")).getByText(read.who?.text ?? "")).toBeVisible();
+    expect(within(row("Avoid or reuse")).queryByText(read.avoid?.from ?? "")).toBeNull();
+    await change("Avoid or reuse");
     expect(within(row("Avoid or reuse")).getByText(read.avoid?.from ?? "")).toBeVisible();
     expect(within(row("It's done when")).getByText("3 lines, 2 checked by Bezl")).toBeVisible();
     expect(within(row("Crew")).getByText("Claude Code writes, Codex reviews")).toBeVisible();
-    expect(within(row("Files")).getByText(read.files?.from ?? "")).toBeVisible();
-    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(within(row("Files")).getByText("Only 2 paths")).toBeVisible();
   });
 
   test("the quick path: write the goal, then start with Bezl's read as it is", async () => {
@@ -123,21 +122,19 @@ describe("NewTask review", () => {
 
   test("where Bezl couldn't tell, it says so, and you can start anyway", async () => {
     const { onStart } = setup({ initial: { text, doneWhen: [] }, read: {}, step: "review" });
-    expect(screen.getAllByText(/Bezl couldn't tell from the goal or the code/).length).toBe(3);
-    expect(screen.getByText(/Not filled in: who it's for/)).toBeVisible();
+    expect(screen.getAllByText("Not found").length).toBe(3);
     await userEvent.click(screen.getByRole("button", { name: "Start anyway" }));
     expect(onStart).toHaveBeenCalledOnce();
   });
 });
 
 describe("NewTask setup", () => {
-  test("Start names the setup it runs, and you can turn it off", async () => {
+  test("the setup row names the command, and you can turn it off", async () => {
     const { onStart } = setup({ initial: { text, doneWhen: [] }, step: "review" });
     expect(within(row("Setup")).getByText("bun install")).toBeVisible();
-    expect(screen.getByText(/Starting runs bun install in the task's copy/)).toBeVisible();
     await change("Setup");
     await userEvent.click(screen.getByRole("switch", { name: "Run setup when the task starts" }));
-    expect(screen.queryByText(/Starting runs bun install/)).toBeNull();
+    expect(within(row("Setup")).getByText("Skipped")).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Start task" }));
     expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ setup: false }));
   });
@@ -183,7 +180,7 @@ describe("NewTask from a GitHub issue", () => {
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveDisplayValue(
       /^Projects page shows an empty table/,
     );
-    expect(screen.getByRole("link", { name: "View issue #128" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "issue #128" })).toHaveAttribute(
       "href",
       "https://github.com/acme/studio-web/issues/128",
     );

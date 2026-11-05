@@ -22,13 +22,11 @@ function showAll() {
 }
 
 describe("Providers at a glance", () => {
-  test("each agent row shows a status and one line, with its details folded away", () => {
+  test("a ready agent row is its name and status, with its details folded away", () => {
     render(<Providers checks={[claudeFound, codexProbed]} github={githubSignedIn} />);
     const claude = screen.getByRole("region", { name: "Claude Code" });
     expect(within(claude).getByText("Ready to write")).toBeVisible();
-    expect(
-      within(claude).getByText("Signed in · All 5 safety tests passed · Version 2.1.312"),
-    ).toBeVisible();
+    expect(within(claude).queryByText(/^Signed in · /)).toBeNull();
     expect(within(claude).getByText("/Users/me/.local/bin/claude")).not.toBeVisible();
     expect(within(claude).queryByText("Writing files")).not.toBeVisible();
   });
@@ -49,11 +47,10 @@ describe("Providers at a glance", () => {
     expect(within(claude).getByRole("list", { name: "To fix" })).toBeVisible();
   });
 
-  test("GitHub says what Bezl uses it for, and folds its path away", () => {
+  test("signed-in GitHub is its account, with its path folded away", () => {
     render(<Providers checks={[claudeFound]} github={githubSignedIn} />);
     const github = screen.getByRole("region", { name: "GitHub" });
     expect(within(github).getByText("Signed in as octocat")).toBeVisible();
-    expect(within(github).getByText("Reads issues and opens pull requests")).toBeVisible();
     expect(within(github).getByText("/opt/homebrew/bin/gh")).not.toBeVisible();
   });
 });
@@ -386,15 +383,14 @@ describe("Providers", () => {
     expect(screen.getByRole("region", { name: "Codex" })).toBeVisible();
   });
 
-  test("the GitHub row names the account and says it is needed only for Ship", () => {
+  test("the GitHub row names the account and says it is optional", () => {
     render(<Providers checks={[claudeFound, codexProbed]} github={githubSignedIn} />);
     showAll();
     const github = screen.getByRole("region", { name: "GitHub" });
     expect(within(github).getByText("Signed in as octocat")).toBeVisible();
     expect(within(github).getByText("/opt/homebrew/bin/gh")).toBeVisible();
-    expect(within(github).getByText(/Needed only for Ship/)).toBeVisible();
     expect(
-      within(github).getByText(/hides the issue picker, and Ship can't open a pull request/),
+      within(github).getByText("Optional. Needed only for issues and pull requests."),
     ).toBeVisible();
   });
 
