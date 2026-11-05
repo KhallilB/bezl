@@ -21,7 +21,7 @@ import { ChooseRepository } from "../onboarding/ChooseRepository";
 import { claudeFound, codexReady, githubSignedIn, noWriter } from "../providers/fixtures";
 import type { GitHubCheck, ProviderCheck } from "../providers/model";
 import { Providers } from "../providers/Providers";
-import { AppShell, EmptyTasks } from "../shell/AppShell";
+import { type AgentStatus, AppShell, EmptyTasks } from "../shell/AppShell";
 import { task } from "../task/fixtures";
 import type { WorkerView } from "../task/model";
 import { Task } from "../task/Task";
@@ -205,6 +205,12 @@ type Shared = {
   onGoTo: (id: string) => void;
 };
 
+const agentsAre = (claude: AgentStatus["state"], codex: AgentStatus["state"]): AgentStatus[] => [
+  { name: "Claude Code", state: claude },
+  { name: "Codex", state: codex },
+];
+const ready = agentsAre("ready", "ready");
+
 /** The shell once tasks exist: the list, its lights and Approvals with its count. */
 function TasksShell({
   list,
@@ -221,6 +227,8 @@ function TasksShell({
     <AppShell
       tasks={list}
       usage={usage}
+      agents={ready}
+      onAgents={() => shared.onGoTo("agents")}
       currentTaskId={current}
       approvals={{
         count: shared.queue.length,
@@ -304,13 +312,12 @@ function View({
   };
   switch (view.kind) {
     case "choose":
-      return <ChooseRepository onChoose={() => onGoTo("providers")} />;
+      return <ChooseRepository onChoose={() => onGoTo("empty-list")} />;
     case "providers":
       return (
         <Providers
           {...preflight[view.result]}
-          onCheckAgain={() => onGoTo("providers")}
-          firstRun
+          onCheckAgain={() => onGoTo("agents")}
           onContinue={() => onGoTo("empty-list")}
         />
       );
@@ -319,25 +326,35 @@ function View({
         <AppShell
           tasks={[]}
           usage={usage}
+          // First launch: the agent check is still running in the background.
+          agents={agentsAre("ready", "checking")}
+          onAgents={() => onGoTo("agents")}
           onOpenTask={() => {}}
           onNewTask={() => onGoTo("new-task")}
         >
-          <EmptyTasks firstRun onNewTask={() => onGoTo("new-task")} />
+          <EmptyTasks onNewTask={() => onGoTo("new-task")} />
         </AppShell>
       );
     case "newTask":
       return (
-        <AppShell tasks={[]} usage={usage} onOpenTask={() => {}}>
+        <AppShell
+          tasks={[]}
+          usage={usage}
+          agents={view.noWriter ? agentsAre("fix", "fix") : ready}
+          onAgents={() => onGoTo(view.noWriter ? "agents-fix" : "agents")}
+          onOpenTask={() => {}}
+        >
           <NewTask
-            key={`${view.draft}-${view.step}`}
+            key={`${view.draft}-${view.withRead}-${view.noWriter}`}
             repo="studio-web"
             branch="main"
             initial={drafts[view.draft]}
             read={read}
-            providers={crew}
+            providers={view.noWriter ? crew.map((p) => ({ ...p, canWrite: false })) : crew}
             setup="bun install"
             onStart={() => onGoTo("preparing")}
-            {...(view.step ? { step: view.step } : {})}
+            onAgents={() => onGoTo("agents-fix")}
+            withRead={Boolean(view.withRead)}
             issues={issues}
           />
         </AppShell>
@@ -345,7 +362,14 @@ function View({
     case "started": {
       const started = startedTask();
       return (
-        <AppShell tasks={[started]} usage={usage} currentTaskId={started.id} onOpenTask={() => {}}>
+        <AppShell
+          tasks={[started]}
+          usage={usage}
+          agents={ready}
+          onAgents={() => onGoTo("agents")}
+          currentTaskId={started.id}
+          onOpenTask={() => {}}
+        >
           <TaskPage
             task={started}
             stage={place?.stage ?? started.current}

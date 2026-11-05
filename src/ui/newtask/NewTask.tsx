@@ -1,5 +1,5 @@
-import { Button, Fieldset, Input, RadioGroup, Switch, Textarea } from "@kb.ui/react";
-import { type ReactNode, useId, useRef, useState } from "react";
+import { Button, Callout, Fieldset, Input, RadioGroup, Switch, Textarea } from "@kb.ui/react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import {
   applyRead,
   type BezlRead,
@@ -28,10 +28,6 @@ export type StartedTask = {
   setup: boolean;
 };
 
-const stepLabel = { goal: "Goal", review: "Review and start" } as const;
-export type NewTaskStep = keyof typeof stepLabel;
-const order = Object.keys(stepLabel) as NewTaskStep[];
-
 export type NewTaskProps = {
   repo: string;
   branch: string;
@@ -43,8 +39,10 @@ export type NewTaskProps = {
   /** The repository's setup command, if it has one; shown beside Start. */
   setup?: string | undefined;
   onStart: (task: StartedTask) => void;
-  /** The step it opens on, for the walkthrough. */
-  step?: NewTaskStep;
+  /** Opens Coding agents; offered when no agent can write. */
+  onAgents?: () => void;
+  /** Opens with Bezl's read already shown, for the walkthrough. */
+  withRead?: boolean;
   /** Open issues from your `gh` session; absent without a GitHub sign-in or remote. */
   issues?: GitHubIssue[];
   /** For the walkthrough: the list starts open, or with this issue already picked. */
@@ -52,28 +50,14 @@ export type NewTaskProps = {
   pickedIssue?: number;
 };
 
+/** Long enough to read a finished thought, short enough to feel instant. */
+const READ_DELAY_MS = 400;
+
 const firstOpen = (choices: Choice[]) => choices.find((c) => !c.disabled)?.id ?? "";
 
 // Prefer a second vendor's eyes; the writer's own vendor is the fallback.
 const defaultReviewer = (choices: Choice[]) =>
   choices.find((c) => !c.disabled && !c.note)?.id ?? firstOpen(choices);
-
-function StepBar({ step }: { step: NewTaskStep }) {
-  const at = order.indexOf(step);
-  return (
-    <ol className="newtask-steps" aria-label="New task steps">
-      {order.map((id, i) => (
-        <li
-          key={id}
-          aria-current={i === at ? "step" : undefined}
-          data-state={i < at ? "done" : i === at ? "current" : "next"}
-        >
-          {stepLabel[id]}
-        </li>
-      ))}
-    </ol>
-  );
-}
 
 type Part = "who" | "avoid" | "example";
 const partLabel: Record<Part, string> = {
@@ -284,7 +268,7 @@ function IssuePicker({
   );
 }
 
-/** New task in two steps: your goal, then Bezl's read of the whole task to change or start as it is. */
+/** New task on one screen: your goal, then Bezl's read of it below, then Start. */
 export function NewTask({
   repo,
   branch,
@@ -293,21 +277,20 @@ export function NewTask({
   providers,
   setup,
   onStart,
-  step: first = "goal",
+  onAgents,
+  withRead = false,
   issues,
   issuesOpen = false,
   pickedIssue,
 }: NewTaskProps) {
-  // Bezl reads once, as you leave the goal; after that the parts are yours.
-  const applied = useRef(first !== "goal");
+  // Bezl reads once, shortly after the goal has words; after that the parts are yours.
+  const [hasRead, setHasRead] = useState(withRead);
   const [draft, setDraft] = useState(() => {
     const picked = issues?.find((i) => i.number === pickedIssue);
     const start = picked ? briefFromIssue(picked) : initial;
-    return applied.current ? applyRead(start, read) : start;
+    return withRead ? applyRead(start, read) : start;
   });
-  const [step, setStep] = useState(first);
   const [open, setOpen] = useState<string | null>(null);
-  const moved = useRef(false);
   const writers = writerChoices(providers);
   const [writer, setWriter] = useState(() => firstOpen(writers));
   const reviewers = reviewerChoices(providers, writer);
@@ -333,26 +316,16 @@ export function NewTask({
   const gap = (id: CheckId) => checks.find((c) => c.id === id && !c.met);
   const why = (id: CheckId) => checks.find((c) => c.id === id)?.why ?? "";
   const gaps = checks.filter((c) => !c.met);
-  const at = order.indexOf(step);
-  const go = (to: NewTaskStep) => {
-    if (to === "review" && !applied.current) {
-      applied.current = true;
-      setDraft((d) => applyRead(d, read));
-    }
-    moved.current = true;
-    setOpen(null);
-    setStep(to);
-  };
   const toggle = (row: string) => setOpen(open === row ? null : row);
-
-  // Each move lands on the new step's question, for keyboard and screen reader alike.
-  const land = (el: HTMLHeadingElement | null) => {
-    if (!el || !moved.current) return;
-    // Once per move: the ref reruns on every render, and typing would lose focus.
-    moved.current = false;
-    el.focus();
-    el.scrollIntoView?.({ block: "nearest" });
-  };
+  const written = draft.text.trim().length > 0;
+  useEffect(() => {
+    if (hasRead || !written) return;
+    const t = setTimeout(() => {
+      setDraft((d) => applyRead(d, read));
+      setHasRead(true);
+    }, READ_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [hasRead, written, read]);
 
   const nameOf = (id: string) => providers.find((p) => p.id === id)?.name ?? id;
   const bezlLines = read.done?.lines ?? [];
@@ -366,9 +339,10 @@ export function NewTask({
       aria-labelledby="newtask-title"
       onSubmit={(e) => {
         e.preventDefault();
-        const to = order[at + 1];
-        if (to) go(to);
-        else onStart({ draft, writer, reviewer, paths: allowed, blockShip, setup: willSetup });
+        if (!written || !writer) return;
+        // Started before the read showed: start with it anyway.
+        const brief = hasRead ? draft : applyRead(draft, read);
+        onStart({ draft: brief, writer, reviewer, paths: allowed, blockShip, setup: willSetup });
       }}
     >
       <header className="page-title-row">
@@ -377,45 +351,35 @@ export function NewTask({
         </h1>
         <span className="page-tag">{`${repo} · ${branch}`}</span>
       </header>
-      <StepBar step={step} />
-
-      {step === "goal" ? (
-        <section className="newtask-step" aria-labelledby="newtask-step">
-          <h2 id="newtask-step" ref={land} tabIndex={-1} className="newtask-question">
-            What should change?
-          </h2>
-          {issues?.length ? (
-            <IssuePicker
-              repo={repo}
-              issues={issues}
-              initialOpen={issuesOpen}
-              picked={draft.issue}
-              onPick={(issue) => setDraft((d) => withIssue(d, issue, issueOf(d)))}
-              onClear={() => setDraft((d) => withoutIssue(d, issueOf(d)))}
-            />
-          ) : null}
-          <Textarea
-            label="Goal"
-            rows={4}
-            value={draft.text}
-            onValueChange={(text) => setDraft((d) => ({ ...d, text }))}
-            placeholder="What should change, and why?"
+      <section className="newtask-step" aria-labelledby="newtask-goal">
+        <h2 id="newtask-goal" className="newtask-question">
+          What should change?
+        </h2>
+        {issues?.length ? (
+          <IssuePicker
+            repo={repo}
+            issues={issues}
+            initialOpen={issuesOpen}
+            picked={draft.issue}
+            onPick={(issue) => setDraft((d) => withIssue(d, issue, issueOf(d)))}
+            onClear={() => setDraft((d) => withoutIssue(d, issueOf(d)))}
           />
-        </section>
-      ) : null}
+        ) : null}
+        <Textarea
+          label="Goal"
+          rows={4}
+          value={draft.text}
+          onValueChange={(text) => setDraft((d) => ({ ...d, text }))}
+          placeholder="What should change, and why?"
+        />
+      </section>
 
-      {step === "review" ? (
-        <section className="newtask-step" aria-labelledby="newtask-step">
-          <h2 id="newtask-step" ref={land} tabIndex={-1} className="newtask-question">
-            Check the task before it starts
+      {hasRead ? (
+        <section className="newtask-step" aria-labelledby="newtask-read">
+          <h2 id="newtask-read" className="newtask-question">
+            Bezl's read
           </h2>
           <ul className="newtask-rows" aria-label="Your task">
-            <Row
-              label="Goal"
-              value={<span className="newtask-row-goal">{draft.text || "Not written yet"}</span>}
-              open={false}
-              onChange={() => go("goal")}
-            />
             {(["who", "avoid", "example"] as const).map((part) => {
               const value = draft[part]?.trim();
               const bezl = read[part];
@@ -626,20 +590,19 @@ export function NewTask({
         </section>
       ) : null}
 
+      {writer ? null : (
+        <Callout tone="warning" title="No coding agent can write yet">
+          {onAgents ? (
+            <Button size="sm" variant="secondary" onClick={onAgents}>
+              Open Coding agents
+            </Button>
+          ) : null}
+        </Callout>
+      )}
       <footer className="newtask-actions newtask-start">
-        {at > 0 ? (
-          <Button variant="ghost" onClick={() => go(order[at - 1] ?? "goal")}>
-            Back
-          </Button>
-        ) : null}
-        <Button type="submit" variant="primary">
-          {order[at + 1]
-            ? `Next: ${stepLabel[order[at + 1] as NewTaskStep]}`
-            : gaps.length === 0
-              ? "Start task"
-              : "Start anyway"}
+        <Button type="submit" variant="primary" disabled={!written || !writer}>
+          {hasRead && gaps.length > 0 ? "Start anyway" : "Start task"}
         </Button>
-        {order[at + 1] ? <span>{`Step ${at + 1} of ${order.length}`}</span> : null}
       </footer>
     </form>
   );

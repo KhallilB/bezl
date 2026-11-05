@@ -198,6 +198,47 @@
   white-space: nowrap;
 }
 
+.shell-agents {
+  display: grid;
+  gap: 0;
+  margin: auto 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shell-agent {
+  display: flex;
+  align-items: center;
+  gap: var(--kb-space-2);
+  width: 100%;
+  padding: var(--kb-space-1) var(--kb-space-3);
+  border: 0;
+  border-radius: var(--kb-radius-md);
+  background: none;
+  color: var(--kb-color-muted);
+  font: inherit;
+  font-size: var(--kb-size-xs);
+  text-align: start;
+  cursor: pointer;
+}
+
+.shell-agent:hover {
+  color: var(--kb-color-fg);
+}
+
+.shell-agent svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.shell-agent-word {
+  margin-inline-start: auto;
+}
+
+.shell-agent[data-state="fix"] .shell-agent-word {
+  color: var(--kb-color-warning);
+}
+
 .shell-usage {
   display: flex;
   flex-wrap: wrap;
@@ -221,6 +262,10 @@
 .shell-usage dd {
   color: var(--kb-color-fg);
   font-family: var(--shell-mono);
+}
+
+.shell-agents + .shell-usage {
+  margin-top: var(--kb-space-2);
 }
 
 .shell-main {

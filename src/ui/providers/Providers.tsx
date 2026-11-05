@@ -1,6 +1,5 @@
 import { Badge, Button, Callout, Code, Inline, Panel, Status, Text } from "@kb.ui/react";
-import { type ReactNode, useId } from "react";
-import { OnboardingSteps } from "../onboarding/OnboardingSteps";
+import type { ReactNode } from "react";
 import "../shell/page.css";
 import { StateIcon } from "../task/icons";
 import {
@@ -38,9 +37,7 @@ export type ProvidersProps = {
   checking?: boolean;
   error?: string;
   onCheckAgain?: () => void;
-  /** Shows first run's steps; the action then reads "Start your first task". */
-  firstRun?: boolean;
-  /** The way on once a CLI can write; disabled, with the reason, when none can. */
+  /** The way back to your tasks; never blocked, since Start is where a writer is needed. */
   onContinue?: () => void;
   /** Omitted: no GitHub row. `null`: its check is in flight. */
   github?: GitHubCheck | null;
@@ -370,41 +367,29 @@ function GitHubPanel({ check }: { check: GitHubCheck | null }) {
   );
 }
 
-function Writers({
-  checks,
-  action,
-  onContinue,
-}: {
-  checks: ProviderCheck[];
-  action: string;
-  onContinue?: (() => void) | undefined;
-}) {
-  const reason = useId();
+/** One line: who can write, or that no one can yet. */
+function Writers({ checks }: { checks: ProviderCheck[] }) {
   const ready = readyShown(checks);
-  const button = onContinue ? (
-    <Button
-      variant="secondary"
-      disabled={!ready}
-      onClick={onContinue}
-      {...(ready ? {} : { "aria-describedby": reason })}
-    >
-      {action}
-    </Button>
-  ) : null;
-  if (ready)
-    return (
-      <div className="providers-ready">
-        <Shows shown={ready} />
-        {button}
-      </div>
-    );
+  return ready ? (
+    <Shows shown={ready} />
+  ) : (
+    <Callout tone="warning" title="No coding agent can write code yet" />
+  );
+}
+
+/** A card per agent while its check runs, so the page has its shape from the start. */
+function Checking() {
   return (
-    <>
-      <div id={reason}>
-        <Callout tone="warning" title="No coding agent can write code yet" />
-      </div>
-      {button ? <div>{button}</div> : null}
-    </>
+    <div className="providers-grid">
+      {Object.values(providerName).map((name) => (
+        <Panel key={name} className="providers-panel" aria-label={name}>
+          <Panel.Header>
+            <h2 className="providers-title">{name}</h2>
+            <Shows shown={githubChecking} />
+          </Panel.Header>
+        </Panel>
+      ))}
+    </div>
   );
 }
 
@@ -413,7 +398,6 @@ export function Providers({
   checking = false,
   error,
   onCheckAgain,
-  firstRun = false,
   onContinue,
   github,
 }: ProvidersProps) {
@@ -433,27 +417,33 @@ export function Providers({
             ) : null}
           </div>
         </header>
-        {firstRun ? <OnboardingSteps current="agents" /> : null}
         {busy ? (
-          <Status tone="running" live icon={<StateIcon state="running" />}>
+          <p role="status" className="kb-sr-only">
             Checking your coding agents…
-          </Status>
+          </p>
         ) : null}
         {error ? (
           <Callout tone="danger" role="alert" title="Agent check failed">
             {error}
           </Callout>
         ) : null}
-        {checks === null ? null : (
-          <Writers
-            checks={checks}
-            action={firstRun ? "Start your first task" : "New task"}
-            onContinue={onContinue}
-          />
-        )}
+        {checks || onContinue ? (
+          <div className="providers-ready">
+            {checks ? <Writers checks={checks} /> : <span />}
+            {onContinue ? (
+              <Button variant="secondary" onClick={onContinue}>
+                Back to tasks
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         {/* Above the CLI cards, which run long: a missing sign-in should show on day one. */}
         {github === undefined ? null : <GitHubPanel check={github} />}
-        {checks === null ? null : (
+        {checks === null ? (
+          error ? null : (
+            <Checking />
+          )
+        ) : (
           <div className="providers-grid">
             {checks.map((c) => (
               <ProviderPanel key={c.discovery.provider} check={c} />

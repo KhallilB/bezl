@@ -152,16 +152,27 @@ describe("Walkthrough free navigation", () => {
 });
 
 describe("Walkthrough getting started", () => {
-  test("Choose a folder moves on to the agent check", async () => {
+  test("Choose a folder goes straight to tasks, with the agent check in the sidebar", async () => {
     at("?screen=walkthrough&step=open-repo");
     render(<Walkthrough />);
     await userEvent.click(screen.getByRole("button", { name: "Choose a folder" }));
-    expect(within(dock()).getByText(position("providers"))).toBeVisible();
-    expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
+    expect(within(dock()).getByText(position("empty-list"))).toBeVisible();
+    const agents = screen.getByRole("list", { name: "Coding agents" });
+    expect(within(agents).getByRole("button", { name: /Codex.*Checking/ })).toBeVisible();
+  });
+
+  test("an agent in the sidebar opens Coding agents, and Back to tasks returns", async () => {
+    at("?screen=walkthrough&step=empty-list");
+    render(<Walkthrough />);
+    const agents = screen.getByRole("list", { name: "Coding agents" });
+    await userEvent.click(within(agents).getByRole("button", { name: /Claude Code/ }));
+    expect(within(dock()).getByText(position("agents"))).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Back to tasks" }));
+    expect(within(dock()).getByText(position("empty-list"))).toBeVisible();
   });
 
   test("Coding agents shows the real screen for each agent check result", () => {
-    at("?screen=walkthrough&step=providers");
+    at("?screen=walkthrough&step=agents");
     const { unmount } = render(<Walkthrough />);
     expect(screen.getByText("Claude Code and Codex are ready to write code")).toBeVisible();
     // New task offers Codex as a reviewer, so its safety tests must pass here.
@@ -170,22 +181,18 @@ describe("Walkthrough getting started", () => {
     ).toBeVisible();
     expect(screen.queryAllByText(/A safety test failed/)).toHaveLength(0);
     unmount();
-    at("?screen=walkthrough&step=no-writer");
+    at("?screen=walkthrough&step=agents-fix");
     render(<Walkthrough />);
     expect(screen.getByText("No coding agent can write code yet")).toBeVisible();
     expect(screen.getByText("The codex at /Users/me/.bun/bin/codex isn't Codex")).toBeVisible();
   });
 
-  test("Start your first task moves from Coding agents to the empty task list", async () => {
-    at("?screen=walkthrough&step=providers");
+  test("with no agent able to write, Start waits and points at Coding agents", async () => {
+    at("?screen=walkthrough&step=no-writer");
     render(<Walkthrough />);
-    await userEvent.click(screen.getByRole("button", { name: "Start your first task" }));
-    expect(within(dock()).getByText(position("empty-list"))).toBeVisible();
-    const steps = screen.getByRole("list", { name: "Getting started" });
-    expect(within(steps).getByText("First task").closest("li")).toHaveAttribute(
-      "aria-current",
-      "step",
-    );
+    expect(screen.getByRole("button", { name: /^Start (task|anyway)$/ })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Open Coding agents" }));
+    expect(within(dock()).getByText(position("agents-fix"))).toBeVisible();
   });
 
   test("the empty task list offers one action, which opens New task", async () => {

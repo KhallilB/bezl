@@ -1,14 +1,36 @@
 import { Button } from "@kb.ui/react";
 import type { ReactNode } from "react";
 import { LightIcon } from "../journey/icons";
-import { type JourneyTask, lightLabel, type ProviderUsage, taskLight } from "../journey/model";
-import { OnboardingSteps } from "../onboarding/OnboardingSteps";
+import {
+  type JourneyTask,
+  type Light,
+  lightLabel,
+  type ProviderUsage,
+  taskLight,
+} from "../journey/model";
 import "./page.css";
 import "./shell.css";
+
+export type AgentState = "checking" | "ready" | "fix";
+export type AgentStatus = { name: string; state: AgentState };
+
+const agentLight: Record<AgentState, Light> = {
+  checking: "working",
+  ready: "done",
+  fix: "needsYou",
+};
+const agentWord: Record<AgentState, string> = {
+  checking: "Checking",
+  ready: "Ready",
+  fix: "Needs a fix",
+};
 
 export type AppShellProps = {
   tasks: JourneyTask[];
   usage: ProviderUsage[];
+  /** The background agent check, one row each; a click opens Coding agents. */
+  agents?: AgentStatus[];
+  onAgents?: () => void;
   currentTaskId?: string;
   onOpenTask: (taskId: string) => void;
   /** Shows New task above the list when given. */
@@ -36,14 +58,7 @@ function InboxIcon() {
 }
 
 /** The task list before the first task: one action. */
-export function EmptyTasks({
-  onNewTask,
-  firstRun = false,
-}: {
-  onNewTask: () => void;
-  /** Shows first run's last step. */
-  firstRun?: boolean;
-}) {
+export function EmptyTasks({ onNewTask }: { onNewTask: () => void }) {
   return (
     <section className="shell-empty page" aria-labelledby="shell-empty-title">
       <header className="page-header">
@@ -51,7 +66,6 @@ export function EmptyTasks({
           No tasks yet
         </h1>
       </header>
-      {firstRun ? <OnboardingSteps current="first" /> : null}
       <div>
         <Button variant="secondary" onClick={onNewTask}>
           <PlusIcon />
@@ -76,6 +90,8 @@ function keepInView(row: HTMLElement | null) {
 export function AppShell({
   tasks,
   usage,
+  agents = [],
+  onAgents,
   currentTaskId,
   onOpenTask,
   onNewTask,
@@ -158,6 +174,27 @@ export function AppShell({
             </ul>
           </nav>
         </div>
+        {agents.length ? (
+          <ul className="shell-agents" aria-label="Coding agents">
+            {agents.map((a) => (
+              <li key={a.name}>
+                <button
+                  type="button"
+                  className="shell-agent"
+                  data-state={a.state}
+                  onClick={onAgents}
+                >
+                  <LightIcon light={agentLight[a.state]} />
+                  <span>{a.name}</span>
+                  {/* Ready is the quiet default; only the other states take room. */}
+                  <span className={a.state === "ready" ? "shell-sr" : "shell-agent-word"}>
+                    {agentWord[a.state]}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {tight.length ? (
           <dl className="shell-usage" aria-label="Coding agent usage">
             {tight.map((p) => (

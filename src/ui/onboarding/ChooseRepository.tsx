@@ -1,7 +1,6 @@
 import { Button, Callout } from "@kb.ui/react";
 import "../shell/page.css";
 import "./onboarding.css";
-import { OnboardingSteps } from "./OnboardingSteps";
 
 export type Refusal = { path: string; reason: string };
 
@@ -25,7 +24,6 @@ export function ChooseRepository({ onChoose, refused }: ChooseRepositoryProps) {
             Open a repository
           </h1>
         </header>
-        <OnboardingSteps current="repository" />
         {refused ? (
           <Callout tone="warning" role="alert" title={refused.reason}>
             <code>{refused.path}</code>

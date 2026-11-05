@@ -5,14 +5,11 @@ import { crew, issues, read } from "./fixtures";
 import { NewTask, type NewTaskProps } from "./NewTask";
 
 const text = "Help people with no projects start their first one.";
-const next = () => userEvent.click(screen.getByRole("button", { name: /^Next/ }));
+/** Bezl's read shows under the goal shortly after it has words. */
+const next = () => screen.findByRole("list", { name: "Your task" });
 const change = (part: string) =>
   userEvent.click(screen.getByRole("button", { name: `Change ${part}` }));
 const row = (part: string) => screen.getByRole("listitem", { name: part });
-const stepNow = () =>
-  within(screen.getByRole("list", { name: "New task steps" })).getByRole("listitem", {
-    current: "step",
-  });
 
 function setup(props: Partial<NewTaskProps> = {}) {
   const onStart = vi.fn();
@@ -31,22 +28,35 @@ function setup(props: Partial<NewTaskProps> = {}) {
   return { onStart };
 }
 
-describe("NewTask steps", () => {
-  test("walks Goal then Review and start, and Back keeps what you wrote", async () => {
+describe("NewTask on one screen", () => {
+  test("Bezl's read appears under the goal, and Start waits for a goal", async () => {
     setup();
-    expect(stepNow()).toHaveTextContent("Goal");
+    const start = screen.getByRole("button", { name: "Start task" });
+    expect(start).toBeDisabled();
+    expect(screen.queryByRole("list", { name: "Your task" })).toBeNull();
     await userEvent.type(screen.getByRole("textbox", { name: "Goal" }), text);
     await next();
-    expect(stepNow()).toHaveTextContent("Review and start");
-    expect(screen.queryByRole("textbox", { name: "Goal" })).toBeNull();
-    expect(within(row("Goal")).getByText(text)).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue(text);
+    expect(screen.getByRole("button", { name: /^Start (task|anyway)$/ })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /^Next|Back/ })).toBeNull();
   });
 
-  test("the walkthrough can open on the review", () => {
-    setup({ step: "review" });
-    expect(stepNow()).toHaveTextContent("Review and start");
+  test("the walkthrough can open with the read shown", () => {
+    setup({ withRead: true });
+    expect(screen.getByRole("list", { name: "Your task" })).toBeVisible();
+  });
+
+  test("with no agent that can write, Start is off and Coding agents is one click away", async () => {
+    const onAgents = vi.fn();
+    setup({
+      withRead: true,
+      providers: crew.map((p) => ({ ...p, canWrite: false })),
+      onAgents,
+    });
+    expect(screen.getByText("No coding agent can write yet")).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Start (task|anyway)$/ })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Open Coding agents" }));
+    expect(onAgents).toHaveBeenCalledOnce();
   });
 });
 
@@ -97,17 +107,14 @@ describe("NewTask review", () => {
     await userEvent.type(who, "Admins");
     await change("Example");
     await userEvent.click(screen.getByRole("button", { name: "Drop Example" }));
-    await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    await next();
     expect(within(row("Who it's for")).getByText("Admins")).toBeVisible();
     expect(within(row("Example")).queryByText(read.example?.text ?? "")).toBeNull();
-    await change("Example");
     await userEvent.click(screen.getByRole("button", { name: "Use Bezl's read for Example" }));
     expect(screen.getByRole("textbox", { name: "Example" })).toHaveValue(read.example?.text);
   });
 
   test("a line you type is yours to check, and you can remove any line", async () => {
-    setup({ initial: { text, doneWhen: [] }, read: {}, step: "review" });
+    setup({ initial: { text, doneWhen: [] }, read: {}, withRead: true });
     await change("It's done when");
     await userEvent.type(
       screen.getByRole("textbox", { name: "Add a line" }),
@@ -121,7 +128,7 @@ describe("NewTask review", () => {
   });
 
   test("where Bezl couldn't tell, it says so, and you can start anyway", async () => {
-    const { onStart } = setup({ initial: { text, doneWhen: [] }, read: {}, step: "review" });
+    const { onStart } = setup({ initial: { text, doneWhen: [] }, read: {}, withRead: true });
     expect(screen.getAllByText("Not found").length).toBe(3);
     await userEvent.click(screen.getByRole("button", { name: "Start anyway" }));
     expect(onStart).toHaveBeenCalledOnce();
@@ -130,7 +137,7 @@ describe("NewTask review", () => {
 
 describe("NewTask setup", () => {
   test("the setup row names the command, and you can turn it off", async () => {
-    const { onStart } = setup({ initial: { text, doneWhen: [] }, step: "review" });
+    const { onStart } = setup({ initial: { text, doneWhen: [] }, withRead: true });
     expect(within(row("Setup")).getByText("bun install")).toBeVisible();
     await change("Setup");
     await userEvent.click(screen.getByRole("switch", { name: "Run setup when the task starts" }));
@@ -140,14 +147,14 @@ describe("NewTask setup", () => {
   });
 
   test("a repository with no setup command has no setup row", () => {
-    setup({ step: "review", setup: undefined });
+    setup({ withRead: true, setup: undefined });
     expect(screen.queryByRole("listitem", { name: "Setup" })).toBeNull();
   });
 });
 
 describe("NewTask crew", () => {
   test("offers what passed preflight and greys the rest with the reason", async () => {
-    setup({ step: "review" });
+    setup({ withRead: true });
     await change("Crew");
     // The name holds the visible word, so voice control can say it.
     expect(screen.getByRole("button", { name: "Done Crew" })).toHaveTextContent("Done");
@@ -160,7 +167,7 @@ describe("NewTask crew", () => {
   });
 
   test("a reviewer from the writer's vendor is allowed and labelled", async () => {
-    setup({ step: "review" });
+    setup({ withRead: true });
     await change("Crew");
     const reviewer = screen.getByRole("radiogroup", { name: "Reviews" });
     expect(within(reviewer).queryByText(/same company/)).toBeNull();
@@ -189,16 +196,15 @@ describe("NewTask from a GitHub issue", () => {
   });
 
   test("the issue travels with the task, and you can start from scratch", async () => {
-    const { onStart } = setup({ issues, pickedIssue: 128, step: "review" });
-    await userEvent.click(screen.getByRole("button", { name: /^Start/ }));
+    const { onStart } = setup({ issues, pickedIssue: 128, withRead: true });
+    await userEvent.click(screen.getByRole("button", { name: /^Start (task|anyway)$/ }));
     expect(onStart.mock.calls[0]?.[0].draft.issue).toEqual({
       number: 128,
       url: "https://github.com/acme/studio-web/issues/128",
     });
-    await userEvent.click(screen.getByRole("button", { name: "Back" }));
     await userEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
-    expect(screen.queryByRole("link", { name: "View issue #128" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "issue #128" })).toBeNull();
   });
 
   test("picking and clearing an issue keep what you wrote yourself", async () => {
@@ -209,7 +215,6 @@ describe("NewTask from a GitHub issue", () => {
     await change("Who it's for");
     await userEvent.clear(screen.getByRole("textbox", { name: "Who it's for" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Who it's for" }), "Ops");
-    await userEvent.click(screen.getByRole("button", { name: "Back" }));
     await userEvent.click(screen.getByRole("button", { name: "Start from scratch" }));
     expect(screen.getByRole("textbox", { name: "Goal" })).toHaveValue("");
     await next();
@@ -224,7 +229,7 @@ describe("NewTask from a GitHub issue", () => {
 
 describe("NewTask limits", () => {
   test("you add and remove the files it may change, and the task starts with yours", async () => {
-    const { onStart } = setup({ initial: { text, doneWhen: [] }, step: "review" });
+    const { onStart } = setup({ initial: { text, doneWhen: [] }, withRead: true });
     await change("Files");
     const paths = () => screen.getByRole("list", { name: "Files it may change" });
     await userEvent.type(screen.getByRole("textbox", { name: "Add a path" }), "src/components/**");
@@ -237,12 +242,12 @@ describe("NewTask limits", () => {
       within(paths()).getByRole("button", { name: "Remove src/pages/Projects.test.tsx" }),
     );
     expect(within(paths()).queryByText("src/pages/Projects.tsx")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /^Start/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start (task|anyway)$/ }));
     expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ paths: ["src/components/**"] }));
   });
 
   test("open problems do not block Ship unless you say so", async () => {
-    setup({ step: "review" });
+    setup({ withRead: true });
     await change("Files");
     expect(screen.getByRole("switch", { name: /Don't ship with open problems/ })).not.toBeChecked();
   });
