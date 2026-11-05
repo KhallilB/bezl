@@ -48,7 +48,7 @@
   display: flex;
   gap: var(--kb-space-2);
   color: var(--kb-color-muted);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-xs);
 }
 
@@ -101,7 +101,7 @@
   padding: 0 var(--kb-space-1);
   border-radius: var(--kb-radius-sm);
   box-shadow: inset 0 0 0 1px var(--walkthrough-ring);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-xs);
 }
 
@@ -124,7 +124,7 @@
 
 .walkthrough-entry-n {
   color: var(--kb-color-muted);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-xs);
   text-align: end;
 }

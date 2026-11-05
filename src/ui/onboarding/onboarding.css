@@ -46,7 +46,7 @@
 }
 
 .onboarding code {
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: 0.9em;
 }
 
@@ -82,7 +82,7 @@
   height: 1.25rem;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: 0.75em;
   line-height: 1;
 }

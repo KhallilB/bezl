@@ -28,7 +28,7 @@
 
 .page-tag {
   color: var(--kb-color-muted);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-xs);
 }
 

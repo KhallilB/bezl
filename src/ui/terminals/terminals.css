@@ -38,7 +38,7 @@
 .terminal-says {
   margin: 0 0 var(--kb-space-2);
   color: var(--kb-color-danger);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-sm);
 }
 
@@ -58,7 +58,7 @@
 .snapshot-meta {
   margin: 0;
   color: var(--kb-color-muted);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-sm);
 }
 

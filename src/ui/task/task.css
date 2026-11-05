@@ -1,6 +1,6 @@
 /* Bezl's own elements only; kbui parts change through the app theme's token overrides. */
 .task-screen {
-  --task-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --task-mono: var(--kb-font-mono);
   --task-glass: color-mix(in oklab, var(--kb-color-fg) 6%, transparent);
   --task-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
   position: relative;

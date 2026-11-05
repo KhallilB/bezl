@@ -1,6 +1,6 @@
 /* New task form. Frame and headings: page.css. */
 .newtask {
-  --newtask-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --newtask-mono: var(--kb-font-mono);
   --newtask-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
   --newtask-soft: color-mix(in oklab, var(--kb-color-fg) 72%, transparent);
   container-type: inline-size;
