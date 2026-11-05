@@ -6,9 +6,9 @@ import { AppTheme, usePortalRoot } from "./AppTheme";
 import { themeTokens } from "./tokens";
 
 const documented = new Set<string>(
-  [tokens.panel, tokens.status, tokens.button, tokens.dialog, tokens.progress, tokens.stat].flatMap(
-    (g) => Object.values(g),
-  ),
+  [tokens.panel, tokens.status, tokens.button, tokens.dialog, tokens.progress, tokens.stat]
+    .flatMap((g) => Object.values(g))
+    .concat(tokens.font.mono),
 );
 const semantic = new Set<string>(
   [tokens.color, tokens.space, tokens.radius].flatMap((g) => Object.values(g)),
@@ -16,7 +16,7 @@ const semantic = new Set<string>(
 const values: Record<string, string> = themeTokens;
 
 describe("app theme", () => {
-  test("sets documented panel, status, button, dialog, progress and stat properties only", () => {
+  test("sets documented panel, status, button, dialog, progress, stat and mono font properties only", () => {
     const keys = Object.keys(values);
     expect(keys.length).toBeGreaterThan(0);
     for (const key of keys) expect(documented.has(key), key).toBe(true);
@@ -32,6 +32,7 @@ describe("app theme", () => {
         expect(value, key).toMatch(filter);
         continue;
       }
+      if (key === tokens.font.mono) continue;
       if (key.endsWith("-weight")) {
         expect(value, key).toMatch(weight);
         continue;
@@ -62,6 +63,10 @@ describe("app theme", () => {
   test("fills step progress with info light", () => {
     expect(values[tokens.progress.fill]).toBe(`var(${tokens.color.info})`);
     expect(values).toHaveProperty(tokens.progress.glow);
+  });
+
+  test("sets the app's mono font once, so kbui code matches Bezl's", () => {
+    expect(values[tokens.font.mono]).toMatch(/^"Geist Mono Variable", .*monospace$/);
   });
 
   test("sets headline numerals light", () => {

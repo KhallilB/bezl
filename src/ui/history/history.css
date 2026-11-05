@@ -1,7 +1,7 @@
 /* History: read-only record on the task page's left edge and type scale. */
 .history {
   /* Journey's file list reads these. */
-  --journey-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --journey-mono: var(--kb-font-mono);
   --journey-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
 }
 
@@ -132,7 +132,7 @@
   overflow-x: auto;
   border-radius: var(--kb-radius-md);
   background: color-mix(in oklab, var(--kb-color-fg) 6%, transparent);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-xs);
   line-height: 1.6;
 }

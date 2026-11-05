@@ -7,7 +7,8 @@ type ComponentVar = Extract<
 >;
 type SemanticRef = `var(--kb-${"color" | "space" | "radius"}-${string})`;
 type Mix = `color-mix(in oklab, var(--kb-color-${string}) ${number}%, transparent)`;
-type ThemeValue = SemanticRef | Mix | `blur(${string}` | `${number}00`;
+type FontStack = `"Geist Mono Variable", ${string}monospace`;
+type ThemeValue = SemanticRef | Mix | `blur(${string}` | `${number}00` | FontStack;
 
 /** Semantic colors keep translucent planes valid in both themes. */
 export const themeTokens = {
@@ -34,4 +35,6 @@ export const themeTokens = {
   "--kb-status-glow": "var(--kb-space-1)",
   "--kb-button-radius": "var(--kb-radius-full)",
   "--kb-dialog-radius": "var(--kb-radius-lg)",
-} satisfies Partial<Record<ComponentVar, ThemeValue>>;
+  // Fontsource loads Geist Mono in App.tsx; kbui's Code and Badge then match Bezl's mono.
+  "--kb-font-mono": '"Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace',
+} satisfies Partial<Record<ComponentVar | typeof tokens.font.mono, ThemeValue>>;

@@ -1,6 +1,6 @@
 /* One task's page: header, stage strip, status sentence, then the open stage. Frame: page.css. */
 .journey {
-  --journey-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --journey-mono: var(--kb-font-mono);
   --journey-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
 }
 

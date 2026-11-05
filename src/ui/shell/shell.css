@@ -1,6 +1,6 @@
 /* App shell: the task list beside the open task. Bezl's own elements only. */
 .shell {
-  --shell-mono: "Geist Mono Variable", var(--kb-font-mono);
+  --shell-mono: var(--kb-font-mono);
   --shell-ring: color-mix(in oklab, var(--kb-color-fg) 10%, transparent);
   position: relative;
   isolation: isolate;
@@ -302,7 +302,7 @@
   border-radius: var(--kb-radius-full);
   background: color-mix(in oklab, var(--kb-color-warning) 18%, transparent);
   color: var(--kb-color-warning);
-  font-family: "Geist Mono Variable", var(--kb-font-mono);
+  font-family: var(--kb-font-mono);
   font-size: var(--kb-size-xs);
   line-height: 1.25rem;
   text-align: center;

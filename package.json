@@ -18,9 +18,9 @@
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/geist-mono": "5.3.0",
-    "@kb.ui/css": "0.10.2",
-    "@kb.ui/react": "0.10.2",
-    "@kb.ui/tokens": "0.10.2",
+    "@kb.ui/css": "0.12.1",
+    "@kb.ui/react": "0.12.1",
+    "@kb.ui/tokens": "0.12.1",
     "@tauri-apps/api": "2.12.4",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-serialize": "0.14.0",
