@@ -1,21 +1,12 @@
 # Bezl
 
-**Any agent writes the change. Bezl measures it. You decide.**
+**Bezl is retired.** The source and v0.1.0 prerelease are available for reference. My current work on coordinating tasks across repositories is [Waveboard](https://kcb.pro/work/waveboard).
 
-Bezl is a local desktop app for working with AI coding agents. It is in early development: the app shell, a live terminal and the Task screen exist, and agents do not run inside it yet.
+Bezl was a local desktop prototype for working with coding agents. It shipped an app shell, a live terminal, and a task screen with sample data. The planned writer and reviewer workflow never shipped.
 
-Bezl will run the official agent CLIs, Claude Code and Codex for now, as separate workers:
+## Archived builds
 
-- one writer per task worktree;
-- reviewers that cannot write, from a different provider when you have two.
-
-Bezl will run the checks itself, show which changed code no test runs, and record every step on your machine.
-
-Bezl never holds a key. Agent CLIs keep their own sign-in, and model endpoints such as Ollama run on this machine by default. Between agents, Bezl passes only what it produced or checked itself: the diff from git, its own check results, and verified findings. It never passes one agent's conversation or claims to another.
-
-## Install
-
-Download Bezl from the [Releases page](https://github.com/KhallilB/bezl/releases). Each release says which file fits your computer.
+Find the original builds on the [Releases page](https://github.com/KhallilB/bezl/releases). Each release says which file fits your computer.
 
 | Your computer | File to download |
 |---|---|
@@ -85,9 +76,9 @@ bun tauri dev
 
 Checks run locally for now. The GitHub workflow in `.github/workflows/ci.yml` runs only when started by hand.
 
-## Releases
+## Historical release process
 
-To cut a release, push a tag like `v0.2.0` that matches the version in `src-tauri/tauri.conf.json`. GitHub Actions then builds the installers for macOS, Windows and Linux and puts them in a draft release (`.github/workflows/release.yml`). Look the draft over, then publish it.
+To build a release, push a tag like `v0.2.0` that matches the version in `src-tauri/tauri.conf.json`. GitHub Actions then builds the installers for macOS, Windows and Linux and puts them in a draft release (`.github/workflows/release.yml`). Look the draft over, then publish it.
 
 ## License
 
